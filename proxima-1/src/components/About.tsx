@@ -1,6 +1,6 @@
 export default function About() {
   return (
-    <section id="about" className="relative py-32 px-6 overflow-hidden">
+    <section id="about" className="relative py-16 px-6 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-[#0a0a0a]" />
       

@@ -38,7 +38,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="relative py-32 px-6 overflow-hidden" id="how-it-works">
+    <section className="relative pt-8 pb-16 px-6 overflow-hidden" id="how-it-works">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]" />
       
@@ -58,9 +58,6 @@ export default function HowItWorks() {
         
         {/* Steps */}
         <div className="grid md:grid-cols-3 gap-8 relative">
-          {/* Connection line */}
-          <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-[1px] bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-green-500/20" />
-          
           {steps.map((step, index) => (
             <div key={step.number} className="relative">
               {/* Step card */}

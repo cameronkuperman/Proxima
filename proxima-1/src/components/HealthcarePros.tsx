@@ -2,7 +2,7 @@
 
 export default function HealthcarePros() {
   return (
-    <section className="relative py-32 px-6 overflow-hidden" id="healthcare-pros">
+    <section className="relative py-16 px-6 overflow-hidden" id="healthcare-pros">
       {/* Background */}
       <div className="absolute inset-0 bg-[#0f0f0f]" />
       

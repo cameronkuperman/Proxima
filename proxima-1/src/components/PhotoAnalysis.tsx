@@ -1,8 +1,9 @@
 'use client';
+import Image from 'next/image';
 
 export default function PhotoAnalysis() {
   return (
-    <section className="relative py-32 px-6 overflow-hidden" id="photo-analysis">
+    <section className="relative py-16 px-6 overflow-hidden" id="photo-analysis">
       {/* Background */}
       <div className="absolute inset-0 bg-[#0a0a0a]" />
       
@@ -26,11 +27,11 @@ export default function PhotoAnalysis() {
         </div>
 
         {/* Two modes showcase */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-20">
+        <div className="grid lg:grid-cols-2 gap-8 mb-20 lg:items-stretch">
           {/* Instant Analysis */}
-          <div className="relative group">
+          <div className="relative group flex">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl blur-xl group-hover:from-cyan-500/20 group-hover:to-blue-500/20 transition-all duration-500" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300">
+            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300 flex-1 flex flex-col">
               {/* Header with icon */}
               <div className="p-8 pb-0">
                 <div className="flex items-center gap-3 mb-6">
@@ -74,7 +75,7 @@ export default function PhotoAnalysis() {
               </div>
 
               {/* Visual mockup */}
-              <div className="relative h-64 bg-gradient-to-b from-gray-900/0 to-black/50">
+              <div className="relative flex-1 min-h-[16rem] bg-gradient-to-b from-gray-900/0 to-black/50">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center animate-pulse">
                     <svg className="w-12 h-12 text-cyan-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,9 +98,9 @@ export default function PhotoAnalysis() {
           </div>
 
           {/* Long-term Tracking */}
-          <div className="relative group">
+          <div className="relative group flex">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl group-hover:from-indigo-500/20 group-hover:to-purple-500/20 transition-all duration-500" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300">
+            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300 flex-1 flex flex-col">
               {/* Header with icon */}
               <div className="p-8 pb-0">
                 <div className="flex items-center gap-3 mb-6">
@@ -143,7 +144,7 @@ export default function PhotoAnalysis() {
               </div>
 
               {/* Visual mockup - Timeline */}
-              <div className="relative h-64 bg-gradient-to-b from-gray-900/0 to-black/50 p-8">
+              <div className="relative flex-1 min-h-[16rem] bg-gradient-to-b from-gray-900/0 to-black/50 p-8">
                 <div className="flex items-center justify-between h-full">
                   {/* Timeline items */}
                   <div className="flex-1 flex items-center gap-4">
@@ -183,20 +184,28 @@ export default function PhotoAnalysis() {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: '🔴', label: 'Rashes & Skin Conditions' },
-              { icon: '🩹', label: 'Wound Healing' },
-              { icon: '😮', label: 'Swelling & Inflammation' },
-              { icon: '👁️', label: 'Eye Irritation' },
-              { icon: '🦷', label: 'Dental Issues' },
-              { icon: '💊', label: 'Medication Reactions' },
-              { icon: '🦶', label: 'Foot & Nail Problems' },
-              { icon: '🌡️', label: 'Post-Surgery Recovery' }
+              { iconNumber: 1, label: 'Rashes & Skin Conditions' },
+              { iconNumber: 2, label: 'Wound Healing' },
+              { iconNumber: 3, label: 'Swelling & Inflammation' },
+              { iconNumber: 4, label: 'Eye Irritation' },
+              { iconNumber: 5, label: 'Dental Issues' },
+              { iconNumber: 6, label: 'Medication Reactions' },
+              { iconNumber: 7, label: 'Foot & Nail Problems' },
+              { iconNumber: 8, label: 'Post-Surgery Recovery' }
             ].map((useCase, index) => (
               <div 
                 key={index}
                 className="p-4 bg-gray-900/30 border border-gray-800 rounded-xl hover:border-gray-700 transition-all duration-300 text-center"
               >
-                <div className="text-2xl mb-2">{useCase.icon}</div>
+                <div className="w-6 h-6 mx-auto mb-2 flex items-center justify-center">
+                  <Image
+                    src={`/conditionIcons/${useCase.iconNumber}.png`}
+                    alt={useCase.label}
+                    width={24}
+                    height={24}
+                    className="w-6 h-6 object-contain filter invert"
+                  />
+                </div>
                 <div className="text-sm text-gray-400">{useCase.label}</div>
               </div>
             ))}

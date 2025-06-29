@@ -2,7 +2,7 @@
 
 export default function Features() {
   return (
-    <section className="relative py-32 px-6 overflow-hidden" id="features">
+    <section className="relative py-16 px-6 overflow-hidden" id="features">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a]" />
       
@@ -30,7 +30,7 @@ export default function Features() {
         </div>
         
         {/* Feature grid */}
-        <div className="grid lg:grid-cols-2 gap-12 mb-32">
+        <div className="grid lg:grid-cols-2 gap-12 mb-16">
           {/* 3D Body Mapping */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl blur-xl group-hover:from-purple-500/20 group-hover:to-pink-500/20 transition-all duration-500" />
@@ -165,16 +165,29 @@ export default function Features() {
               
               {/* Visual preview */}
               <div className="mt-8 p-6 bg-black/30 rounded-xl border border-gray-800/50">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="aspect-square bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg animate-pulse" />
-                  <div className="aspect-square bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.2s'}} />
-                  <div className="aspect-square bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.4s'}} />
-                </div>
-                <div className="mt-4 space-y-2">
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full w-3/4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" />
+                <div className="aspect-square relative overflow-hidden rounded-lg">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/20" />
+                  
+                  {/* Photo grid in center */}
+                  <div className="absolute inset-0 flex items-center justify-center p-8">
+                    <div className="grid grid-cols-2 gap-2 w-full h-full max-w-[200px] max-h-[200px]">
+                      <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg animate-pulse" />
+                      <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.2s'}} />
+                      <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.4s'}} />
+                      <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.6s'}} />
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500">AI Confidence: 94%</p>
+                  
+                  {/* Analysis overlay */}
+                  <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-400">AI Confidence</span>
+                      <span className="text-xs text-cyan-400">94%</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full w-[94%] bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
