@@ -42,7 +42,7 @@ Proxima-1 is a next-generation health technology platform that combines 3D body 
 
 ## Trust & Credibility
 - HIPAA Compliant
-- Medical Advisors: Dr. Paul Kuperman & Dr. Edward Baidoo
+- Medical Advisors: Dr. Paul Kuperman & Dr. Edward Botse-Baidoo
 - Powered by leading AI models from:
   - OpenAI
   - Anthropic

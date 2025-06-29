@@ -55,7 +55,7 @@ export default function HealthcarePros() {
                   EB
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-2xl font-semibold text-white mb-2">Dr. Edward Baidoo</h3>
+                  <h3 className="text-2xl font-semibold text-white mb-2">Dr. Edward Botse-Baidoo</h3>
                   <p className="text-blue-400 mb-4">Medical Advisor</p>
                   <p className="text-gray-400 leading-relaxed">
                     Guiding our approach to make sure we're building something that 
