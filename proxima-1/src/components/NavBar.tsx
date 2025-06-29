@@ -3,23 +3,46 @@ import Link from "next/link";
 
 export default function NavBar() {
   return (
-    <nav className="w-full h-[100px] flex items-center justify-between px-6 md:px-12 bg-transparent fixed top-0 left-0 z-30 overflow-hidden">
-      <div className="flex items-center gap-2">
-        {/* Replace /logo.png with actual logo file in public folder */}
-        <Image src="/logo3.png" alt="Proxima logo" width={200} height={100} priority />
-        <span className="sr-only">Proxima</span>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-gray-800">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center gap-2">
+              <Image src="/logo.png" alt="Proxima" width={120} height={40} priority className="h-8 w-auto" />
+            </Link>
+          </div>
+          
+          {/* Navigation */}
+          <div className="hidden md:flex items-center gap-8">
+            <Link href="#features" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              Features
+            </Link>
+            <Link href="#how-it-works" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              How it Works
+            </Link>
+            <Link href="#ai-partners" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              AI Partners
+            </Link>
+            <Link href="#about" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              About
+            </Link>
+            <Link href="#contact" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              Contact
+            </Link>
+          </div>
+          
+          {/* CTA */}
+          <div className="flex items-center gap-4">
+            <button className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+              Sign In
+            </button>
+            <button className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200">
+              Try Demo
+            </button>
+          </div>
+        </div>
       </div>
-      <ul className="hidden md:flex gap-8 font-medium">
-        <li>
-          <Link href="#about" className="hover:text-[#2962FF] transition-colors">About</Link>
-        </li>
-        <li>
-          <Link href="#testimonials" className="hover:text-[#2962FF] transition-colors">Testimonials</Link>
-        </li>
-        <li>
-          <Link href="#contact" className="hover:text-[#2962FF] transition-colors">Contact</Link>
-        </li>
-      </ul>
     </nav>
   );
-} 
+}
