@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 export default function PhotoAnalysis() {
   return (
@@ -7,13 +8,44 @@ export default function PhotoAnalysis() {
       {/* Background */}
       <div className="absolute inset-0 bg-[#0a0a0a]" />
       
-      {/* Gradient accents */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-radial from-cyan-500/10 via-blue-500/5 to-transparent blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] rounded-full bg-gradient-radial from-indigo-500/10 via-purple-500/5 to-transparent blur-3xl" />
+      {/* Gradient accents with parallax */}
+      <motion.div 
+        className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-radial from-cyan-500/10 via-blue-500/5 to-transparent blur-3xl"
+        animate={{
+          y: [0, -30, 0],
+          x: [0, 20, 0],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 15,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div 
+        className="absolute bottom-0 right-1/4 w-[600px] h-[600px] rounded-full bg-gradient-radial from-indigo-500/10 via-purple-500/5 to-transparent blur-3xl"
+        animate={{
+          y: [0, 30, 0],
+          x: [0, -20, 0],
+          scale: [1, 1.15, 1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2
+        }}
+      />
       
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-20">
+        <motion.div 
+          className="text-center mb-20"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="text-sm font-medium text-cyan-400 mb-4 uppercase tracking-wider">
             Visual Intelligence
           </p>
@@ -24,14 +56,24 @@ export default function PhotoAnalysis() {
             Upload photos for instant AI analysis or track changes over time. 
             Perfect for skin conditions, injuries, or any visible symptom.
           </p>
-        </div>
+        </motion.div>
 
         {/* Two modes showcase */}
         <div className="grid lg:grid-cols-2 gap-8 mb-20 lg:items-stretch">
           {/* Instant Analysis */}
-          <div className="relative group flex">
+          <motion.div 
+            className="relative group flex"
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl blur-xl group-hover:from-cyan-500/20 group-hover:to-blue-500/20 transition-all duration-500" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300 flex-1 flex flex-col">
+            <motion.div 
+              className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300 flex-1 flex flex-col"
+              whileHover={{ scale: 1.02, y: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
               {/* Header with icon */}
               <div className="p-8 pb-0">
                 <div className="flex items-center gap-3 mb-6">
@@ -94,13 +136,23 @@ export default function PhotoAnalysis() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Long-term Tracking */}
-          <div className="relative group flex">
+          <motion.div 
+            className="relative group flex"
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl group-hover:from-indigo-500/20 group-hover:to-purple-500/20 transition-all duration-500" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300 flex-1 flex flex-col">
+            <motion.div 
+              className="relative bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-300 flex-1 flex flex-col"
+              whileHover={{ scale: 1.02, y: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
               {/* Header with icon */}
               <div className="p-8 pb-0">
                 <div className="flex items-center gap-3 mb-6">
@@ -172,8 +224,8 @@ export default function PhotoAnalysis() {
                   Improving
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* Use cases */}
@@ -193,11 +245,27 @@ export default function PhotoAnalysis() {
               { iconNumber: 7, label: 'Foot & Nail Problems' },
               { iconNumber: 8, label: 'Post-Surgery Recovery' }
             ].map((useCase, index) => (
-              <div 
+              <motion.div 
                 key={index}
-                className="p-4 bg-gray-900/30 border border-gray-800 rounded-xl hover:border-gray-700 transition-all duration-300 text-center"
+                className="p-4 bg-gray-900/30 border border-gray-800 rounded-xl hover:border-gray-700 transition-all duration-300 text-center cursor-pointer"
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ 
+                  duration: 0.4, 
+                  delay: index * 0.05,
+                  ease: [0.22, 1, 0.36, 1]
+                }}
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
+                }}
               >
-                <div className="w-6 h-6 mx-auto mb-2 flex items-center justify-center">
+                <motion.div 
+                  className="w-6 h-6 mx-auto mb-2 flex items-center justify-center"
+                  whileHover={{ rotate: 360 }}
+                  transition={{ duration: 0.6 }}
+                >
                   <Image
                     src={`/conditionIcons/${useCase.iconNumber}.png`}
                     alt={useCase.label}
@@ -205,9 +273,9 @@ export default function PhotoAnalysis() {
                     height={24}
                     className="w-6 h-6 object-contain filter invert"
                   />
-                </div>
+                </motion.div>
                 <div className="text-sm text-gray-400">{useCase.label}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>

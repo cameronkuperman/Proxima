@@ -1,3 +1,5 @@
+'use client';
+import { motion } from 'framer-motion';
 import EmailSignupForm from './EmailSignupForm';
 
 export default function Contact() {
@@ -7,9 +9,26 @@ export default function Contact() {
       <div className="absolute inset-0 bg-[#0f0f0f]" />
       
       {/* Gradient orb */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-radial from-purple-500/10 via-purple-500/5 to-transparent blur-3xl" />
+      <motion.div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-radial from-purple-500/10 via-purple-500/5 to-transparent blur-3xl"
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.5, 0.8, 0.5],
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
       
-      <div className="relative z-10 max-w-4xl mx-auto text-center">
+      <motion.div 
+        className="relative z-10 max-w-4xl mx-auto text-center"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      >
         {/* Header */}
         <p className="text-sm font-medium text-purple-400 mb-4 uppercase tracking-wider">
           Get Early Access
@@ -64,7 +83,7 @@ export default function Contact() {
             Always consult with a healthcare professional for medical advice.
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

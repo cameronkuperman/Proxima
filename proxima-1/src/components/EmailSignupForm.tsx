@@ -1,5 +1,6 @@
 'use client';
 import { FormEvent, useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 
 export default function EmailSignupForm() {
   const [email, setEmail] = useState('');

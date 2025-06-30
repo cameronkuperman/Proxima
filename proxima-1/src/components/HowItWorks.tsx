@@ -1,4 +1,6 @@
 'use client';
+import { motion } from 'framer-motion';
+import { useInView } from 'framer-motion';
 
 const steps = [
   {
@@ -44,7 +46,13 @@ export default function HowItWorks() {
       
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-20">
+        <motion.div 
+          className="text-center mb-20"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="text-sm font-medium text-purple-400 mb-4 uppercase tracking-wider">
             Simple Process
           </p>
@@ -54,18 +62,69 @@ export default function HowItWorks() {
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
             Whether you use our 3D body model or photo analysis, getting answers is simple
           </p>
-        </div>
+        </motion.div>
         
         {/* Steps */}
         <div className="grid md:grid-cols-3 gap-8 relative">
+          {/* Animated connecting line */}
+          <svg className="hidden md:block absolute top-12 left-0 w-full h-1 pointer-events-none" style={{ zIndex: 0 }}>
+            <motion.line
+              x1="16.67%"
+              y1="2"
+              x2="83.33%"
+              y2="2"
+              stroke="url(#lineGradient)"
+              strokeWidth="2"
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.5, delay: 0.5, ease: "easeInOut" }}
+            />
+            <defs>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#9333ea" stopOpacity="0.2" />
+                <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.2" />
+              </linearGradient>
+            </defs>
+          </svg>
+
           {steps.map((step, index) => (
-            <div key={step.number} className="relative">
+            <motion.div 
+              key={step.number} 
+              className="relative"
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ 
+                duration: 0.6, 
+                delay: index * 0.2,
+                ease: [0.22, 1, 0.36, 1]
+              }}
+            >
               {/* Step card */}
-              <div className="relative bg-gray-900/30 border border-gray-800 rounded-2xl p-8 hover:border-gray-700 transition-all duration-300">
+              <motion.div 
+                className="relative bg-gray-900/30 border border-gray-800 rounded-2xl p-8 hover:border-gray-700 transition-all duration-300"
+                whileHover={{ 
+                  scale: 1.02,
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.3)"
+                }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 {/* Step number */}
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#0a0a0a] border border-gray-800 rounded-full flex items-center justify-center">
+                <motion.div 
+                  className="absolute -top-4 -left-4 w-12 h-12 bg-[#0a0a0a] border border-gray-800 rounded-full flex items-center justify-center"
+                  initial={{ scale: 0 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 200,
+                    delay: 0.3 + (index * 0.2)
+                  }}
+                >
                   <span className="text-sm font-bold text-gray-400">{step.number}</span>
-                </div>
+                </motion.div>
                 
                 {/* Icon */}
                 <div className={`w-12 h-12 rounded-xl bg-${step.color}-500/10 border border-${step.color}-500/20 flex items-center justify-center mb-6 text-${step.color}-400`}>
@@ -75,18 +134,29 @@ export default function HowItWorks() {
                 {/* Content */}
                 <h3 className="text-xl font-semibold text-white mb-3">{step.title}</h3>
                 <p className="text-gray-400">{step.description}</p>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           ))}
         </div>
         
         {/* Bottom CTA */}
-        <div className="text-center mt-20">
+        <motion.div 
+          className="text-center mt-20"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="text-gray-400 mb-6">Ready to try it out?</p>
-          <button className="px-8 py-4 text-lg font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 transform hover:scale-[1.02]">
+          <motion.button 
+            className="px-8 py-4 text-lg font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          >
             Start Free Demo
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </div>
     </section>
   );
