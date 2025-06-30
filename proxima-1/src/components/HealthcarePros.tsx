@@ -1,4 +1,5 @@
 'use client';
+import { motion } from 'framer-motion';
 
 export default function HealthcarePros() {
   return (
@@ -11,7 +12,13 @@ export default function HealthcarePros() {
       
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-20">
+        <motion.div 
+          className="text-center mb-20"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="text-sm font-medium text-purple-400 mb-4 uppercase tracking-wider">
             Medical Advisors
           </p>
@@ -22,7 +29,7 @@ export default function HealthcarePros() {
             We're working with experienced physicians to build a platform that actually 
             understands how healthcare works in the real world.
           </p>
-        </div>
+        </motion.div>
         
         {/* Advisors Grid */}
         <div className="grid md:grid-cols-2 gap-12 max-w-4xl mx-auto">

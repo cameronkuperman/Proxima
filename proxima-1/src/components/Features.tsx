@@ -1,4 +1,6 @@
 'use client';
+import { motion } from 'framer-motion';
+import { useInView } from 'framer-motion';
 
 export default function Features() {
   return (
@@ -17,7 +19,13 @@ export default function Features() {
       
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Section header */}
-        <div className="text-center mb-20">
+        <motion.div 
+          className="text-center mb-20"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
           <h2 className="text-4xl sm:text-5xl font-semibold text-white mb-4">
             Everything you need to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
@@ -27,14 +35,24 @@ export default function Features() {
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
             Two powerful ways to get answers: interactive 3D body mapping or instant photo analysis.
           </p>
-        </div>
+        </motion.div>
         
         {/* Feature grid */}
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           {/* 3D Body Mapping */}
-          <div className="relative group">
+          <motion.div 
+            className="relative group"
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl blur-xl group-hover:from-purple-500/20 group-hover:to-pink-500/20 transition-all duration-500" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl p-8 hover:border-gray-700 transition-all duration-300">
+            <motion.div 
+              className="relative bg-gray-900/50 border border-gray-800 rounded-2xl p-8 hover:border-gray-700 transition-all duration-300"
+              whileHover={{ scale: 1.02, y: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
                   <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,13 +122,23 @@ export default function Features() {
                   <div className="absolute bottom-1/3 left-1/2 w-3 h-3 bg-purple-500 rounded-full animate-pulse" style={{animationDelay: '1s'}} />
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
           
           {/* Photo Analysis */}
-          <div className="relative group">
+          <motion.div 
+            className="relative group"
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-xl group-hover:from-blue-500/20 group-hover:to-cyan-500/20 transition-all duration-500" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-2xl p-8 hover:border-gray-700 transition-all duration-300">
+            <motion.div 
+              className="relative bg-gray-900/50 border border-gray-800 rounded-2xl p-8 hover:border-gray-700 transition-all duration-300"
+              whileHover={{ scale: 1.02, y: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -190,21 +218,37 @@ export default function Features() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
         
         {/* Analysis modes */}
-        <div className="relative">
+        <motion.div 
+          className="relative"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
           <h3 className="text-3xl font-semibold text-white text-center mb-12">
             Choose your speed: Quick answers or deep analysis
           </h3>
           
           <div className="grid md:grid-cols-2 gap-8">
             {/* Quick Scan */}
-            <div className="relative group">
+            <motion.div 
+              className="relative group"
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
               <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-emerald-500/5 rounded-xl blur-lg group-hover:from-green-500/10 group-hover:to-emerald-500/10 transition-all duration-500" />
-              <div className="relative bg-gray-900/30 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-all duration-300">
+              <motion.div 
+                className="relative bg-gray-900/30 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-all duration-300"
+                whileHover={{ scale: 1.03 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-xl font-semibold text-white">Quick Scan</h4>
                   <span className="px-3 py-1 text-xs font-medium text-green-400 bg-green-500/10 border border-green-500/20 rounded-full">
@@ -235,13 +279,23 @@ export default function Features() {
                     Warning signs to watch
                   </li>
                 </ul>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
             
             {/* Deep Dive */}
-            <div className="relative group">
+            <motion.div 
+              className="relative group"
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            >
               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-amber-500/5 rounded-xl blur-lg group-hover:from-orange-500/10 group-hover:to-amber-500/10 transition-all duration-500" />
-              <div className="relative bg-gray-900/30 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-all duration-300">
+              <motion.div 
+                className="relative bg-gray-900/30 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-all duration-300"
+                whileHover={{ scale: 1.03 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-xl font-semibold text-white">Deep Dive</h4>
                   <span className="px-3 py-1 text-xs font-medium text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full">
@@ -272,10 +326,10 @@ export default function Features() {
                     Doctor-ready reports
                   </li>
                 </ul>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
