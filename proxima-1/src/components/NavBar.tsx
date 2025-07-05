@@ -41,9 +41,9 @@ export default function NavBar() {
           
           {/* CTA */}
           <div className="flex items-center gap-4">
-            <button className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+            <Link href="/login" className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Sign In
-            </button>
+            </Link>
             <button className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200">
               Try Demo
             </button>

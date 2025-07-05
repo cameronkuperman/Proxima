@@ -128,7 +128,7 @@ export default function Hero() {
           
           {/* Subtitle */}
           <motion.p 
-            className="text-2xl sm:text-3xl text-gray-300 mb-6 max-w-3xl mx-auto leading-relaxed font-light"
+            className="text-2xl sm:text-3xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed font-light"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -136,14 +136,6 @@ export default function Hero() {
             Point. Describe. Understand. A smarter way to track your symptoms.
           </motion.p>
           
-          <motion.p 
-            className="text-lg sm:text-xl text-gray-400 mb-12 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          >
-            The most advanced 3D body mapping meets conversational AI to help you understand what's happening with your health.
-          </motion.p>
           
           {/* CTA Section */}
           <motion.div 
