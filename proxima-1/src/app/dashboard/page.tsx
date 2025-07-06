@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import HealthProfileModal from '@/components/HealthProfileModal';
+import OracleChat from '@/components/OracleChat';
 
 // Mock data for timeline
 const mockTimelineData = [
@@ -93,6 +94,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [oracleChatOpen, setOracleChatOpen] = useState(false);
   const [currentGraphIndex, setCurrentGraphIndex] = useState(0);
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
   const [healthScore, setHealthScore] = useState(92);
@@ -617,7 +619,11 @@ export default function DashboardPage() {
               </div>
 
               {/* AI Oracle Chat */}
-              <div className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                onClick={() => router.push('/oracle')}
+                className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5 cursor-pointer hover:border-purple-600/30 transition-all"
+              >
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -634,7 +640,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
 
@@ -717,7 +723,7 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={() => {
-                  // Start new chat logic
+                  setOracleChatOpen(true);
                   setFloatingMenuOpen(false);
                 }}
                 className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
@@ -754,6 +760,13 @@ export default function DashboardPage() {
       <HealthProfileModal 
         isOpen={profileModalOpen} 
         onClose={() => setProfileModalOpen(false)} 
+      />
+
+      {/* Oracle Chat */}
+      <OracleChat
+        isOpen={oracleChatOpen}
+        onClose={() => setOracleChatOpen(false)}
+        healthScore={healthScore}
       />
     </div>
   );
