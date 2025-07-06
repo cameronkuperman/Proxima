@@ -454,24 +454,6 @@ export default function DashboardPage() {
                     </div>
                   </motion.button>
                 </div>
-
-                {/* Predictive Alert - aligned with graph bottom */}
-                <div className="mt-12">
-                  <div className="backdrop-blur-[20px] bg-gradient-to-r from-yellow-600/10 to-orange-600/10 border border-yellow-600/20 rounded-xl p-5">
-                    <div className="flex items-start gap-3">
-                      <span className="text-yellow-500 text-xl">⚡</span>
-                      <div className="flex-1">
-                        <h3 className="text-base font-medium text-white mb-2">Predictive Alert</h3>
-                        <p className="text-sm text-gray-300">
-                          Based on your patterns, you might experience a migraine in 2 days. Consider preventive measures.
-                        </p>
-                        <button className="text-xs text-yellow-400 hover:text-yellow-300 mt-2">
-                          View prevention tips →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </motion.div>
 
               {/* Line Graph Section (Right) */}
@@ -614,6 +596,45 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </motion.div>
+            </div>
+            
+            {/* Predictive Alert and AI Oracle - Below insights and graph */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-12">
+              {/* Predictive Alert */}
+              <div className="backdrop-blur-[20px] bg-gradient-to-r from-yellow-600/10 to-orange-600/10 border border-yellow-600/20 rounded-xl p-5">
+                <div className="flex items-start gap-3">
+                  <span className="text-yellow-500 text-xl">⚡</span>
+                  <div className="flex-1">
+                    <h3 className="text-base font-medium text-white mb-2">Predictive Alert</h3>
+                    <p className="text-sm text-gray-300">
+                      Based on your patterns, you might experience a migraine in 2 days. Consider preventive measures.
+                    </p>
+                    <button className="text-xs text-yellow-400 hover:text-yellow-300 mt-2">
+                      View prevention tips →
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Oracle Chat */}
+              <div className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-medium text-white mb-2">AI Health Oracle</h3>
+                    <p className="text-sm text-gray-300 mb-3">
+                      Ask me anything about your health data or symptoms.
+                    </p>
+                    <button className="w-full text-left text-sm bg-white/[0.03] border border-white/[0.05] rounded-lg px-3 py-2 text-gray-400 hover:text-white hover:border-white/[0.1] transition-all">
+                      "What's causing my headaches?" →
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
