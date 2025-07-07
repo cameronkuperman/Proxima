@@ -276,7 +276,7 @@ export default function DashboardPage() {
             <motion.div
               whileHover={{ scale: 1.02 }}
               className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
-              onClick={() => setProfileModalOpen(true)}
+              onClick={() => router.push('/profile')}
             >
               {/* Completion ring background */}
               <div className="absolute top-4 right-4">
@@ -314,7 +314,13 @@ export default function DashboardPage() {
               <div className="text-sm text-gray-400 mb-4 group-hover:blur-0 blur-[2px] transition-all">
                 O+ • 3 🚨 • 2 💊
               </div>
-              <button className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-white text-sm font-medium hover:from-purple-600/30 hover:to-pink-600/30 transition-all">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfileModalOpen(true);
+                }}
+                className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-white text-sm font-medium hover:from-purple-600/30 hover:to-pink-600/30 transition-all"
+              >
                 Configure Profile
               </button>
             </motion.div>
@@ -652,7 +658,10 @@ export default function DashboardPage() {
             className="mb-8"
           >
             <h2 className="text-2xl font-semibold text-white mb-6">Your Health Story</h2>
-            <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+            <div 
+              onClick={() => router.push('/intelligence')}
+              className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all"
+            >
               <div className="prose prose-invert max-w-none">
                 <p className="text-gray-300 leading-relaxed">
                   <span className="text-white font-medium">Today&apos;s chapter:</span> Your health journey continues to show positive trends. The reduction in headache intensity over the past week correlates with your improved sleep quality scores. Your body is responding well to the new routine you established 7 days ago.
@@ -660,11 +669,14 @@ export default function DashboardPage() {
                 <p className="text-gray-300 leading-relaxed mt-4">
                   The AI analysis suggests that maintaining your current hydration levels and continuing with the stress management techniques will likely prevent the predicted migraine. Your consistency in tracking symptoms has enabled more accurate health predictions.
                 </p>
-                <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center justify-between mt-4">
                   <span className="text-xs text-gray-500">AI-generated narrative • Updated 2 hours ago</span>
-                  <button className="text-xs text-purple-400 hover:text-purple-300">
-                    Read full story →
-                  </button>
+                  <div className="flex items-center gap-2 text-xs text-purple-400">
+                    <span>View full intelligence</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
