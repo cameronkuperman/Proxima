@@ -42,8 +42,8 @@ export default function LiquidGlassLogin() {
     
     setIsLoading(false);
     
-    // Redirect to dashboard after successful login/signup
-    router.push('/dashboard');
+    // Redirect to home page after successful login/signup
+    router.push('/');
   };
 
   return (

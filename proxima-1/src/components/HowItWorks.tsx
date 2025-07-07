@@ -149,12 +149,13 @@ export default function HowItWorks() {
         >
           <p className="text-gray-400 mb-6">Ready to try it out?</p>
           <motion.button 
+            onClick={() => window.location.href = '/demo'}
             className="px-8 py-4 text-lg font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
           >
-            Start Free Demo
+            Try Interactive Demo
           </motion.button>
         </motion.div>
       </div>

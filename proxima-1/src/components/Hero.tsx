@@ -146,7 +146,8 @@ export default function Hero() {
           >
             <EmailSignupForm />
             
-            <motion.button 
+            <motion.button
+              onClick={() => window.location.href = '/demo'} 
               className="w-full px-8 py-4 text-gray-400 border border-gray-800 rounded-lg hover:bg-gray-900/50 hover:border-gray-700 transition-all duration-200 flex items-center justify-center gap-3 group"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -156,8 +157,7 @@ export default function Hero() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Watch Demo
-              <span className="text-gray-600 text-sm">(Coming Soon)</span>
+              Explore Features
             </motion.button>
           </motion.div>
           
