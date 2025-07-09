@@ -10,8 +10,8 @@ export default function AuthStatus() {
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-        <span className="text-sm text-gray-400">Loading...</span>
+        <div className="w-4 h-4 border-2 border-gray-600 border-t-purple-500 rounded-full animate-spin" />
+        <span className="text-sm text-gray-400 font-light">Loading...</span>
       </div>
     );
   }
@@ -19,21 +19,15 @@ export default function AuthStatus() {
   if (user) {
     return (
       <div className="flex items-center gap-4">
-        <div className="text-sm text-gray-300">
+        <div className="text-sm text-gray-300 font-light">
           <span>Welcome, </span>
           <span className="text-white font-medium">
             {user.user_metadata?.full_name || user.email}
           </span>
         </div>
         <button
-          onClick={() => router.push('/dashboard')}
-          className="px-3 py-1 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-        >
-          Dashboard
-        </button>
-        <button
           onClick={() => signOut()}
-          className="px-3 py-1 text-sm border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white rounded-lg transition-colors"
+          className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-gray-700 hover:bg-gray-900/70 rounded-lg transition-all duration-200"
         >
           Sign Out
         </button>
@@ -45,7 +39,7 @@ export default function AuthStatus() {
     <div className="flex items-center gap-3">
       <button
         onClick={() => router.push('/login')}
-        className="px-4 py-2 text-sm border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white rounded-lg transition-colors"
+        className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-gray-700 hover:bg-gray-900/70 rounded-lg transition-all duration-200"
       >
         Sign In
       </button>
