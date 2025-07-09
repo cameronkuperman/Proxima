@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { X, Sparkles, ChevronRight } from 'lucide-react'
 import { FeatureCard } from './FeatureCard'
 import { QuickScanDemo } from './QuickScanDemo'
@@ -149,7 +150,8 @@ export function InteractiveDemo() {
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-semibold text-white">Proxima Demo</h1>
+                <Image src="/logo.png" alt="Proxima" width={120} height={40} priority className="h-8 w-auto" />
+                <h1 className="text-2xl font-semibold text-white">Demo</h1>
                 {state.currentView === 'cards' && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -240,10 +242,13 @@ export function InteractiveDemo() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 1.5 }}
-                    className="mt-12 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-400 text-sm"
+                    transition={{ delay: 1.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="mt-12 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-900/50 backdrop-blur-sm border border-gray-800 text-gray-400 text-sm"
                   >
-                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                    </span>
                     AI integration in active development
                   </motion.div>
                 </div>
@@ -257,6 +262,7 @@ export function InteractiveDemo() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 className="h-full flex flex-col items-center justify-center px-6 py-12"
               >
                 <motion.div
@@ -289,9 +295,10 @@ export function InteractiveDemo() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                     className="mt-12 text-center"
                   >
-                    <p className="text-green-400 mb-6 text-lg">
+                    <p className="text-green-400 mb-6 text-lg font-light">
                       🎉 You've explored all features!
                     </p>
                     <motion.button

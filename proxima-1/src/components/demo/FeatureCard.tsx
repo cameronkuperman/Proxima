@@ -48,7 +48,7 @@ export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCard
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
+      transition={{ delay: index * 0.1, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
       onClick={onClick}
       className="relative group cursor-pointer"
     >
@@ -60,7 +60,7 @@ export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCard
         className={`relative h-full p-8 rounded-2xl glass glass-hover card-shadow card-shadow-hover overflow-hidden`}
       >
         {/* Gradient overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />
+        <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-3 group-hover:opacity-8 transition-opacity duration-300`} />
         
         {/* Explored indicator */}
         {isExplored && (
@@ -79,21 +79,21 @@ export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCard
           <div className="text-5xl mb-4">{feature.icon}</div>
 
           {/* Title and subtitle */}
-          <h3 className="text-2xl font-bold text-white mb-1">{feature.title}</h3>
-          <p className="text-gray-300 mb-4">{feature.subtitle}</p>
+          <h3 className="text-2xl font-semibold text-white mb-1 tracking-tight">{feature.title}</h3>
+          <p className="text-gray-300 mb-4 font-light">{feature.subtitle}</p>
 
           {/* Description */}
-          <p className="text-gray-400 text-sm mb-6">{feature.description}</p>
+          <p className="text-gray-400 text-sm mb-6 leading-relaxed">{feature.description}</p>
 
           {/* Status Badge */}
           <div className="flex items-center justify-between">
-            <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${config.badgeColor}`}>
+            <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${config.badgeColor} backdrop-blur-sm`}>
               {config.icon}
               <span>{config.badge}</span>
             </div>
             
             {feature.releaseDate && (
-              <span className="text-xs text-gray-500">{feature.releaseDate}</span>
+              <span className="text-xs text-gray-500 font-light">{feature.releaseDate}</span>
             )}
           </div>
 
