@@ -56,7 +56,8 @@ export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCard
       <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className={`relative h-full p-8 rounded-2xl bg-gradient-to-br ${feature.gradient} bg-opacity-10 backdrop-blur-sm border border-white/10 overflow-hidden`}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        className={`relative h-full p-8 rounded-2xl glass glass-hover card-shadow card-shadow-hover overflow-hidden`}
       >
         {/* Gradient overlay */}
         <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />

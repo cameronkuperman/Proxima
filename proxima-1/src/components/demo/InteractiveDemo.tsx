@@ -95,64 +95,97 @@ export function InteractiveDemo() {
   const currentFeature = features.find(f => f.id === state.currentView)
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden">
-      {/* Background gradient animation */}
+    <div className="fixed inset-0 bg-[#0a0a0a] overflow-hidden">
+      {/* Background gradient animation - matching main site style */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20" />
-        <motion.div
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a]" />
+        
+        {/* Subtle grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 1px)`,
+            backgroundSize: '40px 40px'
+          }}
+        />
+        
+        {/* Gradient orbs - matching main site style */}
+        <motion.div 
+          className="absolute top-0 right-0 w-[800px] h-[800px] rounded-full bg-gradient-radial from-purple-500/10 via-purple-500/5 to-transparent blur-3xl"
           animate={{
-            backgroundPosition: ['0% 0%', '100% 100%'],
+            scale: [1, 1.1, 1],
+            opacity: [0.5, 0.8, 0.5],
           }}
           transition={{
-            duration: 20,
+            duration: 8,
             repeat: Infinity,
-            repeatType: 'reverse'
+            ease: "easeInOut"
           }}
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 20% 50%, #3b82f6 0%, transparent 50%), radial-gradient(circle at 80% 80%, #a855f7 0%, transparent 50%)',
-            backgroundSize: '100% 100%'
+        />
+        <motion.div 
+          className="absolute bottom-0 left-0 w-[600px] h-[600px] rounded-full bg-gradient-radial from-blue-500/10 via-blue-500/5 to-transparent blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            opacity: [0.5, 0.7, 0.5],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
           }}
         />
       </div>
 
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col">
-        {/* Header */}
+        {/* Header - matching main site glassmorphism style */}
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="flex items-center justify-between p-6"
+          transition={{ delay: 0.5, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-gray-800"
         >
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-white">Proxima Demo</h1>
-            {state.currentView === 'cards' && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2"
-              >
-                {features.map((feature) => (
-                  <div
-                    key={feature.id}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      state.exploredFeatures.includes(feature.id)
-                        ? 'bg-white'
-                        : 'bg-white/30'
-                    }`}
-                  />
-                ))}
-              </motion.div>
-            )}
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
+                <h1 className="text-2xl font-semibold text-white">Proxima Demo</h1>
+                {state.currentView === 'cards' && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-2"
+                  >
+                    {features.map((feature) => (
+                      <div
+                        key={feature.id}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          state.exploredFeatures.includes(feature.id)
+                            ? 'bg-white'
+                            : 'bg-white/30'
+                        }`}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={exitDemo}
+                  className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                >
+                  Back to Site
+                </button>
+                <button
+                  onClick={exitDemo}
+                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
           </div>
-          
-          <button
-            onClick={exitDemo}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
         </motion.header>
 
         {/* Main Content */}
@@ -180,8 +213,8 @@ export function InteractiveDemo() {
                   <motion.h1
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="text-6xl font-bold text-white mb-6"
+                    transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-5xl sm:text-6xl md:text-7xl font-semibold text-white mb-6 tracking-tight"
                   >
                     Welcome to Proxima
                   </motion.h1>
@@ -189,8 +222,8 @@ export function InteractiveDemo() {
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="text-2xl text-gray-300 mb-8"
+                    transition={{ delay: 0.6, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-2xl sm:text-3xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed font-light"
                   >
                     Your AI-powered health intelligence platform
                   </motion.p>
@@ -229,12 +262,13 @@ export function InteractiveDemo() {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                   className="text-center mb-12"
                 >
-                  <h2 className="text-4xl font-bold text-white mb-4">
+                  <h2 className="text-4xl sm:text-5xl font-semibold text-white mb-4 tracking-tight">
                     Choose Your Experience
                   </h2>
-                  <p className="text-xl text-gray-400">
+                  <p className="text-xl sm:text-2xl text-gray-400 font-light">
                     Click any card to explore • Available features are ready to use
                   </p>
                 </motion.div>
@@ -260,12 +294,15 @@ export function InteractiveDemo() {
                     <p className="text-green-400 mb-6 text-lg">
                       🎉 You've explored all features!
                     </p>
-                    <button
+                    <motion.button
                       onClick={exitDemo}
-                      className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition-all text-lg"
+                      className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-lg"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     >
                       Get Started with Proxima
-                    </button>
+                    </motion.button>
                   </motion.div>
                 )}
               </motion.div>
