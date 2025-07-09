@@ -13,24 +13,27 @@ import { PhotoAnalysisDemo } from './PhotoAnalysisDemo'
 interface DemoState {
   currentView: 'welcome' | 'cards' | 'quickScan' | 'deepDive' | 'photoAnalysis' | 'closing'
   exploredFeatures: string[]
+  completedFeatures: string[]
 }
 
 export function InteractiveDemo() {
   const router = useRouter()
   const [state, setState] = useState<DemoState>({
     currentView: 'welcome',
-    exploredFeatures: []
+    exploredFeatures: [],
+    completedFeatures: []
   })
 
   useEffect(() => {
     // Save progress
-    if (state.exploredFeatures.length > 0) {
+    if (state.exploredFeatures.length > 0 || state.completedFeatures.length > 0) {
       localStorage.setItem('proxima-demo-progress', JSON.stringify({
         exploredFeatures: state.exploredFeatures,
+        completedFeatures: state.completedFeatures,
         lastSeen: new Date().toISOString()
       }))
     }
-  }, [state.exploredFeatures])
+  }, [state.exploredFeatures, state.completedFeatures])
 
   useEffect(() => {
     // Auto-advance from welcome
@@ -50,8 +53,20 @@ export function InteractiveDemo() {
     }))
   }
 
+  const completeFeature = (featureId: string) => {
+    setState(prev => ({
+      ...prev,
+      currentView: 'cards',
+      completedFeatures: [...new Set([...prev.completedFeatures, featureId])]
+    }))
+  }
+
   const backToCards = () => {
     setState(prev => ({ ...prev, currentView: 'cards' }))
+  }
+
+  const isFeatureUnlocked = (feature: typeof features[0]) => {
+    return feature.prerequisites.every(prereq => state.completedFeatures.includes(prereq))
   }
 
   const exitDemo = () => {
@@ -67,7 +82,8 @@ export function InteractiveDemo() {
       status: 'available' as const,
       icon: '⚡',
       gradient: 'from-blue-500 via-cyan-500 to-teal-500',
-      demo: <QuickScanDemo onComplete={backToCards} />
+      prerequisites: [] as string[],
+      demo: <QuickScanDemo onComplete={() => completeFeature('quickScan')} />
     },
     {
       id: 'deepDive',
@@ -78,7 +94,8 @@ export function InteractiveDemo() {
       releaseDate: 'January 2025',
       icon: '🧬',
       gradient: 'from-purple-500 via-pink-500 to-rose-500',
-      demo: <DeepDiveDemo onComplete={backToCards} />
+      prerequisites: ['quickScan'] as string[],
+      demo: <DeepDiveDemo onComplete={() => completeFeature('deepDive')} />
     },
     {
       id: 'photoAnalysis',
@@ -89,7 +106,8 @@ export function InteractiveDemo() {
       releaseDate: 'Q1 2025',
       icon: '📸',
       gradient: 'from-orange-500 via-red-500 to-pink-500',
-      demo: <PhotoAnalysisDemo onComplete={backToCards} />
+      prerequisites: ['quickScan', 'deepDive'] as string[],
+      demo: <PhotoAnalysisDemo onComplete={() => completeFeature('photoAnalysis')} />
     }
   ]
 
@@ -162,7 +180,9 @@ export function InteractiveDemo() {
                       <div
                         key={feature.id}
                         className={`w-2 h-2 rounded-full transition-colors ${
-                          state.exploredFeatures.includes(feature.id)
+                          state.completedFeatures.includes(feature.id)
+                            ? 'bg-green-400'
+                            : state.exploredFeatures.includes(feature.id)
                             ? 'bg-white'
                             : 'bg-white/30'
                         }`}
@@ -275,23 +295,30 @@ export function InteractiveDemo() {
                     Choose Your Experience
                   </h2>
                   <p className="text-xl sm:text-2xl text-gray-400 font-light">
-                    Click any card to explore • Available features are ready to use
+                    Complete features in order to unlock the next one
                   </p>
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full">
-                  {features.map((feature, index) => (
-                    <FeatureCard
-                      key={feature.id}
-                      feature={feature}
-                      index={index}
-                      isExplored={state.exploredFeatures.includes(feature.id)}
-                      onClick={() => exploreFeature(feature.id)}
-                    />
-                  ))}
+                  {features.map((feature, index) => {
+                    const isUnlocked = isFeatureUnlocked(feature)
+                    const isCompleted = state.completedFeatures.includes(feature.id)
+                    
+                    return (
+                      <FeatureCard
+                        key={feature.id}
+                        feature={feature}
+                        index={index}
+                        isExplored={state.exploredFeatures.includes(feature.id)}
+                        isUnlocked={isUnlocked}
+                        isCompleted={isCompleted}
+                        onClick={() => isUnlocked && exploreFeature(feature.id)}
+                      />
+                    )
+                  })}
                 </div>
 
-                {state.exploredFeatures.length === 3 && (
+                {state.completedFeatures.length === 3 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
