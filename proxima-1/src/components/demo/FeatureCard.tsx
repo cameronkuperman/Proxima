@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Check, Lock, Construction, ChevronRight } from 'lucide-react'
+import { Check, Lock, Construction, ChevronRight, CheckCircle } from 'lucide-react'
 
 interface FeatureCardProps {
   feature: {
@@ -14,35 +14,60 @@ interface FeatureCardProps {
     releaseDate?: string
     icon: string
     gradient: string
+    prerequisites: string[]
   }
   index: number
   isExplored: boolean
+  isUnlocked: boolean
+  isCompleted: boolean
   onClick: () => void
 }
 
-export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCardProps) {
-  const statusConfig = {
-    available: {
-      badge: 'Ready Now',
-      badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
-      icon: null,
-      canInteract: true
-    },
-    beta: {
-      badge: 'Beta Access',
-      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-      icon: <Construction className="w-3 h-3" />,
-      canInteract: true
-    },
-    'coming-soon': {
-      badge: 'Coming Soon',
-      badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      icon: <Lock className="w-3 h-3" />,
-      canInteract: true
+export function FeatureCard({ feature, index, isExplored, isUnlocked, isCompleted, onClick }: FeatureCardProps) {
+  const getStatusConfig = () => {
+    if (isCompleted) {
+      return {
+        badge: 'Completed',
+        badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
+        icon: <CheckCircle className="w-3 h-3" />,
+        canInteract: true
+      }
     }
+    
+    if (!isUnlocked) {
+      return {
+        badge: 'Locked',
+        badgeColor: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+        icon: <Lock className="w-3 h-3" />,
+        canInteract: false
+      }
+    }
+    
+    const statusConfig = {
+      available: {
+        badge: 'Ready Now',
+        badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
+        icon: null,
+        canInteract: true
+      },
+      beta: {
+        badge: 'Beta Access',
+        badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+        icon: <Construction className="w-3 h-3" />,
+        canInteract: true
+      },
+      'coming-soon': {
+        badge: 'Coming Soon',
+        badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        icon: <Lock className="w-3 h-3" />,
+        canInteract: true
+      }
+    }
+    
+    return statusConfig[feature.status]
   }
 
-  const config = statusConfig[feature.status]
+  const config = getStatusConfig()
 
   return (
     <motion.div
@@ -50,17 +75,25 @@ export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCard
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
       onClick={onClick}
-      className="relative group cursor-pointer"
+      className={`relative group ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
     >
       {/* Card */}
       <motion.div
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={isUnlocked ? { scale: 1.01 } : {}}
+        whileTap={isUnlocked ? { scale: 0.99 } : {}}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
-        className={`relative h-full p-8 rounded-2xl glass glass-hover card-shadow card-shadow-hover overflow-hidden`}
+        className={`relative h-full p-8 rounded-2xl backdrop-blur-sm border transition-all duration-300 overflow-hidden ${
+          isUnlocked 
+            ? 'bg-gray-900/20 border-gray-800/50 hover:border-gray-700/50 hover:bg-gray-900/30' 
+            : 'bg-gray-900/10 border-gray-800/30 opacity-50'
+        }`}
       >
         {/* Gradient overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-3 group-hover:opacity-8 transition-opacity duration-300`} />
+        <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} transition-opacity duration-300 ${
+          isUnlocked 
+            ? 'opacity-2 group-hover:opacity-5' 
+            : 'opacity-1'
+        }`} />
         
         {/* Explored indicator */}
         {isExplored && (
@@ -79,11 +112,17 @@ export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCard
           <div className="text-5xl mb-4">{feature.icon}</div>
 
           {/* Title and subtitle */}
-          <h3 className="text-2xl font-semibold text-white mb-1 tracking-tight">{feature.title}</h3>
-          <p className="text-gray-300 mb-4 font-light">{feature.subtitle}</p>
+          <h3 className={`text-2xl font-semibold mb-1 tracking-tight ${
+            isUnlocked ? 'text-white' : 'text-gray-500'
+          }`}>{feature.title}</h3>
+          <p className={`mb-4 font-light ${
+            isUnlocked ? 'text-gray-300' : 'text-gray-600'
+          }`}>{feature.subtitle}</p>
 
           {/* Description */}
-          <p className="text-gray-400 text-sm mb-6 leading-relaxed">{feature.description}</p>
+          <p className={`text-sm mb-6 leading-relaxed ${
+            isUnlocked ? 'text-gray-400' : 'text-gray-600'
+          }`}>{isUnlocked ? feature.description : 'Complete previous features to unlock'}</p>
 
           {/* Status Badge */}
           <div className="flex items-center justify-between">
@@ -98,28 +137,26 @@ export function FeatureCard({ feature, index, isExplored, onClick }: FeatureCard
           </div>
 
           {/* Hover indicator */}
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            whileHover={{ opacity: 1, x: 0 }}
-            className="absolute bottom-8 right-8 text-white/50"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </motion.div>
+          {isUnlocked && (
+            <motion.div
+              initial={{ opacity: 0, x: -5 }}
+              whileHover={{ opacity: 0.7, x: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute bottom-8 right-8 text-white/40"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </motion.div>
+          )}
         </div>
 
-        {/* Animated border gradient */}
-        <motion.div
-          className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-20 transition-opacity`}
-          style={{ 
-            background: `linear-gradient(45deg, transparent 30%, ${feature.gradient.includes('blue') ? '#3b82f6' : feature.gradient.includes('purple') ? '#a855f7' : '#f97316'} 50%, transparent 70%)`,
-            backgroundSize: '200% 200%',
-            animation: 'shimmer 3s linear infinite'
-          }}
-        />
+        {/* Subtle border highlight */}
+        <div className={`absolute inset-0 rounded-2xl border border-transparent group-hover:border-gray-600/30 transition-all duration-300`} />
       </motion.div>
 
       {/* Glow effect */}
-      <div className={`absolute -inset-0.5 bg-gradient-to-br ${feature.gradient} rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity`} />
+      {isUnlocked && (
+        <div className={`absolute -inset-0.5 bg-gradient-to-br ${feature.gradient} rounded-2xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+      )}
     </motion.div>
   )
 }
