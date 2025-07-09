@@ -36,7 +36,7 @@ const partners = [
   {
     name: 'Google',
     description: 'Great for complex analysis and deep thinking',
-    models: ['Gemini 2.5 Pro', '2.5 Pro Deep Thinking', '2.5 Flash', '2.5 Nano'],
+    models: ['Gemini 2.5 Pro', '2.5 Pro Deep Thinking', '2.5 Flash', '2.5 Flash Lite'],
     gradient: 'from-blue-500/20 to-cyan-500/20',
     logo: (
       <Image

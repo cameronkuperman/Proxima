@@ -37,7 +37,7 @@ export default function Contact() {
           Join the waitlist
         </h2>
         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
-          We're launching in early 2025. Join thousands who are already on the list 
+          We're launching in late 2025/early 2026. Join thousands who are already on the list 
           for exclusive early access and special launch pricing.
         </p>
 
@@ -69,7 +69,7 @@ export default function Contact() {
         <div className="pt-20 border-t border-gray-800">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="text-gray-500 text-sm">
-              © 2024 Proxima-1. All rights reserved.
+              © 2025 Proxima-1. All rights reserved.
             </div>
             <div className="flex items-center gap-6 text-sm">
               <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</a>
