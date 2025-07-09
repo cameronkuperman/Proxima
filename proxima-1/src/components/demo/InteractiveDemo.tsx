@@ -167,9 +167,14 @@ export function InteractiveDemo() {
         >
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-center justify-between h-16">
+              {/* Left side - Logo */}
+              <div className="flex items-center">
+                <Image src="/widelogoforbanner.png" alt="Proxima" width={200} height={50} priority className="h-10 w-auto" />
+              </div>
+              
+              {/* Center - Demo title and progress */}
               <div className="flex items-center gap-4">
-                <Image src="/logo.png" alt="Proxima" width={120} height={40} priority className="h-8 w-auto" />
-                <h1 className="text-2xl font-semibold text-white">Demo</h1>
+                <h1 className="text-xl font-semibold text-white tracking-tight">Demo Experience</h1>
                 {state.currentView === 'cards' && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -192,6 +197,7 @@ export function InteractiveDemo() {
                 )}
               </div>
               
+              {/* Right side - Exit actions */}
               <div className="flex items-center gap-4">
                 <button
                   onClick={exitDemo}
