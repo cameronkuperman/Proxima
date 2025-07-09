@@ -95,14 +95,25 @@ export function FeatureCard({ feature, index, isExplored, isUnlocked, isComplete
             : 'opacity-1'
         }`} />
         
-        {/* Explored indicator */}
-        {isExplored && (
+        {/* Status indicators */}
+        {isExplored && isUnlocked && (
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             className="absolute top-4 right-4 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
           >
             <Check className="w-4 h-4 text-white" />
+          </motion.div>
+        )}
+        
+        {/* Lock indicator for locked features */}
+        {!isUnlocked && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute top-4 right-4 w-6 h-6 bg-gray-700/80 rounded-full flex items-center justify-center backdrop-blur-sm"
+          >
+            <Lock className="w-3 h-3 text-gray-400" />
           </motion.div>
         )}
 
