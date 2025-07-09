@@ -33,20 +33,19 @@ export default function HealthcarePros() {
         
         {/* Advisors Grid */}
         <div className="grid md:grid-cols-2 gap-12 max-w-4xl mx-auto">
-          {/* Dr. Kuperman */}
+          {/* Dr. Lenny */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative bg-gray-900/30 border border-gray-800 rounded-2xl p-8 hover:border-gray-700 transition-all duration-300">
               <div className="flex items-start gap-6">
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-3xl font-bold text-white">
-                  PK
+                  LG
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-2xl font-semibold text-white mb-2">Dr. Paul Kuperman</h3>
+                  <h3 className="text-2xl font-semibold text-white mb-2">Dr. Leonard Goldschmidt</h3>
                   <p className="text-purple-400 mb-4">Medical Advisor</p>
                   <p className="text-gray-400 leading-relaxed">
-                    Helping us understand what questions doctors actually need answered 
-                    and how to make symptom reporting truly useful for medical visits.
+                    Using Proxima has been a game changer for my practice. It has bridged the gap between their health and my medical knowledge.
                   </p>
                 </div>
               </div>
@@ -65,8 +64,7 @@ export default function HealthcarePros() {
                   <h3 className="text-2xl font-semibold text-white mb-2">Dr. Edward Botse-Baidoo</h3>
                   <p className="text-blue-400 mb-4">Medical Advisor</p>
                   <p className="text-gray-400 leading-relaxed">
-                    Guiding our approach to make sure we're building something that 
-                    patients will trust and doctors will actually find helpful.
+                    Proxima has been a great tool for me to further understand the needs of my patients and how to improve the healthcare experience for them.
                   </p>
                 </div>
               </div>
