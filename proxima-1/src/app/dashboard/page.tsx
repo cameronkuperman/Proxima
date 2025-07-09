@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -8,6 +9,7 @@ import HealthProfileModal from '@/components/HealthProfileModal';
 import OracleChat from '@/components/OracleChat';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
+import OnboardingGuard from '@/components/OnboardingGuard';
 
 // Mock data for timeline
 const mockTimelineData = [
@@ -160,6 +162,7 @@ export default function DashboardPage() {
 
   return (
     <AuthGuard requireAuth={true}>
+      <OnboardingGuard>
       <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden transition-all duration-1000">
         {/* Ambient Health Background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${getAmbientGradient()} transition-all duration-3000`} />
@@ -442,10 +445,10 @@ export default function DashboardPage() {
                               </p>
                               <div className="flex items-center gap-2">
                                 {report.tags.map((tag, tagIdx) => (
-                                  <>
-                                    <span key={tag} className="text-xs text-gray-400">{tag}</span>
+                                  <React.Fragment key={tag}>
+                                    <span className="text-xs text-gray-400">{tag}</span>
                                     {tagIdx < report.tags.length - 1 && <span className="text-xs text-gray-500">•</span>}
-                                  </>
+                                  </React.Fragment>
                                 ))}
                               </div>
                             </div>
@@ -790,6 +793,7 @@ export default function DashboardPage() {
           healthScore={healthScore}
         />
       </div>
+      </OnboardingGuard>
     </AuthGuard>
   );
 }
