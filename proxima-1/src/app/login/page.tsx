@@ -1,5 +1,10 @@
 import LiquidGlassLogin from "@/components/LiquidGlassLogin";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function LoginPage() {
-  return <LiquidGlassLogin />;
+  return (
+    <AuthGuard requireAuth={false}>
+      <LiquidGlassLogin />
+    </AuthGuard>
+  );
 }

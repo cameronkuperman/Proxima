@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 export default function LiquidGlassLogin() {
   const router = useRouter();
@@ -19,6 +21,33 @@ export default function LiquidGlassLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Check for existing session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session ? 'User is logged in' : 'No session');
+      setSession(session);
+      if (session) {
+        console.log('User already logged in, redirecting to dashboard...');
+        router.push('/dashboard');
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session ? 'User logged in' : 'User logged out');
+      setSession(session);
+      if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        console.log('Redirecting to dashboard due to auth state change...');
+        router.push('/dashboard');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   const passwordStrength = calculatePasswordStrength(password);
 
@@ -36,14 +65,110 @@ export default function LiquidGlassLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     
-    // Simulate API call (reduced for better UX)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      if (isSignup) {
+        // Validate passwords match
+        if (password !== confirmPassword) {
+          setError('Passwords do not match');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Sign up new user
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+            }
+          }
+        });
+        
+        if (error) {
+          setError(error.message);
+        } else if (data.user) {
+          // Check if email confirmation is required
+          if (data.user.identities?.length === 0) {
+            setError('Please check your email to confirm your account before signing in');
+          } else {
+            // If no email confirmation required, redirect immediately
+            console.log('Sign up successful, redirecting...');
+            router.push('/dashboard');
+          }
+        }
+      } else {
+        // Sign in existing user
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) {
+          setError(error.message);
+        } else if (data.user) {
+          console.log('Sign in successful, redirecting...');
+          router.push('/dashboard');
+        }
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    setIsLoading(true);
+    setError(null);
     
-    setIsLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        }
+      });
+      
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address first');
+      return;
+    }
     
-    // Redirect to home page after successful login/signup
-    router.push('/');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        setError(error.message);
+      } else {
+        setError('Password reset link sent to your email!');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -117,6 +242,18 @@ export default function LiquidGlassLogin() {
               {isSignup ? 'Join Proxima for instant health insights' : 'Sign in to your Proxima account'}
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg"
+            >
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            </motion.div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Input (Signup only) */}
@@ -312,9 +449,13 @@ export default function LiquidGlassLogin() {
             {/* Forgot Password */}
             {!isSignup && (
               <div className="flex justify-end">
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
             )}
 
@@ -352,9 +493,11 @@ export default function LiquidGlassLogin() {
           {/* Social Login */}
           <div className="space-y-3">
             <motion.button
+              onClick={() => handleSocialLogin('google')}
+              disabled={isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-3 rounded-lg border border-white/10 hover:border-white/20 transition-all duration-300 flex items-center justify-center space-x-3 group"
+              className="w-full py-3 rounded-lg border border-white/10 hover:border-white/20 transition-all duration-300 flex items-center justify-center space-x-3 group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -366,9 +509,11 @@ export default function LiquidGlassLogin() {
             </motion.button>
 
             <motion.button
+              onClick={() => handleSocialLogin('apple')}
+              disabled={isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-3 rounded-lg border border-white/10 hover:border-white/20 transition-all duration-300 flex items-center justify-center space-x-3 group"
+              className="w-full py-3 rounded-lg border border-white/10 hover:border-white/20 transition-all duration-300 flex items-center justify-center space-x-3 group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
