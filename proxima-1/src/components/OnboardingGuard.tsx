@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserProfile, isOnboardingComplete } from '@/utils/onboarding';
 
@@ -12,6 +12,7 @@ interface OnboardingGuardProps {
 export default function OnboardingGuard({ children }: OnboardingGuardProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [checking, setChecking] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
@@ -43,17 +44,27 @@ export default function OnboardingGuard({ children }: OnboardingGuardProps) {
         console.log('OnboardingGuard: Profile:', profile);
         console.log('OnboardingGuard: Onboarding complete:', complete);
         
-        if (!complete) {
+        // If onboarding is complete and we're on the onboarding page, redirect to dashboard
+        if (complete && pathname === '/onboarding') {
+          console.log('OnboardingGuard: Onboarding already complete, redirecting to dashboard');
+          router.push('/dashboard');
+          return;
+        }
+        
+        // If onboarding is not complete and we're not on the onboarding page, redirect to onboarding
+        if (!complete && pathname !== '/onboarding') {
           console.log('OnboardingGuard: Redirecting to onboarding');
           router.push('/onboarding');
           return;
         }
         
-        setOnboardingComplete(true);
+        setOnboardingComplete(complete);
       } catch (error) {
         console.error('OnboardingGuard: Error checking onboarding:', error);
         // On error, redirect to onboarding to be safe
-        router.push('/onboarding');
+        if (pathname !== '/onboarding') {
+          router.push('/onboarding');
+        }
         return;
       } finally {
         setChecking(false);
@@ -61,7 +72,7 @@ export default function OnboardingGuard({ children }: OnboardingGuardProps) {
     }
 
     checkOnboardingStatus();
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   // Show loading while checking auth or onboarding status
   if (loading || checking) {
@@ -75,12 +86,18 @@ export default function OnboardingGuard({ children }: OnboardingGuardProps) {
     );
   }
 
-  // Only render children if user is authenticated and onboarding is complete
+  // Only render children if user is authenticated and onboarding status is appropriate for the current page
   if (!user) {
     return null;
   }
 
-  if (!onboardingComplete) {
+  // On onboarding page, only show if onboarding is not complete
+  if (pathname === '/onboarding' && onboardingComplete) {
+    return null;
+  }
+
+  // On other pages, only show if onboarding is complete
+  if (pathname !== '/onboarding' && !onboardingComplete) {
     return null;
   }
 
