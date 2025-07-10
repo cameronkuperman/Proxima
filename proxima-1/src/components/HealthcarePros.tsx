@@ -43,10 +43,9 @@ export default function HealthcarePros() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-2xl font-semibold text-white mb-2">Dr. Leonard Goldschmidt</h3>
-                  <p className="text-purple-400 mb-4">Medical Advisor</p>
+                  <p className="text-purple-400 mb-4">M.D., J.D.</p>
                   <p className="text-gray-400 leading-relaxed">
-                    Using Proxima has been a game changer for my practice. It has bridged the gap between their health and my medical knowledge.
-                  </p>
+Guides our medical-legal strategy and oversees our HIPAA compliance and privacy policies, ensuring we maintain patient trust while keeping their data secure.                  </p>
                 </div>
               </div>
             </div>
@@ -62,9 +61,9 @@ export default function HealthcarePros() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-2xl font-semibold text-white mb-2">Dr. Edward Botse-Baidoo</h3>
-                  <p className="text-blue-400 mb-4">Medical Advisor</p>
+                  <p className="text-blue-400 mb-4">M.D.</p>
                   <p className="text-gray-400 leading-relaxed">
-                    Proxima has been a great tool for me to further understand the needs of my patients and how to improve the healthcare experience for them.
+                    Responsible for the clinical validation of our AI. He tests our platform’s medical reasoning and refines its system prompts to guarantee every analysis is accurate, safe, and effective.
                   </p>
                 </div>
               </div>

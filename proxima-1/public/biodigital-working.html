@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html style="height: 100%; margin: 0;">
+<head>
+    <title>BioDigital Human Working Integration</title>
+    <style>
+        body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: -apple-system, sans-serif;
+        }
+        #container {
+            height: 100%;
+            position: relative;
+        }
+        #status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            background: rgba(0,0,0,0.9);
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            max-width: 400px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        #status h3 {
+            margin: 0 0 10px 0;
+            color: #4ade80;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .log-entry {
+            font-size: 12px;
+            margin: 3px 0;
+            color: #cbd5e1;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        .log-entry.success { color: #4ade80; }
+        .log-entry.error { color: #f87171; }
+        .log-entry.pick { 
+            color: #60a5fa;
+            font-weight: bold;
+            background: rgba(96, 165, 250, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 5px 0;
+        }
+        #instruction {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.9; }
+            50% { opacity: 1; }
+            100% { opacity: 0.9; }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="status">
+            <h3>BioDigital Selection Status</h3>
+            <div id="logs"></div>
+        </div>
+        
+        <div id="instruction">
+            Click on any body part to see real-time selection
+        </div>
+        
+        <iframe 
+            id="biodigital-iframe" 
+            src="https://human.biodigital.com/widget/?m=6F0C&ui-anatomy-descriptions=false&ui-anatomy-pronunciations=false&ui-anatomy-labels=false&ui-audio=false&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=false&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=false&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&dk=4a7eb63719c66a365c746afeae476870503ba4be"
+            width="100%" 
+            height="100%"
+            frameborder="0"
+            style="border: none;">
+        </iframe>
+    </div>
+    
+    <script src="https://human-api.biodigital.com/build/1.2.1/human-api-1.2.1.min.js"></script>
+    
+    <script>
+        const logsDiv = document.getElementById('logs');
+        let logCount = 0;
+        
+        function log(msg, type = '') {
+            console.log(msg);
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = `[${new Date().toISOString().substr(11, 8)}] ${msg}`;
+            logsDiv.appendChild(entry);
+            
+            // Keep only last 10 logs
+            if (++logCount > 10) {
+                logsDiv.removeChild(logsDiv.firstChild);
+            }
+            
+            // Auto scroll
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        log('Page loaded, initializing...', 'success');
+        
+        // Wait for everything to load
+        window.addEventListener('load', function() {
+            log('Window loaded, waiting for SDK...', '');
+            
+            // Check if HumanAPI is available
+            let checkCount = 0;
+            const checkInterval = setInterval(function() {
+                checkCount++;
+                
+                if (typeof HumanAPI !== 'undefined') {
+                    clearInterval(checkInterval);
+                    log('✓ HumanAPI SDK detected', 'success');
+                    initializeBioDigital();
+                } else if (checkCount > 20) {
+                    clearInterval(checkInterval);
+                    log('✗ HumanAPI SDK not found after 10s', 'error');
+                }
+            }, 500);
+        });
+        
+        function initializeBioDigital() {
+            try {
+                log('Creating Human instance...', '');
+                
+                const human = new HumanAPI.Human('biodigital-iframe');
+                
+                // Set up all possible event handlers
+                human.on('ready', function() {
+                    log('✓ BioDigital Human READY!', 'success');
+                    document.getElementById('instruction').style.display = 'block';
+                    
+                    // Try enabling selection mode
+                    try {
+                        if (human.scene && human.scene.selectionMode) {
+                            human.scene.selectionMode(true);
+                            log('Selection mode enabled via scene', 'success');
+                        }
+                    } catch (e) {
+                        log('Could not enable selection mode: ' + e.message, '');
+                    }
+                    
+                    // Try mouse events
+                    human.on('click', function(event) {
+                        handlePickEvent('human.on.click', event);
+                    });
+                    
+                    human.on('select', function(event) {
+                        handlePickEvent('human.on.select', event);
+                    });
+                    
+                    // Try different pick event patterns
+                    if (human.pick) {
+                        log('Pick object found, setting up handlers...', '');
+                        
+                        // Enable picking mode
+                        if (typeof human.pick.enable === 'function') {
+                            human.pick.enable();
+                            log('Pick mode enabled', 'success');
+                        }
+                        
+                        // Method 1: Standard pick event
+                        human.pick.on('picked', function(event) {
+                            handlePickEvent('pick.on.picked', event);
+                        });
+                        
+                        // Method 2: Alternative pick event
+                        human.pick.on('select', function(event) {
+                            handlePickEvent('pick.on.select', event);
+                        });
+                        
+                        // Method 3: Click event
+                        human.pick.on('click', function(event) {
+                            handlePickEvent('pick.on.click', event);
+                        });
+                        
+                        log('✓ Pick handlers registered', 'success');
+                    }
+                    
+                    // Direct human events
+                    human.on('picked', function(event) {
+                        handlePickEvent('human.on.picked', event);
+                    });
+                    
+                    human.on('scene.picked', function(event) {
+                        handlePickEvent('human.on.scene.picked', event);
+                    });
+                    
+                    human.on('object.selected', function(event) {
+                        handlePickEvent('human.on.object.selected', event);
+                    });
+                    
+                    // Log available methods
+                    if (human.pick) {
+                        const pickMethods = Object.getOwnPropertyNames(human.pick);
+                        log('Pick methods: ' + pickMethods.join(', '), '');
+                        
+                        // Try to find the actual methods
+                        for (let prop in human.pick) {
+                            if (typeof human.pick[prop] === 'function') {
+                                log('Pick function: ' + prop, '');
+                            }
+                        }
+                    }
+                    
+                    // Log human object methods
+                    log('Checking human object methods...', '');
+                    for (let prop in human) {
+                        if (typeof human[prop] === 'function' && prop.includes('pick')) {
+                            log('Human method with pick: ' + prop, '');
+                        }
+                    }
+                    
+                    // Try scene.pick if exists
+                    if (human.scene && human.scene.pick) {
+                        log('Found human.scene.pick, setting up handler...', '');
+                        human.scene.pick.on('picked', function(event) {
+                            handlePickEvent('scene.pick.on.picked', event);
+                        });
+                    }
+                    
+                    // Catch-all event listener
+                    const originalEmit = human._handleTopic || human.emit;
+                    if (originalEmit) {
+                        human._handleTopic = function(topic, data) {
+                            if (topic && topic.includes('pick') || topic.includes('select') || topic.includes('click')) {
+                                log('Event caught: ' + topic, 'pick');
+                                handlePickEvent('caught.' + topic, data);
+                            }
+                            if (originalEmit) originalEmit.apply(this, arguments);
+                        };
+                    }
+                });
+                
+                human.on('error', function(err) {
+                    log('✗ Error: ' + JSON.stringify(err), 'error');
+                });
+                
+                human.on('load', function() {
+                    log('Model loaded', '');
+                });
+                
+            } catch (e) {
+                log('✗ Exception: ' + e.message, 'error');
+            }
+        }
+        
+        function handlePickEvent(source, event) {
+            try {
+                const objectName = event.object?.displayName || 
+                                 event.object?.name || 
+                                 event.objectId || 
+                                 'Unknown';
+                
+                log(`PICKED [${source}]: ${objectName}`, 'pick');
+                
+                // Send to parent window
+                window.parent.postMessage({
+                    type: 'BIODIGITAL_PICK',
+                    source: source,
+                    data: {
+                        objectName: objectName,
+                        objectId: event.objectId,
+                        object: event.object,
+                        worldPos: event.worldPos,
+                        screenPos: event.screenPos
+                    }
+                }, '*');
+                
+                // Hide instruction after first pick
+                document.getElementById('instruction').style.display = 'none';
+                
+            } catch (e) {
+                log('Pick event error: ' + e.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
