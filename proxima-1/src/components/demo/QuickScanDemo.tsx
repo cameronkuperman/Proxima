@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, MousePointer, Sparkles, Check, ChevronDown, AlertCircle, Activity, Clock, BedDouble, TrendingUp, Shield, Calendar, Eye } from 'lucide-react'
+import { ArrowLeft, MousePointer, Sparkles, Check, ChevronDown, AlertCircle, Activity, Clock, BedDouble, TrendingUp, Shield, Calendar, Eye, Briefcase, Users, Dumbbell } from 'lucide-react'
 
 interface QuickScanDemoProps {
   onComplete: () => void
@@ -333,22 +333,40 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-8 z-20"
+                      className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 lg:p-8 z-20"
+                      onClick={() => setShowForm(false)}
                     >
                       <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="bg-gray-900/95 backdrop-blur-xl rounded-3xl p-8 max-w-3xl w-full border border-white/10 max-h-[85vh] overflow-y-auto"
+                        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 rounded-2xl p-6 sm:p-8 max-w-4xl w-full border border-gray-700/50 shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <h4 className="text-3xl font-bold text-white mb-6">
-                          Tell us about your {selectedBodyPart.toLowerCase()} symptoms
-                        </h4>
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-6">
+                          <div>
+                            <h4 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                              Tell us about your <span className="text-blue-400">{selectedBodyPart}</span> symptoms
+                            </h4>
+                            <p className="text-gray-400 text-sm">Help us understand what you're experiencing</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowForm(false)}
+                            className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                          >
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
                         
-                        <form onSubmit={handleFormSubmit} className="space-y-6">
+                        <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto space-y-4 pr-2">
                           {/* Primary symptom description - Required */}
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
                               What's bothering you? <span className="text-red-400">*</span>
                             </label>
                             <textarea
@@ -358,25 +376,27 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                               placeholder="Describe what you're feeling..."
                               required
                               rows={3}
-                              className="w-full px-6 py-4 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:outline-none resize-none"
+                              className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none transition-all placeholder-gray-500"
                             />
                           </div>
 
                           {/* Pain descriptors */}
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
                               How would you describe the pain?
                             </label>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-2">
                               {['Sharp', 'Dull', 'Throbbing', 'Burning', 'Stabbing', 'Aching'].map((type) => (
-                                <label key={type} className="flex items-center gap-3 p-4 rounded-xl bg-gray-800/50 hover:bg-gray-800 cursor-pointer transition-all group">
+                                <label key={type} className="relative">
                                   <input
                                     type="checkbox"
                                     checked={formData.painType.includes(type.toLowerCase())}
                                     onChange={() => handleCheckboxChange('painType', type.toLowerCase())}
-                                    className="w-5 h-5 text-blue-500 rounded"
+                                    className="peer sr-only"
                                   />
-                                  <span className="text-gray-300 group-hover:text-white transition-colors">{type}</span>
+                                  <div className="flex items-center justify-center p-3 rounded-lg bg-gray-800/30 border border-gray-700 hover:bg-gray-800/50 cursor-pointer transition-all peer-checked:bg-blue-500/20 peer-checked:border-blue-500 peer-checked:text-blue-400">
+                                    <span className="text-sm font-medium">{type}</span>
+                                  </div>
                                 </label>
                               ))}
                             </div>
@@ -384,7 +404,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
 
                           {/* Pain level */}
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
                               Pain intensity (1-10)
                             </label>
                             <div className="flex items-center gap-4">
@@ -395,11 +415,11 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                                 max="10"
                                 value={formData.painLevel}
                                 onChange={handleInputChange}
-                                className="flex-1"
+                                className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
                               />
-                              <span className="text-2xl font-bold text-white w-12 text-center">{formData.painLevel}</span>
+                              <span className="text-2xl font-bold text-blue-400 w-12 text-center">{formData.painLevel}</span>
                             </div>
-                            <div className="flex justify-between text-xs text-gray-500 mt-2">
+                            <div className="flex justify-between text-xs text-gray-500 mt-1 px-1">
                               <span>Mild</span>
                               <span>Moderate</span>
                               <span>Severe</span>
@@ -408,14 +428,14 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
 
                           {/* Duration */}
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
                               How long has this been going on?
                             </label>
                             <select
                               name="duration"
                               value={formData.duration}
                               onChange={handleInputChange}
-                              className="w-full px-6 py-4 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:outline-none"
+                              className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all appearance-none"
                             >
                               <option value="">Select duration</option>
                               <option value="hours">Just started (hours)</option>
@@ -429,25 +449,27 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
 
                           {/* Daily impact */}
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
                               How is this affecting your daily life?
                             </label>
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
                               {[
-                                { id: 'work', label: 'Can\'t work/study effectively', icon: Activity },
-                                { id: 'sleep', label: 'Trouble sleeping', icon: BedDouble },
-                                { id: 'exercise', label: 'Can\'t exercise', icon: Activity },
-                                { id: 'social', label: 'Avoiding social activities', icon: Activity }
+                                { id: 'work', label: 'Work/Study', icon: Briefcase },
+                                { id: 'sleep', label: 'Sleep', icon: BedDouble },
+                                { id: 'exercise', label: 'Exercise', icon: Dumbbell },
+                                { id: 'social', label: 'Social life', icon: Users }
                               ].map((impact) => (
-                                <label key={impact.id} className="flex items-center gap-3 p-4 rounded-xl bg-gray-800/50 hover:bg-gray-800 cursor-pointer transition-all group">
+                                <label key={impact.id} className="relative">
                                   <input
                                     type="checkbox"
                                     checked={formData.dailyImpact.includes(impact.id)}
                                     onChange={() => handleCheckboxChange('dailyImpact', impact.id)}
-                                    className="w-5 h-5 text-blue-500 rounded"
+                                    className="peer sr-only"
                                   />
-                                  <impact.icon className="w-5 h-5 text-gray-400" />
-                                  <span className="text-gray-300 group-hover:text-white transition-colors">{impact.label}</span>
+                                  <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-800/30 border border-gray-700 hover:bg-gray-800/50 cursor-pointer transition-all peer-checked:bg-blue-500/20 peer-checked:border-blue-500 peer-checked:text-blue-400">
+                                    <impact.icon className="w-4 h-4" />
+                                    <span className="text-sm font-medium">{impact.label}</span>
+                                  </div>
                                 </label>
                               ))}
                             </div>
@@ -457,9 +479,9 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                           <button
                             type="button"
                             onClick={() => setShowAdvanced(!showAdvanced)}
-                            className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+                            className="w-full flex items-center justify-center gap-2 py-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
                           >
-                            <ChevronDown className={`w-5 h-5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                             {showAdvanced ? 'Hide' : 'Show'} additional questions
                           </button>
 
@@ -470,11 +492,11 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="space-y-6 overflow-hidden"
+                                className="space-y-4 overflow-hidden"
                               >
                                 {/* What makes it worse */}
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                                  <label className="block text-sm font-medium text-gray-300 mb-2">
                                     What makes it worse?
                                   </label>
                                   <input
@@ -483,13 +505,13 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                                     value={formData.worseWhen}
                                     onChange={handleInputChange}
                                     placeholder="e.g., Movement, sitting, cold weather..."
-                                    className="w-full px-6 py-4 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:outline-none"
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-500"
                                   />
                                 </div>
 
                                 {/* What makes it better */}
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                                  <label className="block text-sm font-medium text-gray-300 mb-2">
                                     What makes it better?
                                   </label>
                                   <input
@@ -498,20 +520,20 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                                     value={formData.betterWhen}
                                     onChange={handleInputChange}
                                     placeholder="e.g., Rest, heat, stretching..."
-                                    className="w-full px-6 py-4 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:outline-none"
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-500"
                                   />
                                 </div>
 
                                 {/* Sleep impact */}
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                                  <label className="block text-sm font-medium text-gray-300 mb-2">
                                     How is your sleep affected?
                                   </label>
                                   <select
                                     name="sleepImpact"
                                     value={formData.sleepImpact}
                                     onChange={handleInputChange}
-                                    className="w-full px-6 py-4 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:outline-none"
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all appearance-none"
                                   >
                                     <option value="">Select sleep impact</option>
                                     <option value="none">Not affected</option>
@@ -525,23 +547,26 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                             )}
                           </AnimatePresence>
 
-                          <div className="flex gap-4 pt-4">
-                            <button
-                              type="button"
-                              onClick={() => setShowForm(false)}
-                              className="flex-1 px-6 py-4 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors text-lg font-medium"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              className="flex-1 px-6 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 transition-all text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={!formData.symptoms.trim()}
-                            >
-                              Analyze Symptoms
-                            </button>
-                          </div>
                         </form>
+                        
+                        {/* Fixed bottom buttons */}
+                        <div className="flex gap-3 pt-6 mt-6 border-t border-gray-700/50">
+                          <button
+                            type="button"
+                            onClick={() => setShowForm(false)}
+                            className="flex-1 px-5 py-3 rounded-xl bg-gray-800/50 text-gray-300 hover:bg-gray-800 transition-all font-medium"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            onClick={handleFormSubmit}
+                            className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
+                            disabled={!formData.symptoms.trim()}
+                          >
+                            Analyze Symptoms
+                          </button>
+                        </div>
                       </motion.div>
                     </motion.div>
                   )}
