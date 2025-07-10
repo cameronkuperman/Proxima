@@ -76,7 +76,7 @@ export default function Features() {
                   </div>
                   <div>
                     <h4 className="text-white font-medium mb-1">Anatomically Accurate</h4>
-                    <p className="text-gray-500 text-sm">Powered by BioDigital's medical-grade 3D models</p>
+                    <p className="text-gray-500 text-sm">Powered by BioDigital&apos;s medical-grade 3D models</p>
                   </div>
                 </div>
                 
@@ -301,7 +301,7 @@ export default function Features() {
                 </div>
                 <p className="text-gray-400 mb-4">
                   Want the full picture? Our AI asks follow-up questions to really understand 
-                  what's going on. Takes a bit longer but worth it for complex symptoms.
+                  what&apos;s going on. Takes a bit longer but worth it for complex symptoms.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li className="flex items-center gap-2">

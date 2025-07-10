@@ -37,7 +37,7 @@ export default function Contact() {
           Join the waitlist
         </h2>
         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
-          We're launching in late 2025/early 2026. Join thousands who are already on the list 
+          We&apos;re launching in late 2025/early 2026. Join thousands who are already on the list 
           for exclusive early access and special launch pricing.
         </p>
 
