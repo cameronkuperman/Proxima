@@ -161,7 +161,7 @@ export default function OracleFullScreen() {
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-3xl mx-auto px-4 py-8">
               <AnimatePresence>
-                {messages.map((message, index) => (
+                {messages.map((message) => (
                   <motion.div
                     key={message.id}
                     initial={{ opacity: 0, y: 20 }}

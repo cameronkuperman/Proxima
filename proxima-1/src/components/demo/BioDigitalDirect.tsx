@@ -34,6 +34,7 @@ export function BioDigitalDirect() {
             human.on('ready', () => {
               console.log('BioDigital Human is ready!')
               
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               // Enable pick mode
               human.pick.on('picked', (event: any) => {
                 console.log('PICKED EVENT:', event)
@@ -51,10 +52,12 @@ export function BioDigitalDirect() {
                 console.log('Screen Position:', event.screenPos)
               })
               
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               // Try other events
               human.on('scene.picked', (event: any) => {
                 console.log('SCENE PICKED:', event)
               })
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               
               human.on('object.selected', (event: any) => {
                 console.log('OBJECT SELECTED:', event)
@@ -63,6 +66,7 @@ export function BioDigitalDirect() {
               // Log available methods
               console.log('Human methods:', Object.keys(human))
               console.log('Pick methods:', Object.keys(human.pick))
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             })
             
             human.on('error', (error: any) => {
@@ -113,6 +117,7 @@ export function BioDigitalDirect() {
 // Add global type declaration
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     HumanAPI: any
   }
 }

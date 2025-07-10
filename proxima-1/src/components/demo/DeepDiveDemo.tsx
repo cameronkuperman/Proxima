@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Brain, MessageSquare, Sparkles, Construction, Send, MousePointer, ChevronDown, FileText, Activity, Shield, TrendingUp, Calendar, AlertCircle, Heart, Stethoscope } from 'lucide-react'
+import { ArrowLeft, Brain, Construction, Send, MousePointer, ChevronDown, FileText, Shield, TrendingUp, AlertCircle, Heart, Stethoscope } from 'lucide-react'
 
 interface DeepDiveDemoProps {
   onComplete: () => void
@@ -44,7 +44,7 @@ export function DeepDiveDemo({ onComplete }: DeepDiveDemoProps) {
     betterWhen: ''
   })
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentTyping, setCurrentTyping] = useState('')
+  // const [currentTyping, setCurrentTyping] = useState('')
   const [userInput, setUserInput] = useState('')
   const [showPresetResponses, setShowPresetResponses] = useState(false)
 

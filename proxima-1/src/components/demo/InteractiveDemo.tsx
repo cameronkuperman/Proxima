@@ -47,6 +47,7 @@ export function InteractiveDemo() {
 
   const exploreFeature = (feature: string) => {
     setState(prev => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...prev,
       currentView: feature as any,
       exploredFeatures: [...new Set([...prev.exploredFeatures, feature])]
@@ -61,7 +62,7 @@ export function InteractiveDemo() {
     }))
   }
 
-  const backToCards = () => {
+  const backToCards = () => { return; // unused
     setState(prev => ({ ...prev, currentView: 'cards' }))
   }
 
