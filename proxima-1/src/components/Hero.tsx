@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import EmailSignupForm from "./EmailSignupForm";
-import { blurToFocus, fadeIn, staggerContainer, breathe } from '@/utils/animations';
+import { staggerContainer } from '@/utils/animations';
 
 const TYPING_QUERIES = [
   "Does this mole look suspicious?",
@@ -174,7 +174,7 @@ export default function Hero() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 1.4 }}
             >
-              Powered by the world's best AI
+              Powered by the world&apos;s best AI
             </motion.p>
             <motion.div 
               className="flex items-center justify-center gap-10 opacity-30 mb-16"

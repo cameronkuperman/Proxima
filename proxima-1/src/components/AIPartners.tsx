@@ -90,7 +90,7 @@ export default function AIPartners() {
             Choose the AI that works for you
           </h2>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            We partner with the world's leading AI providers, giving you the freedom 
+            We partner with the world&apos;s leading AI providers, giving you the freedom 
             to use whichever model you prefer for your health insights.
           </p>
         </motion.div>

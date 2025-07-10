@@ -1,6 +1,5 @@
 'use client';
 import { motion } from 'framer-motion';
-import { useInView } from 'framer-motion';
 
 const steps = [
   {
