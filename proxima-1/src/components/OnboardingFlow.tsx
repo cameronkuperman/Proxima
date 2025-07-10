@@ -1061,7 +1061,7 @@ function HealthProfileStep({
       >
         <div>
           <h2 className="text-lg font-semibold text-white">Current Medications</h2>
-          <p className="text-gray-400 text-sm">Add any medications you're currently taking</p>
+          <p className="text-gray-400 text-sm">Add any medications you&apos;re currently taking</p>
         </div>
         
         <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 hover:border-white/[0.1] transition-all">
