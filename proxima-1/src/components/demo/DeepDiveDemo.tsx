@@ -197,7 +197,7 @@ export function DeepDiveDemo({ onComplete }: DeepDiveDemoProps) {
         
         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-black text-sm font-medium">
           <Construction className="w-3 h-3" />
-          Beta Access - January 2025
+          Beta Access - Late 2025
         </div>
       </motion.div>
 
@@ -522,7 +522,7 @@ export function DeepDiveDemo({ onComplete }: DeepDiveDemoProps) {
                 </h3>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-sm">
                   <Construction className="w-3 h-3" />
-                  Demo Mode - Real AI coming January 2025
+                  Demo Mode - Real AI coming Late 2025
                 </div>
               </div>
 
