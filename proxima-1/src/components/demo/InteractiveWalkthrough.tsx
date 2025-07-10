@@ -27,7 +27,7 @@ export function InteractiveWalkthrough() {
   useEffect(() => {
     const savedState = localStorage.getItem('proxima-walkthrough')
     if (savedState) {
-      const parsed = JSON.parse(savedState)
+      const _parsed = JSON.parse(savedState)
       setState(prev => ({ ...prev, hasSeenBefore: true }))
     }
   }, [])
@@ -60,6 +60,7 @@ export function InteractiveWalkthrough() {
 
   const exploreFeature = (feature: string) => {
     setState(prev => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...prev,
       currentView: feature as any,
       exploredFeatures: [...new Set([...prev.exploredFeatures, feature])]
@@ -90,6 +91,7 @@ export function InteractiveWalkthrough() {
       status: 'available' as const,
       icon: '⚡',
       gradient: 'from-blue-500 to-cyan-500',
+      prerequisites: [],
       demo: <QuickScanDemo onComplete={backToCards} />
     },
     {
@@ -101,6 +103,7 @@ export function InteractiveWalkthrough() {
       releaseDate: 'Late 2025',
       icon: '🧬',
       gradient: 'from-purple-500 to-pink-500',
+      prerequisites: [],
       demo: <DeepDiveDemo onComplete={backToCards} />
     },
     {
@@ -112,6 +115,7 @@ export function InteractiveWalkthrough() {
       releaseDate: 'Late 2025',
       icon: '📸',
       gradient: 'from-orange-500 to-red-500',
+      prerequisites: [],
       demo: <PhotoAnalysisDemo onComplete={backToCards} />
     }
   ]
@@ -243,6 +247,8 @@ export function InteractiveWalkthrough() {
                           feature={feature}
                           index={index}
                           isExplored={state.exploredFeatures.includes(feature.id)}
+                          isUnlocked={true}
+                          isCompleted={false}
                           onClick={() => exploreFeature(feature.id)}
                         />
                       ))}

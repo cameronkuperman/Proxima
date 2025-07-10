@@ -39,7 +39,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
   const [selectedBodyPart, setSelectedBodyPart] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [clickPosition, setClickPosition] = useState({ x: 50, y: 50 })
+  const [, ] = useState({ x: 50, y: 50 })
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   const [formData, setFormData] = useState<FormData>({
@@ -54,7 +54,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
   })
 
   // BioDigital configuration - exact URL with all UI elements
-  const bioDigitalUrl = `https://human.biodigital.com/viewer/?id=6F0C&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=true&ui-audio=true&ui-chapter-list=false&ui-fullscreen=true&ui-help=true&ui-info=true&ui-label-list=true&ui-layers=true&ui-skin-layers=true&ui-loader=circle&ui-media-controls=full&ui-menu=true&ui-nav=true&ui-search=true&ui-tools=true&ui-tutorial=false&ui-undo=true&ui-whiteboard=true&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&paid=o_24754ad1`
+  // const bioDigitalUrl = `https://human.biodigital.com/viewer/?id=6F0C&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=true&ui-audio=true&ui-chapter-list=false&ui-fullscreen=true&ui-help=true&ui-info=true&ui-label-list=true&ui-layers=true&ui-skin-layers=true&ui-loader=circle&ui-media-controls=full&ui-menu=true&ui-nav=true&ui-search=true&ui-tools=true&ui-tutorial=false&ui-undo=true&ui-whiteboard=true&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&paid=o_24754ad1`
   
 
   useEffect(() => {
@@ -309,7 +309,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                             <h4 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-2">
                               Tell us about your <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">{selectedBodyPart}</span> symptoms
                             </h4>
-                            <p className="text-gray-400 text-sm">Help us understand what you're experiencing</p>
+                            <p className="text-gray-400 text-sm">Help us understand what you&apos;re experiencing</p>
                           </div>
                           <button
                             type="button"
