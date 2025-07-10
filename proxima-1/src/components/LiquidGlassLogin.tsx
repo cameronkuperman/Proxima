@@ -31,7 +31,7 @@ export default function LiquidGlassLogin() {
       setSession(session);
       if (session) {
         console.log('User already logged in, redirecting to dashboard...');
-        router.push('/dashboard');
+        router.push('/');
       }
     });
 
@@ -42,7 +42,7 @@ export default function LiquidGlassLogin() {
       setSession(session);
       if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         console.log('Redirecting to dashboard due to auth state change...');
-        router.push('/dashboard');
+        router.push('/');
       }
     });
 
@@ -96,7 +96,7 @@ export default function LiquidGlassLogin() {
           } else {
             // If no email confirmation required, redirect immediately
             console.log('Sign up successful, redirecting...');
-            router.push('/dashboard');
+            router.push('/');
           }
         }
       } else {
@@ -110,7 +110,7 @@ export default function LiquidGlassLogin() {
           setError(error.message);
         } else if (data.user) {
           console.log('Sign in successful, redirecting...');
-          router.push('/dashboard');
+          router.push('/');
         }
       }
     } catch (err) {
@@ -129,7 +129,7 @@ export default function LiquidGlassLogin() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/`,
         }
       });
       

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BioDigital Implementation Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, sans-serif;
+            background: #111;
+            color: #fff;
+        }
+        .controls {
+            background: #222;
+            padding: 20px;
+            border-bottom: 1px solid #444;
+        }
+        .controls h1 {
+            margin: 0 0 20px 0;
+            font-size: 24px;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button.active {
+            background: #10b981;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .iframe-container {
+            position: absolute;
+            top: 200px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #messages {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 400px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #444;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .message.pick {
+            background: #1e40af;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h1>BioDigital Implementation Test</h1>
+        <div class="buttons">
+            <button onclick="loadImplementation('viewer')" id="btn-viewer">
+                Viewer (Published URL)
+            </button>
+            <button onclick="loadImplementation('widget')" id="btn-widget">
+                Widget (API Endpoint)
+            </button>
+            <button onclick="loadImplementation('correct')" id="btn-correct">
+                Correct (Legacy)
+            </button>
+            <button onclick="loadImplementation('working')" id="btn-working">
+                Working (Debug)
+            </button>
+            <button onclick="loadImplementation('final')" id="btn-final">
+                Final (Alternative)
+            </button>
+        </div>
+        <div class="info">
+            <strong>Current Implementation:</strong> <span id="current-impl">None</span><br>
+            <strong>Instructions:</strong> Click any button above to load a different BioDigital implementation. Watch the messages panel for pick events.
+        </div>
+    </div>
+    
+    <div class="iframe-container">
+        <iframe id="test-iframe" src=""></iframe>
+    </div>
+    
+    <div id="messages">
+        <strong>Messages:</strong>
+    </div>
+    
+    <script>
+        const iframe = document.getElementById('test-iframe');
+        const messagesDiv = document.getElementById('messages');
+        const currentImplSpan = document.getElementById('current-impl');
+        
+        const implementations = {
+            viewer: '/biodigital-viewer.html',
+            widget: '/biodigital-widget.html',
+            correct: '/biodigital-correct.html',
+            working: '/biodigital-working.html',
+            final: '/biodigital-final.html'
+        };
+        
+        function loadImplementation(type) {
+            // Update buttons
+            document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${type}`).classList.add('active');
+            
+            // Load iframe
+            iframe.src = implementations[type];
+            currentImplSpan.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+            
+            // Clear messages
+            messagesDiv.innerHTML = '<strong>Messages:</strong>';
+            addMessage(`Loading ${type} implementation...`);
+        }
+        
+        function addMessage(msg, isPick = false) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message' + (isPick ? ' pick' : '');
+            msgDiv.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Keep only last 10 messages
+            while (messagesDiv.children.length > 11) {
+                messagesDiv.removeChild(messagesDiv.children[1]);
+            }
+        }
+        
+        // Listen for messages from iframes
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'BIODIGITAL_PICK' || event.data.type === 'BIODIGITAL_SELECT') {
+                const data = event.data.data;
+                addMessage(`PICKED: ${data.objectName}`, true);
+                console.log('Full pick data:', data);
+            }
+        });
+        
+        // Load viewer by default
+        loadImplementation('viewer');
+    </script>
+</body>
+</html>

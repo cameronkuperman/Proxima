@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, MousePointer, Sparkles, Check, Construction, ChevronDown, AlertCircle, Activity, Clock, BedDouble, TrendingUp, Shield, Calendar, Eye } from 'lucide-react'
+import { ArrowLeft, MousePointer, Sparkles, Check, ChevronDown, AlertCircle, Activity, Clock, BedDouble, TrendingUp, Shield, Calendar, Eye } from 'lucide-react'
 
 interface QuickScanDemoProps {
   onComplete: () => void
@@ -40,6 +40,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
   const [showForm, setShowForm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [isModelReady, setIsModelReady] = useState(false)
+  const [clickPosition, setClickPosition] = useState({ x: 50, y: 50 })
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   const [formData, setFormData] = useState<FormData>({
@@ -53,42 +54,15 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     sleepImpact: ''
   })
 
-  // BioDigital configuration
-  const bioDigitalUrl = 'https://human.biodigital.com/viewer/?id=6CBo&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=true&ui-audio=false&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&load-rotate=10&uaid=M4iCG&paid=o_159040f0'
-
-  // Body region mapping based on click position
-  const getBodyPartFromPosition = (x: number, y: number, width: number, height: number): string => {
-    // Convert to percentage
-    const xPercent = (x / width) * 100
-    const yPercent = (y / height) * 100
-    
-    // Map regions based on typical human body proportions
-    if (yPercent < 15) {
-      return 'Head'
-    } else if (yPercent < 20) {
-      return 'Neck'
-    } else if (yPercent < 35) {
-      if (xPercent < 20 || xPercent > 80) {
-        return 'Shoulder'
-      }
-      return 'Chest'
-    } else if (yPercent < 45) {
-      if (xPercent < 25 || xPercent > 75) {
-        return 'Arm'
-      }
-      return 'Abdomen'
-    } else if (yPercent < 55) {
-      if (xPercent < 30 || xPercent > 70) {
-        return 'Hand'
-      }
-      return 'Lower Back'
-    } else if (yPercent < 65) {
-      return 'Hip'
-    } else if (yPercent < 80) {
-      return 'Knee'
-    } else {
-      return 'Foot'
-    }
+  // BioDigital configuration - exact URL with all UI elements
+  const bioDigitalUrl = `https://human.biodigital.com/viewer/?id=6F0C&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=true&ui-audio=true&ui-chapter-list=false&ui-fullscreen=true&ui-help=true&ui-info=true&ui-label-list=true&ui-layers=true&ui-skin-layers=true&ui-loader=circle&ui-media-controls=full&ui-menu=true&ui-nav=true&ui-search=true&ui-tools=true&ui-tutorial=false&ui-undo=true&ui-whiteboard=true&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&paid=o_24754ad1`
+  
+  // Debug logging state
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
+  
+  const addDebugLog = (message: string) => {
+    console.log(message)
+    setDebugLogs(prev => [...prev, `[${new Date().toISOString().substr(11, 8)}] ${message}`])
   }
 
   useEffect(() => {
@@ -97,20 +71,32 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     }
   }, [step])
 
-  // Handle click detection on the iframe overlay
-  const handleIframeClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isModelReady && !showForm && step === 'interact') {
-      // Get click position relative to the container
-      const rect = event.currentTarget.getBoundingClientRect()
-      const x = event.clientX - rect.left
-      const y = event.clientY - rect.top
-      
-      // Determine body part based on click position
-      const selectedPart = getBodyPartFromPosition(x, y, rect.width, rect.height)
-      setSelectedBodyPart(selectedPart)
-      setShowForm(true)
-    }
+  // Handle iframe load
+  const handleIframeLoad = () => {
+    addDebugLog('🔄 BioDigital iframe loaded')
+    
+    // Wait for BioDigital to fully load
+    setTimeout(() => {
+      addDebugLog('✅ BioDigital model ready')
+      setIsModelReady(true)
+    }, 3000)
   }
+  
+  // Handle messages from hosted BioDigital
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'BIODIGITAL_PICK' || event.data.type === 'BIODIGITAL_SELECT') {
+        const data = event.data.data
+        addDebugLog(`🎯 BODY PART SELECTED: ${data.objectName}`)
+        addDebugLog(`Description: ${data.description || 'No description available'}`)
+        setSelectedBodyPart(data.objectName || 'Unknown Body Part')
+        setShowForm(true)
+      }
+    }
+    
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -142,13 +128,15 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     }))
   }
 
-  // Mock analysis result
+  // Mock analysis result based on selected body part
   const analysisResult: AnalysisResult = {
     confidence: 82,
     primaryCondition: selectedBodyPart === 'Head' ? 'Tension Headache' : 
-                     selectedBodyPart === 'Lower Back' ? 'Lumbar Strain' :
-                     selectedBodyPart === 'Knee' ? 'Patellofemoral Pain Syndrome' :
-                     'Muscle Strain',
+                     selectedBodyPart === 'Neck/Shoulders' ? 'Muscle Strain' :
+                     selectedBodyPart === 'Chest/Arms' ? 'Musculoskeletal Pain' :
+                     selectedBodyPart === 'Abdomen/Lower Back' ? 'Lumbar Strain' :
+                     selectedBodyPart === 'Hips/Thighs' ? 'Hip Flexor Strain' :
+                     'General Muscle Discomfort',
     likelihood: 'High',
     symptoms: [
       formData.painType.includes('sharp') ? 'Sharp, localized pain' : 'Dull, aching pain',
@@ -166,9 +154,9 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     urgency: parseInt(formData.painLevel) > 7 ? 'high' : 
              parseInt(formData.painLevel) > 4 ? 'medium' : 'low',
     differentials: [
-      { condition: selectedBodyPart === 'Head' ? 'Migraine' : 'Disc Herniation', probability: 15 },
-      { condition: selectedBodyPart === 'Head' ? 'Cluster Headache' : 'Arthritis', probability: 8 },
-      { condition: selectedBodyPart === 'Head' ? 'Sinusitis' : 'Nerve Impingement', probability: 5 }
+      { condition: 'Inflammation', probability: 15 },
+      { condition: 'Nerve Involvement', probability: 8 },
+      { condition: 'Referred Pain', probability: 5 }
     ],
     redFlags: [
       'Sudden severe pain with no clear cause',
@@ -296,24 +284,32 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                     </p>
                   </motion.div>
                 )}
+                
+                {/* Debug logs panel */}
+                <div className="mt-4 p-4 rounded-xl bg-gray-900/50 border border-gray-800 max-h-64 overflow-y-auto">
+                  <h5 className="text-sm font-medium text-gray-400 mb-2">Debug Logs:</h5>
+                  <div className="space-y-1 font-mono text-xs">
+                    {debugLogs.slice(-10).map((log, i) => (
+                      <div key={i} className={`text-gray-300 ${log.includes('❌') ? 'text-red-400' : log.includes('✅') ? 'text-green-400' : ''}`}>
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </motion.div>
 
               {/* 3D Model */}
               <div className="flex-1 relative rounded-3xl overflow-hidden bg-gray-900/50 border border-white/10">
-                <div 
-                  className="absolute inset-0 z-10 cursor-pointer"
-                  onClick={handleIframeClick}
-                />
+                
                 <iframe
+                  id="biodigital-iframe"
                   ref={iframeRef}
-                  src={bioDigitalUrl}
+                  src="/biodigital-viewer.html"
                   className="w-full h-full"
-                  style={{ border: 'none', pointerEvents: 'none' }}
-                  onLoad={() => {
-                    setTimeout(() => {
-                      setIsModelReady(true)
-                    }, 3000)
-                  }}
+                  style={{ border: 'none', pointerEvents: showForm ? 'none' : 'auto' }}
+                  allow="autoplay; fullscreen; vr"
+                  allowFullScreen
+                  onLoad={handleIframeLoad}
                 />
                 
                 {/* Loading overlay */}
