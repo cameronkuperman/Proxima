@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import HealthProfileModal from '@/components/HealthProfileModal';
@@ -96,22 +95,22 @@ const mockGraphData = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, signOut, loading } = useAuth();
+  const { user, signOut } = useAuth();
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   const [currentGraphIndex, setCurrentGraphIndex] = useState(0);
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
-  const [healthScore, setHealthScore] = useState(92);
+  const [healthScore] = useState(92);
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
-  const [lastActivityTimes, setLastActivityTimes] = useState({
+  const [lastActivityTimes] = useState({
     quickScan: '2 hours ago',
     bodyMap: '3 days ago',
     photoAnalysis: 'Yesterday'
   });
   
   // Past reports queue
-  const [reportQueue, setReportQueue] = useState([
+  const [reportQueue] = useState([
     { id: 1, title: 'Severe Headache Report', time: '2 days ago', content: 'You reported a throbbing headache (7/10) on the right side of your head. You mentioned it started after a stressful meeting and lack of sleep.', tags: ['📍 Right temporal', '💊 Took ibuprofen'] },
     { id: 2, title: 'Chest Discomfort Analysis', time: '3 days ago', content: 'You reported mild chest tightness (4/10) during exercise. Symptoms resolved with rest. You noted it might be stress-related.', tags: ['💔 During exercise', '⏱️ 5 min duration'] },
     { id: 3, title: 'Sleep Quality Check', time: '5 days ago', content: 'You reported poor sleep (4/10) with frequent wake-ups. Mentioned anxiety about upcoming deadlines affecting rest.', tags: ['😴 4 hrs total', '🌙 3 wake-ups'] },
@@ -157,8 +156,8 @@ export default function DashboardPage() {
   };
 
   const currentGraph = mockGraphData[currentGraphIndex];
-  const maxValue = Math.max(...currentGraph.data.map(d => d.value));
-  const minValue = Math.min(...currentGraph.data.map(d => d.value));
+  // const maxValue = Math.max(...currentGraph.data.map(d => d.value));
+  // const minValue = Math.min(...currentGraph.data.map(d => d.value));
 
   return (
     <AuthGuard requireAuth={true}>
@@ -654,7 +653,7 @@ export default function DashboardPage() {
                         Ask me anything about your health data or symptoms.
                       </p>
                       <button className="w-full text-left text-sm bg-white/[0.03] border border-white/[0.05] rounded-lg px-3 py-2 text-gray-400 hover:text-white hover:border-white/[0.1] transition-all">
-                        "What's causing my headaches?" →
+                        &quot;What&apos;s causing my headaches?&quot; →
                       </button>
                     </div>
                   </div>
