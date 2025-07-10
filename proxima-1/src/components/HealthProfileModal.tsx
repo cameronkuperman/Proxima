@@ -376,7 +376,7 @@ export default function HealthProfileModal({ isOpen, onClose }: HealthProfileMod
                         <option value="never">Never</option>
                         <option value="rarely">Rarely</option>
                         <option value="moderate">Moderate (1-7 drinks/week)</option>
-                        <option value="heavy">Heavy (>7 drinks/week)</option>
+                        <option value="heavy">Heavy (&gt;7 drinks/week)</option>
                       </select>
                     </div>
                     

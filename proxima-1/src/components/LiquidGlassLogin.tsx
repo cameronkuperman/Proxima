@@ -40,9 +40,10 @@ export default function LiquidGlassLogin() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session ? 'User logged in' : 'User logged out');
       setSession(session);
+      // Let the middleware handle redirects instead of automatically redirecting here
+      // This prevents conflicts with onboarding flow
       if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        console.log('Redirecting to dashboard due to auth state change...');
-        router.push('/');
+        console.log('Auth state changed, middleware will handle redirect...');
       }
     });
 
@@ -94,9 +95,36 @@ export default function LiquidGlassLogin() {
           if (data.user.identities?.length === 0) {
             setError('Please check your email to confirm your account before signing in');
           } else {
-            // If no email confirmation required, redirect immediately
-            console.log('Sign up successful, redirecting...');
-            router.push('/');
+            // Create user record in database
+            try {
+              const { error: insertError } = await supabase
+                .from('medical')
+                .insert([{
+                  id: data.user.id,
+                  email: data.user.email,
+                  name: name,
+                  age: null,
+                  height: null,
+                  weight: null,
+                  medications: null,
+                  personal_health_context: null,
+                  family_history: null,
+                  allergies: null
+                }]);
+              
+              if (insertError) {
+                console.error('Error creating user record:', insertError);
+                // Don't fail the signup if user record creation fails
+              }
+            } catch (err) {
+              console.error('Error creating user record:', err);
+              // Don't fail the signup if user record creation fails
+            }
+            
+            // If no email confirmation required, let middleware handle the redirect
+            console.log('Sign up successful, middleware will handle redirect...');
+            // Redirect to dashboard, middleware will intercept and redirect to onboarding if needed
+            router.push('/dashboard');
           }
         }
       } else {
@@ -109,8 +137,9 @@ export default function LiquidGlassLogin() {
         if (error) {
           setError(error.message);
         } else if (data.user) {
-          console.log('Sign in successful, redirecting...');
-          router.push('/');
+          console.log('Sign in successful, middleware will handle redirect...');
+          // Let middleware handle the redirect based on onboarding status
+          router.push('/dashboard');
         }
       }
     } catch (err) {
