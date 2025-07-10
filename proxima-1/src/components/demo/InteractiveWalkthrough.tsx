@@ -98,7 +98,7 @@ export function InteractiveWalkthrough() {
       subtitle: 'Comprehensive analysis',
       description: 'AI-powered follow-up questions for accuracy',
       status: 'beta' as const,
-      releaseDate: 'January 2025',
+      releaseDate: 'Late 2025',
       icon: '🧬',
       gradient: 'from-purple-500 to-pink-500',
       demo: <DeepDiveDemo onComplete={backToCards} />
@@ -109,7 +109,7 @@ export function InteractiveWalkthrough() {
       subtitle: 'Visual symptom tracking',
       description: 'Track changes and healing over time',
       status: 'coming-soon' as const,
-      releaseDate: 'Q1 2025',
+      releaseDate: 'Late 2025',
       icon: '📸',
       gradient: 'from-orange-500 to-red-500',
       demo: <PhotoAnalysisDemo onComplete={backToCards} />

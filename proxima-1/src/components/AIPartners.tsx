@@ -51,7 +51,7 @@ const partners = [
   {
     name: 'xAI',
     description: 'Fast and efficient for quick insights',
-    models: ['Grok-3', 'Grok-3 Mini'],
+    models: ['Grok-4', 'Grok-4-Heavy (beta)', 'Grok-3', 'Grok-3 Mini'],
     gradient: 'from-purple-500/20 to-pink-500/20',
     logo: (
       <Image
