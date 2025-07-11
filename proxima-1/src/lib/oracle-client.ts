@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import { ConversationService } from './supabase-conversations';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -31,6 +32,7 @@ export class OracleClient {
   private baseUrl: string;
   private defaultRetries: number = 3;
   private defaultTimeout: number = 30000; // 30 seconds
+  private conversationCreated: Map<string, boolean> = new Map();
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
@@ -49,10 +51,43 @@ export class OracleClient {
       temperature?: number;
       maxTokens?: number;
       retries?: number;
+      isFirstMessage?: boolean;
     }
   ): Promise<OracleResponse> {
     // Generate conversation ID if not provided
     const convId = conversationId || uuidv4();
+    
+    // Create conversation in Supabase if this is the first message
+    if (options?.isFirstMessage && !this.conversationCreated.get(convId)) {
+      const conversation = await ConversationService.createConversation(
+        userId,
+        convId,
+        await ConversationService.generateTitle(query),
+        'openrouterai',
+        options?.model || 'tngtech/deepseek-r1t-chimera:free',
+        'health_analysis'
+      );
+      
+      if (conversation) {
+        this.conversationCreated.set(convId, true);
+        
+        // Add the user's first message to Supabase
+        await ConversationService.addMessage(
+          convId,
+          'user',
+          query,
+          { source: 'oracle_chat' }
+        );
+      }
+    } else if (!options?.isFirstMessage) {
+      // Add subsequent user messages
+      await ConversationService.addMessage(
+        convId,
+        'user',
+        query,
+        { source: 'oracle_chat' }
+      );
+    }
     
     const message: OracleMessage = {
       query,
@@ -65,6 +100,7 @@ export class OracleClient {
     };
 
     const retries = options?.retries || this.defaultRetries;
+    const startTime = Date.now();
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -79,7 +115,23 @@ export class OracleClient {
           }
         );
 
-        return response.data;
+        // Store the assistant's response in Supabase
+        const responseData = response.data;
+        await ConversationService.addMessage(
+          convId,
+          'assistant',
+          typeof responseData.response === 'string' 
+            ? responseData.response 
+            : JSON.stringify(responseData.response),
+          {
+            token_count: responseData.usage.total_tokens,
+            model_used: responseData.model,
+            processing_time: Date.now() - startTime,
+            source: 'oracle_chat'
+          }
+        );
+
+        return responseData;
       } catch (error) {
         if (attempt === retries) {
           throw this.handleError(error);
