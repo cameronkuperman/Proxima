@@ -22,7 +22,8 @@ export default function OracleFullScreen() {
     error,
     conversationId,
     isHealthy,
-    startNewConversation
+    startNewConversation,
+    generateSummary
   } = useOracle({
     userId: user?.id || 'anonymous',
     onError: (error) => {
@@ -129,7 +130,19 @@ export default function OracleFullScreen() {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.back()}
+              onClick={async () => {
+                // Only generate summary if there are actual user messages
+                const hasUserMessages = messages.some(m => m.role === 'user');
+                
+                if (hasUserMessages) {
+                  try {
+                    await generateSummary();
+                  } catch (error) {
+                    console.error('Failed to generate summary:', error);
+                  }
+                }
+                router.back();
+              }}
               className="text-gray-400 hover:text-white transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +173,19 @@ export default function OracleFullScreen() {
             </button>
             <span className="text-xs text-gray-400">Health Score: 92/100</span>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={async () => {
+                // Only generate summary if there are actual user messages
+                const hasUserMessages = messages.some(m => m.role === 'user');
+                
+                if (hasUserMessages) {
+                  try {
+                    await generateSummary();
+                  } catch (error) {
+                    console.error('Failed to generate summary:', error);
+                  }
+                }
+                router.push('/dashboard');
+              }}
               className="text-gray-400 hover:text-white transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

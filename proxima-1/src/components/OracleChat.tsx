@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOracle } from '@/hooks/useOracle';
 import { useAuth } from '@/contexts/AuthContext';
+import { SummaryNotification } from './SummaryNotification';
 
 interface OracleChatProps {
   isOpen: boolean;
@@ -14,6 +15,9 @@ interface OracleChatProps {
 export default function OracleChat({ isOpen, onClose, healthScore = 92 }: OracleChatProps) {
   const { user } = useAuth();
   const [input, setInput] = useState('');
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summarySuccess, setSummarySuccess] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -25,7 +29,8 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
     error,
     conversationId,
     isHealthy,
-    startNewConversation
+    startNewConversation,
+    generateSummary
   } = useOracle({
     userId: user?.id || 'anonymous',
     onError: (error) => {
@@ -124,9 +129,16 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
+    <>
+      <SummaryNotification 
+        isGenerating={isGeneratingSummary}
+        success={summarySuccess}
+        error={summaryError || undefined}
+      />
+      
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -184,7 +196,37 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
               </div>
               
               <button
-                onClick={onClose}
+                onClick={async () => {
+                  // Only generate summary if there are actual messages from users
+                  const hasUserMessages = messages.some(m => m.role === 'user');
+                  
+                  if (hasUserMessages) {
+                    setIsGeneratingSummary(true);
+                    setSummaryError(null);
+                    setSummarySuccess(false);
+                    
+                    try {
+                      const summary = await generateSummary();
+                      setIsGeneratingSummary(false);
+                      
+                      if (summary?.status === 'success') {
+                        setSummarySuccess(true);
+                        // Small delay to show success
+                        setTimeout(() => {
+                          onClose();
+                        }, 500);
+                      } else {
+                        onClose();
+                      }
+                    } catch (error) {
+                      setIsGeneratingSummary(false);
+                      onClose();
+                    }
+                  } else {
+                    // No messages, just close
+                    onClose();
+                  }
+                }}
                 className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/[0.05] rounded-lg"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,5 +429,6 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   );
 }
