@@ -3,22 +3,32 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+import { useOracle } from '@/hooks/useOracle';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function OracleFullScreen() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { user } = useAuth();
   const [input, setInput] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Initialize Oracle with user ID
+  const {
+    messages,
+    sendMessage,
+    isLoading: isThinking,
+    error,
+    conversationId,
+    isHealthy,
+    startNewConversation
+  } = useOracle({
+    userId: user?.id || 'anonymous',
+    onError: (error) => {
+      console.error('Oracle error:', error);
+    }
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,31 +47,18 @@ export default function OracleFullScreen() {
   }, [input]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isThinking) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const query = input.trim();
     setInput('');
-    setIsThinking(true);
     setHasStarted(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'I\'ve analyzed your health data and recent symptoms. Based on your headache patterns and sleep quality metrics, I can provide some insights. Your morning headaches appear to correlate with nights where your sleep was interrupted. Have you noticed any changes in your sleep environment or routine recently?',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsThinking(false);
-    }, 2000);
+    
+    try {
+      await sendMessage(query);
+    } catch (error) {
+      // Error is already handled by the hook
+      console.error('Failed to send message:', error);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -69,6 +66,60 @@ export default function OracleFullScreen() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Helper function to render message content
+  const renderMessageContent = (content: string | Record<string, any>) => {
+    // Handle structured JSON responses
+    if (typeof content === 'object' && content !== null) {
+      // Check if it's a health analysis response
+      if ('confidence_level' in content || 'symptoms' in content || 'recommendations' in content) {
+        return (
+          <div className="space-y-2">
+            {content.confidence_level && (
+              <div className="text-sm">
+                <span className="opacity-70">Confidence: </span>
+                <span className="font-medium">{(content.confidence_level * 100).toFixed(0)}%</span>
+              </div>
+            )}
+            {content.symptoms_identified && (
+              <div className="text-sm">
+                <span className="opacity-70">Symptoms detected: </span>
+                <span className="font-medium">{content.symptoms_identified.join(', ')}</span>
+              </div>
+            )}
+            {content.recommendations && (
+              <div className="text-sm space-y-1">
+                <span className="opacity-70">Recommendations:</span>
+                <ul className="list-disc list-inside ml-2">
+                  {content.recommendations.map((rec: string, idx: number) => (
+                    <li key={idx} className="text-sm">{rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Fallback to formatted JSON for other properties */}
+            <pre className="text-xs bg-white/5 p-2 rounded overflow-x-auto">
+              {JSON.stringify(content, null, 2)}
+            </pre>
+          </div>
+        );
+      }
+      
+      // Generic JSON response
+      return (
+        <pre className="text-sm bg-white/5 p-2 rounded overflow-x-auto">
+          {JSON.stringify(content, null, 2)}
+        </pre>
+      );
+    }
+
+    // Regular text response - preserve line breaks
+    return (
+      <div className="whitespace-pre-wrap break-words">
+        {content}
+      </div>
+    );
   };
 
   return (
@@ -92,10 +143,21 @@ export default function OracleFullScreen() {
                 </svg>
               </div>
               <span className="text-white font-medium">Health Oracle</span>
+              <span className="text-xs text-gray-400 ml-2">
+                {isHealthy === true ? '• Connected' : 
+                 isHealthy === false ? '• Disconnected' : 
+                 '• Connecting...'}
+              </span>
             </div>
           </div>
           
           <div className="flex items-center gap-4">
+            <button
+              onClick={startNewConversation}
+              className="text-xs text-gray-400 hover:text-white transition-colors"
+            >
+              New Conversation
+            </button>
             <span className="text-xs text-gray-400">Health Score: 92/100</span>
             <button
               onClick={() => router.push('/dashboard')}
@@ -188,8 +250,8 @@ export default function OracleFullScreen() {
                             {message.timestamp.toLocaleTimeString()}
                           </span>
                         </div>
-                        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                          {message.content}
+                        <div className="text-gray-300 leading-relaxed">
+                          {renderMessageContent(message.content)}
                         </div>
                       </div>
                     </div>
@@ -230,6 +292,19 @@ export default function OracleFullScreen() {
                         ))}
                       </div>
                     </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-8"
+                >
+                  <div className="max-w-2xl mx-auto bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
+                    <p className="font-medium text-sm">Connection Error</p>
+                    <p className="text-xs opacity-80 mt-1">{error.message}</p>
                   </div>
                 </motion.div>
               )}

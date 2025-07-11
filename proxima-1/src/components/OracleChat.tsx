@@ -2,13 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+import { useOracle } from '@/hooks/useOracle';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OracleChatProps {
   isOpen: boolean;
@@ -17,18 +12,26 @@ interface OracleChatProps {
 }
 
 export default function OracleChat({ isOpen, onClose, healthScore = 92 }: OracleChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'ve been reviewing your health data. How are you feeling today? I noticed your sleep quality has improved this week.',
-      timestamp: new Date()
-    }
-  ]);
+  const { user } = useAuth();
   const [input, setInput] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Initialize Oracle with user ID
+  const {
+    messages,
+    sendMessage,
+    isLoading: isThinking,
+    error,
+    conversationId,
+    isHealthy,
+    startNewConversation
+  } = useOracle({
+    userId: user?.id || 'anonymous',
+    onError: (error) => {
+      console.error('Oracle error:', error);
+    }
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,30 +49,17 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
   }, [input]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isThinking) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const query = input.trim();
     setInput('');
-    setIsThinking(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'I understand you\'re experiencing headaches in the mornings. Based on your sleep data and the pattern you\'ve described, this could be related to several factors. Let me analyze your recent health metrics to provide more specific insights.',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsThinking(false);
-    }, 2000);
+    
+    try {
+      await sendMessage(query);
+    } catch (error) {
+      // Error is already handled by the hook
+      console.error('Failed to send message:', error);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -77,6 +67,60 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Helper function to render message content
+  const renderMessageContent = (content: string | Record<string, any>) => {
+    // Handle structured JSON responses
+    if (typeof content === 'object' && content !== null) {
+      // Check if it's a health analysis response
+      if ('confidence_level' in content || 'symptoms' in content || 'recommendations' in content) {
+        return (
+          <div className="space-y-2">
+            {content.confidence_level && (
+              <div className="text-sm">
+                <span className="opacity-70">Confidence: </span>
+                <span className="font-medium">{(content.confidence_level * 100).toFixed(0)}%</span>
+              </div>
+            )}
+            {content.symptoms_identified && (
+              <div className="text-sm">
+                <span className="opacity-70">Symptoms detected: </span>
+                <span className="font-medium">{content.symptoms_identified.join(', ')}</span>
+              </div>
+            )}
+            {content.recommendations && (
+              <div className="text-sm space-y-1">
+                <span className="opacity-70">Recommendations:</span>
+                <ul className="list-disc list-inside ml-2">
+                  {content.recommendations.map((rec: string, idx: number) => (
+                    <li key={idx} className="text-sm">{rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Fallback to formatted JSON for other properties */}
+            <pre className="text-xs bg-white/5 p-2 rounded overflow-x-auto">
+              {JSON.stringify(content, null, 2)}
+            </pre>
+          </div>
+        );
+      }
+      
+      // Generic JSON response
+      return (
+        <pre className="text-sm bg-white/5 p-2 rounded overflow-x-auto">
+          {JSON.stringify(content, null, 2)}
+        </pre>
+      );
+    }
+
+    // Regular text response - preserve line breaks
+    return (
+      <div className="whitespace-pre-wrap break-words">
+        {content}
+      </div>
+    );
   };
 
   return (
@@ -131,7 +175,11 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
                 </div>
                 <div>
                   <h3 className="text-white font-medium">Health Oracle</h3>
-                  <p className="text-xs text-gray-400">Always here to help</p>
+                  <p className="text-xs text-gray-400">
+                    {isHealthy === true ? 'Connected' : 
+                     isHealthy === false ? 'Disconnected' : 
+                     'Connecting...'}
+                  </p>
                 </div>
               </div>
               
@@ -148,6 +196,25 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
             {/* Messages Area - Clean like Claude */}
             <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
               <div className="px-6 py-6 space-y-5">
+                {messages.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center text-gray-400 mt-8"
+                  >
+                    <div className="mb-4">
+                      <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-lg mb-2">Welcome to Oracle Health Assistant</p>
+                    <p className="text-sm opacity-70">I'm here to help analyze your health concerns and provide insights.</p>
+                    <p className="text-sm opacity-70 mt-1">How are you feeling today?</p>
+                  </motion.div>
+                )}
+                
                 {messages.map((message) => (
                   <motion.div
                     key={message.id}
@@ -179,9 +246,9 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
                             : 'bg-white/[0.02] text-gray-200 border border-white/[0.03]'
                         }`}
                       >
-                        <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
-                          {message.content}
-                        </p>
+                        <div className="text-[15px] leading-relaxed">
+                          {renderMessageContent(message.content)}
+                        </div>
                       </motion.div>
                     </div>
                   </motion.div>
@@ -214,6 +281,17 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
                         ))}
                       </div>
                     </div>
+                  </motion.div>
+                )}
+                
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg"
+                  >
+                    <p className="font-medium text-sm">Connection Error</p>
+                    <p className="text-xs opacity-80 mt-1">{error.message}</p>
                   </motion.div>
                 )}
                 
@@ -274,9 +352,35 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
                   <span>•</span>
                   <span>Secure & Private</span>
                 </div>
-                <button className="text-xs text-gray-500 hover:text-purple-400 transition-colors">
-                  Export chat
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={startNewConversation}
+                    className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
+                  >
+                    New chat
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const chatData = {
+                        conversationId,
+                        messages: messages.map(m => ({
+                          role: m.role,
+                          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+                          timestamp: m.timestamp
+                        }))
+                      };
+                      const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `oracle-chat-${conversationId.slice(0, 8)}.json`;
+                      a.click();
+                    }}
+                    className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
+                  >
+                    Export chat
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
