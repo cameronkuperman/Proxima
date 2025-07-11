@@ -32,6 +32,7 @@ export function useOracle({
     initialConversationId || ''
   );
   const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
+  const [isFirstMessage, setIsFirstMessage] = useState(true);
 
   // Initialize conversation ID
   useEffect(() => {
@@ -83,8 +84,16 @@ export function useOracle({
           query,
           userId,
           conversationId,
-          options
+          {
+            ...options,
+            isFirstMessage
+          }
         );
+
+        // Mark that we've sent at least one message
+        if (isFirstMessage) {
+          setIsFirstMessage(false);
+        }
 
         // Add Oracle's response
         const assistantMessage: Message = {
@@ -113,7 +122,7 @@ export function useOracle({
         setIsLoading(false);
       }
     },
-    [conversationId, userId, onError, onSuccess]
+    [conversationId, userId, onError, onSuccess, isFirstMessage]
   );
 
   const clearMessages = useCallback(() => {
@@ -124,6 +133,7 @@ export function useOracle({
     const newId = await oracleClient.createConversation(userId);
     setConversationId(newId);
     clearMessages();
+    setIsFirstMessage(true);
     return newId;
   }, [userId, clearMessages]);
 
