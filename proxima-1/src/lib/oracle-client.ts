@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { ConversationService } from './supabase-conversations';
+import { LLMContextService } from './supabase-llm-context';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -28,11 +29,20 @@ export interface OracleResponse {
   model: string;
 }
 
+export interface SummaryResponse {
+  summary: string;
+  token_count: number;
+  compression_ratio: number;
+  status: 'success' | 'error';
+  error?: string;
+}
+
 export class OracleClient {
   private baseUrl: string;
   private defaultRetries: number = 3;
   private defaultTimeout: number = 30000; // 30 seconds
   private conversationCreated: Map<string, boolean> = new Map();
+  private messagesInConversation: Map<string, number> = new Map();
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
@@ -131,6 +141,10 @@ export class OracleClient {
           }
         );
 
+        // Track that we have messages in this conversation
+        const currentCount = this.messagesInConversation.get(convId) || 0;
+        this.messagesInConversation.set(convId, currentCount + 2); // user + assistant
+
         return responseData;
       } catch (error) {
         if (attempt === retries) {
@@ -148,7 +162,11 @@ export class OracleClient {
    * Create a new conversation
    */
   async createConversation(userId: string): Promise<string> {
-    return uuidv4();
+    const newId = uuidv4();
+    // Reset tracking for new conversation
+    this.conversationCreated.set(newId, false);
+    this.messagesInConversation.set(newId, 0);
+    return newId;
   }
 
   /**
@@ -160,6 +178,69 @@ export class OracleClient {
       return response.data.status === 'healthy';
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Generate a summary for a conversation
+   */
+  async generateSummary(
+    conversationId: string,
+    userId: string
+  ): Promise<SummaryResponse> {
+    // Don't even try if we haven't created a conversation or have no messages
+    const messageCount = this.messagesInConversation.get(conversationId) || 0;
+    if (!this.conversationCreated.get(conversationId) || messageCount === 0) {
+      return {
+        summary: '',
+        token_count: 0,
+        compression_ratio: 0,
+        status: 'error',
+        error: 'No conversation to summarize'
+      };
+    }
+
+    try {
+      const response = await axios.post<SummaryResponse>(
+        `${this.baseUrl}/api/generate_summary`,
+        {
+          conversation_id: conversationId,
+          user_id: userId
+        },
+        {
+          timeout: this.defaultTimeout,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      // Store summary in both conversation metadata and llm_context table
+      if (response.data.status === 'success') {
+        // Update conversation metadata
+        await ConversationService.updateConversation(conversationId, {
+          metadata: {
+            last_summary: response.data.summary,
+            summary_generated_at: new Date().toISOString(),
+            summary_token_count: response.data.token_count,
+            summary_compression_ratio: response.data.compression_ratio
+          }
+        });
+
+        // Store in llm_context table for Oracle backend to use
+        await LLMContextService.storeSummary(
+          userId,
+          conversationId,
+          response.data.summary,
+          response.data.token_count,
+          response.data.compression_ratio
+        );
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      throw this.handleError(error);
     }
   }
 

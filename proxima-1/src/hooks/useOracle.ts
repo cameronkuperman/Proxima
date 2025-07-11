@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { oracleClient, OracleResponse } from '@/lib/oracle-client';
+import { oracleClient, OracleResponse, SummaryResponse } from '@/lib/oracle-client';
 
 export interface Message {
   id: string;
@@ -137,6 +137,47 @@ export function useOracle({
     return newId;
   }, [userId, clearMessages]);
 
+  const generateSummary = useCallback(async (): Promise<SummaryResponse | null> => {
+    // Only generate if we have user messages
+    const hasUserMessages = messages.some(m => m.role === 'user');
+    
+    if (!conversationId || !hasUserMessages) {
+      return null;
+    }
+
+    try {
+      const summaryResponse = await oracleClient.generateSummary(conversationId, userId);
+      return summaryResponse;
+    } catch (error) {
+      console.error('Failed to generate summary:', error);
+      onError?.(error as Error);
+      return null;
+    }
+  }, [conversationId, userId, messages, onError]);
+
+  // Only handle browser/tab close when there are actual user messages
+  useEffect(() => {
+    const handleUnload = (e: BeforeUnloadEvent) => {
+      const hasUserMessages = messages.some(m => m.role === 'user');
+      
+      if (hasUserMessages && conversationId) {
+        // Use sendBeacon for reliability
+        const payload = JSON.stringify({
+          conversation_id: conversationId,
+          user_id: userId
+        });
+        
+        navigator.sendBeacon(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/generate_summary`,
+          payload
+        );
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [messages, conversationId, userId]);
+
   return {
     messages,
     sendMessage,
@@ -145,6 +186,7 @@ export function useOracle({
     conversationId,
     isHealthy,
     clearMessages,
-    startNewConversation
+    startNewConversation,
+    generateSummary
   };
 }
