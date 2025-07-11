@@ -12,7 +12,7 @@ interface FeatureCardProps {
     description: string
     status: 'available' | 'beta' | 'coming-soon'
     releaseDate?: string
-    icon: string
+    icon: React.ReactNode
     gradient: string
     prerequisites: string[]
   }
@@ -120,7 +120,9 @@ export function FeatureCard({ feature, index, isExplored, isUnlocked, isComplete
         {/* Content */}
         <div className="relative z-10">
           {/* Icon */}
-          <div className="text-5xl mb-4">{feature.icon}</div>
+          <div className="text-5xl mb-4 flex items-center justify-start text-white">
+            {feature.icon}
+          </div>
 
           {/* Title and subtitle */}
           <h3 className={`text-2xl font-semibold mb-1 tracking-tight ${

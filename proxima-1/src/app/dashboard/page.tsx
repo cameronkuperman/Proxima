@@ -10,6 +10,8 @@ import OracleChat from '@/components/OracleChat';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import OnboardingGuard from '@/components/OnboardingGuard';
+import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, AlertCircle } from 'lucide-react';
+import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 
 // Mock data for timeline
 const mockTimelineData = [
@@ -104,6 +106,8 @@ export default function DashboardPage() {
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
   const [healthScore, setHealthScore] = useState(92);
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
+  const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [lastActivityTimes, setLastActivityTimes] = useState({
     quickScan: '2 hours ago',
     bodyMap: '3 days ago',
@@ -112,13 +116,79 @@ export default function DashboardPage() {
   
   // Past reports queue
   const [reportQueue, setReportQueue] = useState([
-    { id: 1, title: 'Severe Headache Report', time: '2 days ago', content: 'You reported a throbbing headache (7/10) on the right side of your head. You mentioned it started after a stressful meeting and lack of sleep.', tags: ['📍 Right temporal', '💊 Took ibuprofen'] },
-    { id: 2, title: 'Chest Discomfort Analysis', time: '3 days ago', content: 'You reported mild chest tightness (4/10) during exercise. Symptoms resolved with rest. You noted it might be stress-related.', tags: ['💔 During exercise', '⏱️ 5 min duration'] },
-    { id: 3, title: 'Sleep Quality Check', time: '5 days ago', content: 'You reported poor sleep (4/10) with frequent wake-ups. Mentioned anxiety about upcoming deadlines affecting rest.', tags: ['😴 4 hrs total', '🌙 3 wake-ups'] },
-    { id: 4, title: 'Energy Crash Analysis', time: '1 week ago', content: 'You reported afternoon fatigue (3/10 energy) around 2-3 PM daily. Linked to irregular meal timing and high caffeine intake.', tags: ['☕ 4 cups/day', '🍽️ Skipped lunch'] },
-    { id: 5, title: 'Anxiety Episode', time: '10 days ago', content: 'You reported elevated anxiety (6/10) with racing thoughts. Triggered by work presentation. Used breathing exercises.', tags: ['🧘 Meditation helped', '📊 Work trigger'] }
+    { id: 1, title: 'Severe Headache Report', time: '2 days ago', content: 'You reported a throbbing headache (7/10) on the right side of your head. You mentioned it started after a stressful meeting and lack of sleep.', tags: [{ icon: <MapPin className="w-3 h-3" />, text: 'Right temporal' }, { icon: <Pill className="w-3 h-3" />, text: 'Took ibuprofen' }] },
+    { id: 2, title: 'Chest Discomfort Analysis', time: '3 days ago', content: 'You reported mild chest tightness (4/10) during exercise. Symptoms resolved with rest. You noted it might be stress-related.', tags: [{ icon: <Heart className="w-3 h-3" />, text: 'During exercise' }, { icon: <Clock className="w-3 h-3" />, text: '5 min duration' }] },
+    { id: 3, title: 'Sleep Quality Check', time: '5 days ago', content: 'You reported poor sleep (4/10) with frequent wake-ups. Mentioned anxiety about upcoming deadlines affecting rest.', tags: [{ icon: <Moon className="w-3 h-3" />, text: '4 hrs total' }, { icon: <Moon className="w-3 h-3" />, text: '3 wake-ups' }] },
+    { id: 4, title: 'Energy Crash Analysis', time: '1 week ago', content: 'You reported afternoon fatigue (3/10 energy) around 2-3 PM daily. Linked to irregular meal timing and high caffeine intake.', tags: [{ icon: <Coffee className="w-3 h-3" />, text: '4 cups/day' }, { icon: <Utensils className="w-3 h-3" />, text: 'Skipped lunch' }] },
+    { id: 5, title: 'Anxiety Episode', time: '10 days ago', content: 'You reported elevated anxiety (6/10) with racing thoughts. Triggered by work presentation. Used breathing exercises.', tags: [{ icon: <BrainCircuit className="w-3 h-3" />, text: 'Meditation helped' }, { icon: <Star className="w-3 h-3" />, text: 'Work trigger' }] }
   ]);
   const [visibleReports, setVisibleReports] = useState([0, 1]);
+
+  // Fetch user profile data from database
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        setProfileLoading(true);
+        const profile = await getUserProfile(user.id, user.email || '', user.user_metadata?.name || '');
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  // Calculate profile completion percentage
+  const calculateProfileCompletion = () => {
+    if (!userProfile) return { percentage: 0, missingLifestyle: true, missingEmergency: true };
+
+    let totalFields = 0;
+    let completedFields = 0;
+
+    // Basic info fields (assumed complete from onboarding)
+    totalFields += 4; // name, email, age, blood_type
+    completedFields += 4;
+
+    // Health profile fields (assumed complete from onboarding)
+    totalFields += 3; // medications, allergies, family_history arrays
+    completedFields += 3;
+
+    // Lifestyle fields
+    const lifestyleFields = [
+      userProfile.lifestyle_smoking_status,
+      userProfile.lifestyle_alcohol_consumption,
+      userProfile.lifestyle_exercise_frequency,
+      userProfile.lifestyle_sleep_hours,
+      userProfile.lifestyle_stress_level,
+      userProfile.lifestyle_diet_type
+    ];
+    totalFields += lifestyleFields.length;
+    const completedLifestyle = lifestyleFields.filter(field => field && field.trim() !== '').length;
+    completedFields += completedLifestyle;
+    const missingLifestyle = completedLifestyle < lifestyleFields.length;
+
+    // Emergency contact fields (email is optional)
+    const emergencyFields = [
+      userProfile.emergency_contact_name,
+      userProfile.emergency_contact_relation,
+      userProfile.emergency_contact_phone
+    ];
+    totalFields += emergencyFields.length;
+    const completedEmergency = emergencyFields.filter(field => field && field.trim() !== '').length;
+    completedFields += completedEmergency;
+    const missingEmergency = completedEmergency < emergencyFields.length;
+
+    const percentage = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
+    
+    return { percentage, missingLifestyle, missingEmergency };
+  };
+
+  const { percentage: completionPercentage, missingLifestyle, missingEmergency } = calculateProfileCompletion();
 
   // Calculate ambient health color based on health score
   useEffect(() => {
@@ -250,8 +320,8 @@ export default function DashboardPage() {
                 <div>
                   <h1 className="text-4xl font-bold text-white mb-2">Welcome to Proxima</h1>
                   <p className="text-gray-400">
-                    {user?.user_metadata?.full_name ? 
-                      `Good to see you, ${user.user_metadata.full_name}` : 
+                    {user?.user_metadata?.name || user?.user_metadata?.full_name ? 
+                      `Good to see you, ${user.user_metadata?.name || user.user_metadata?.full_name}` : 
                       'Your personal health intelligence dashboard'
                     }
                   </p>
@@ -310,30 +380,57 @@ export default function DashboardPage() {
                       strokeWidth="3"
                       fill="none"
                       strokeDasharray={`${2 * Math.PI * 20}`}
-                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - 0.85)}`}
-                      className="text-purple-500 transition-all duration-500"
+                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - completionPercentage / 100)}`}
+                      className={`transition-all duration-500 ${
+                        completionPercentage >= 80 ? 'text-green-500' : 
+                        completionPercentage >= 60 ? 'text-yellow-500' : 
+                        'text-red-500'
+                      }`}
                     />
                   </svg>
                   <span className="absolute inset-0 flex items-center justify-center text-xs text-white font-medium">
-                    85%
+                    {completionPercentage}%
                   </span>
                 </div>
                 
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 flex items-center justify-center mb-4 group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all">
-                  <span className="text-2xl">👤</span>
+                  <User className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Health Profile</h3>
-                <div className="text-sm text-gray-400 mb-4 group-hover:blur-0 blur-[2px] transition-all">
-                  O+ • 3 🚨 • 2 💊
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Welcome, {user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                </h3>
+                <div className="text-sm text-gray-400 mb-4 flex items-center gap-2">
+                  {profileLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-600 rounded animate-pulse"></div>
+                      <span className="text-gray-500">Loading...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-red-400" />
+                        <span>{userProfile?.allergies?.length || 0}</span>
+                      </div>
+                      <span>•</span>
+                      <div className="flex items-center gap-1">
+                        <Pill className="w-3 h-3 text-blue-400" />
+                        <span>{userProfile?.medications?.length || 0}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     setProfileModalOpen(true);
                   }}
-                  className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-white text-sm font-medium hover:from-purple-600/30 hover:to-pink-600/30 transition-all"
+                  className={`w-full py-2 rounded-lg text-white text-sm font-medium transition-all ${
+                    (missingLifestyle || missingEmergency) 
+                      ? 'bg-gradient-to-r from-red-600/20 to-orange-600/20 hover:from-red-600/30 hover:to-orange-600/30' 
+                      : 'bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/30 hover:to-pink-600/30'
+                  }`}
                 >
-                  Configure Profile
+                  {(missingLifestyle || missingEmergency) ? 'Complete Profile' : 'Configure Profile'}
                 </button>
               </motion.div>
 
@@ -343,9 +440,7 @@ export default function DashboardPage() {
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-600/20 to-green-600/20 flex items-center justify-center mb-4 group-hover:from-emerald-600/30 group-hover:to-green-600/30 transition-all">
-                  <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
+                  <Zap className="w-6 h-6 text-emerald-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Quick Scan</h3>
                 <p className="text-gray-400 text-sm mb-2">Get instant AI-powered health insights</p>
@@ -365,9 +460,7 @@ export default function DashboardPage() {
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
-                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  <Camera className="w-6 h-6 text-blue-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">3D Body Visualization</h3>
                 <p className="text-gray-400 text-sm mb-2">Click exactly where you feel symptoms</p>
@@ -387,9 +480,7 @@ export default function DashboardPage() {
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:from-pink-600/30 group-hover:to-purple-600/30 transition-all">
-                  <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                  <AlertTriangle className="w-6 h-6 text-pink-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Photo Analysis</h3>
                 <p className="text-gray-400 text-sm mb-2">Upload photos for visual analysis</p>
@@ -445,8 +536,11 @@ export default function DashboardPage() {
                               </p>
                               <div className="flex items-center gap-2">
                                 {report.tags.map((tag, tagIdx) => (
-                                  <React.Fragment key={tag}>
-                                    <span className="text-xs text-gray-400">{tag}</span>
+                                  <React.Fragment key={tag.text}>
+                                    <div className="flex items-center gap-1">
+                                      {tag.icon}
+                                      <span className="text-xs text-gray-400">{tag.text}</span>
+                                    </div>
                                     {tagIdx < report.tags.length - 1 && <span className="text-xs text-gray-500">•</span>}
                                   </React.Fragment>
                                 ))}
@@ -623,7 +717,7 @@ export default function DashboardPage() {
                 {/* Predictive Alert */}
                 <div className="backdrop-blur-[20px] bg-gradient-to-r from-yellow-600/10 to-orange-600/10 border border-yellow-600/20 rounded-xl p-5">
                   <div className="flex items-start gap-3">
-                    <span className="text-yellow-500 text-xl">⚡</span>
+                    <Zap className="w-6 h-6 text-yellow-500" />
                     <div className="flex-1">
                       <h3 className="text-base font-medium text-white mb-2">Predictive Alert</h3>
                       <p className="text-sm text-gray-300">
@@ -644,9 +738,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
+                      <Brain className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
                       <h3 className="text-base font-medium text-white mb-2">AI Health Oracle</h3>
@@ -702,9 +794,9 @@ export default function DashboardPage() {
               className="grid grid-cols-1 lg:grid-cols-3 gap-4"
             >
               {[
-                { icon: '💧', tip: 'Increase water intake by 500ml today', color: 'from-blue-600/20 to-cyan-600/20' },
-                { icon: '🧘', tip: '10-minute meditation before bed', color: 'from-purple-600/20 to-pink-600/20' },
-                { icon: '🚶', tip: 'Take a 15-minute walk after lunch', color: 'from-green-600/20 to-emerald-600/20' },
+                { icon: <Sparkles className="w-6 h-6 text-blue-400" />, tip: 'Increase water intake by 500ml today', color: 'from-blue-600/20 to-cyan-600/20' },
+                { icon: <BrainCircuit className="w-6 h-6 text-purple-400" />, tip: '10-minute meditation before bed', color: 'from-purple-600/20 to-pink-600/20' },
+                { icon: <Utensils className="w-6 h-6 text-green-400" />, tip: 'Take a 15-minute walk after lunch', color: 'from-green-600/20 to-emerald-600/20' },
               ].map((tip, index) => (
                 <motion.div
                   key={index}
@@ -713,7 +805,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tip.color} flex items-center justify-center`}>
-                      <span className="text-xl">{tip.icon}</span>
+                      {tip.icon}
                     </div>
                     <p className="text-sm text-gray-300">{tip.tip}</p>
                   </div>
@@ -740,9 +832,7 @@ export default function DashboardPage() {
                   }}
                   className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <Zap className="w-5 h-5" />
                   Generate Doctor Report
                 </button>
                 <button
@@ -752,9 +842,7 @@ export default function DashboardPage() {
                   }}
                   className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
+                  <Brain className="w-5 h-5" />
                   Start New Chat
                 </button>
               </motion.div>
@@ -784,6 +872,25 @@ export default function DashboardPage() {
         <HealthProfileModal 
           isOpen={profileModalOpen} 
           onClose={() => setProfileModalOpen(false)} 
+                onSave={() => {
+                  // Refresh profile data when modal is saved
+                  if (user) {
+                    const fetchUpdatedProfile = async () => {
+                      try {
+                        setProfileLoading(true);
+                        const updatedProfile = await getUserProfile(user.id, user.email || '', user.user_metadata?.name || '');
+                        setUserProfile(updatedProfile);
+                      } catch (error) {
+                        console.error('Error refreshing profile:', error);
+                      } finally {
+                        setProfileLoading(false);
+                      }
+                    };
+                    fetchUpdatedProfile();
+                  }
+                }}
+                missingLifestyle={missingLifestyle}
+                missingEmergency={missingEmergency}
         />
 
         {/* Oracle Chat */}
