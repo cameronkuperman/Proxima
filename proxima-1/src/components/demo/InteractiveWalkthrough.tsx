@@ -27,7 +27,7 @@ export function InteractiveWalkthrough() {
   useEffect(() => {
     const savedState = localStorage.getItem('proxima-walkthrough')
     if (savedState) {
-      const parsed = JSON.parse(savedState)
+      const _parsed = JSON.parse(savedState)
       setState(prev => ({ ...prev, hasSeenBefore: true }))
     }
   }, [])
@@ -60,6 +60,7 @@ export function InteractiveWalkthrough() {
 
   const exploreFeature = (feature: string) => {
     setState(prev => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...prev,
       currentView: feature as any,
       exploredFeatures: [...new Set([...prev.exploredFeatures, feature])]
@@ -89,24 +90,31 @@ export function InteractiveWalkthrough() {
       description: 'Simply click on any part of your body to get instant AI-powered health insights. Our advanced system analyzes your query and provides relevant information in seconds.',
       icon: <Zap className="w-8 h-8" />,
       gradient: 'from-blue-500 to-cyan-500',
+      prerequisites: [],
       demo: <QuickScanDemo onComplete={backToCards} />
     },
     {
       id: 'deepDive',
       title: 'Deep Dive',
-      subtitle: 'Comprehensive health analysis',
-      description: 'Our AI asks follow-up questions to understand your symptoms better, providing more accurate and personalized health insights.',
+      subtitle: 'Comprehensive analysis',
+      description: 'AI-powered follow-up questions for accuracy',
+      status: 'beta' as const,
+      releaseDate: 'Late 2025',
       icon: <Dna className="w-8 h-8" />,
       gradient: 'from-purple-500 to-pink-500',
+      prerequisites: [],
       demo: <DeepDiveDemo onComplete={backToCards} />
     },
     {
       id: 'photoAnalysis',
       title: 'Photo Analysis',
       subtitle: 'Visual symptom tracking',
-      description: 'Upload photos of symptoms or conditions to track changes over time. Our AI analyzes visual patterns to provide insights.',
-      icon: <Camera className="w-8 h-8" />,
+      description: 'Track changes and healing over time',
+      status: 'coming-soon' as const,
+      releaseDate: 'Late 2025',
+      icon: <Camera className="w-8 h-8" />  ,
       gradient: 'from-orange-500 to-red-500',
+      prerequisites: [],
       demo: <PhotoAnalysisDemo onComplete={backToCards} />
     }
   ]
@@ -238,6 +246,8 @@ export function InteractiveWalkthrough() {
                           feature={feature}
                           index={index}
                           isExplored={state.exploredFeatures.includes(feature.id)}
+                          isUnlocked={true}
+                          isCompleted={false}
                           onClick={() => exploreFeature(feature.id)}
                         />
                       ))}

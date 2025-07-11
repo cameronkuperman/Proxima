@@ -39,8 +39,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
   const [selectedBodyPart, setSelectedBodyPart] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [isModelReady, setIsModelReady] = useState(false)
-  const [clickPosition, setClickPosition] = useState({ x: 50, y: 50 })
+  const [, ] = useState({ x: 50, y: 50 })
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   const [formData, setFormData] = useState<FormData>({
@@ -55,15 +54,8 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
   })
 
   // BioDigital configuration - exact URL with all UI elements
-  const bioDigitalUrl = `https://human.biodigital.com/viewer/?id=6F0C&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=true&ui-audio=true&ui-chapter-list=false&ui-fullscreen=true&ui-help=true&ui-info=true&ui-label-list=true&ui-layers=true&ui-skin-layers=true&ui-loader=circle&ui-media-controls=full&ui-menu=true&ui-nav=true&ui-search=true&ui-tools=true&ui-tutorial=false&ui-undo=true&ui-whiteboard=true&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&paid=o_24754ad1`
+  // const bioDigitalUrl = `https://human.biodigital.com/viewer/?id=6F0C&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=true&ui-audio=true&ui-chapter-list=false&ui-fullscreen=true&ui-help=true&ui-info=true&ui-label-list=true&ui-layers=true&ui-skin-layers=true&ui-loader=circle&ui-media-controls=full&ui-menu=true&ui-nav=true&ui-search=true&ui-tools=true&ui-tutorial=false&ui-undo=true&ui-whiteboard=true&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&paid=o_24754ad1`
   
-  // Debug logging state
-  const [debugLogs, setDebugLogs] = useState<string[]>([])
-  
-  const addDebugLog = (message: string) => {
-    console.log(message)
-    setDebugLogs(prev => [...prev, `[${new Date().toISOString().substr(11, 8)}] ${message}`])
-  }
 
   useEffect(() => {
     if (step === 'intro') {
@@ -73,13 +65,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
 
   // Handle iframe load
   const handleIframeLoad = () => {
-    addDebugLog('🔄 BioDigital iframe loaded')
-    
-    // Wait for BioDigital to fully load
-    setTimeout(() => {
-      addDebugLog('✅ BioDigital model ready')
-      setIsModelReady(true)
-    }, 3000)
+    // Model loads in background, no need for loading state
   }
   
   // Handle messages from hosted BioDigital
@@ -87,8 +73,6 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'BIODIGITAL_PICK' || event.data.type === 'BIODIGITAL_SELECT') {
         const data = event.data.data
-        addDebugLog(`🎯 BODY PART SELECTED: ${data.objectName}`)
-        addDebugLog(`Description: ${data.description || 'No description available'}`)
         setSelectedBodyPart(data.objectName || 'Unknown Body Part')
         setShowForm(true)
       }
@@ -284,18 +268,6 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                     </p>
                   </motion.div>
                 )}
-                
-                {/* Debug logs panel */}
-                <div className="mt-4 p-4 rounded-xl bg-gray-900/50 border border-gray-800 max-h-64 overflow-y-auto">
-                  <h5 className="text-sm font-medium text-gray-400 mb-2">Debug Logs:</h5>
-                  <div className="space-y-1 font-mono text-xs">
-                    {debugLogs.slice(-10).map((log, i) => (
-                      <div key={i} className={`text-gray-300 ${log.includes('❌') ? 'text-red-400' : log.includes('✅') ? 'text-green-400' : ''}`}>
-                        {log}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </motion.div>
 
               {/* 3D Model */}
@@ -312,19 +284,6 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                   onLoad={handleIframeLoad}
                 />
                 
-                {/* Loading overlay */}
-                {!isModelReady && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none"
-                  >
-                    <div className="text-center">
-                      <div className="w-16 h-16 mx-auto mb-4 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-white text-lg">Loading 3D model...</p>
-                    </div>
-                  </motion.div>
-                )}
 
                 {/* Form Modal */}
                 <AnimatePresence>
@@ -333,31 +292,31 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 lg:p-8 z-20"
+                      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 lg:p-8 z-50"
                       onClick={() => setShowForm(false)}
                     >
                       <motion.div
                         initial={{ scale: 0.95, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 rounded-2xl p-6 sm:p-8 max-w-4xl w-full border border-gray-700/50 shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
+                        transition={{ type: "spring", damping: 20, stiffness: 260 }}
+                        className="bg-gradient-to-br from-gray-900/95 via-gray-900/95 to-gray-800/95 backdrop-blur-xl rounded-2xl p-5 sm:p-6 max-w-3xl w-full border border-gray-600/30 shadow-2xl max-h-[92vh] overflow-hidden flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {/* Header */}
-                        <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-start justify-between mb-5">
                           <div>
-                            <h4 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                              Tell us about your <span className="text-blue-400">{selectedBodyPart}</span> symptoms
+                            <h4 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-2">
+                              Tell us about your <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">{selectedBodyPart}</span> symptoms
                             </h4>
-                            <p className="text-gray-400 text-sm">Help us understand what you're experiencing</p>
+                            <p className="text-gray-400 text-sm">Help us understand what you&apos;re experiencing</p>
                           </div>
                           <button
                             type="button"
                             onClick={() => setShowForm(false)}
-                            className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                            className="p-2 rounded-lg hover:bg-gray-800/50 transition-all group"
                           >
-                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -550,18 +509,18 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                         </form>
                         
                         {/* Fixed bottom buttons */}
-                        <div className="flex gap-3 pt-6 mt-6 border-t border-gray-700/50">
+                        <div className="flex gap-3 pt-4 mt-4 border-t border-gray-700/50">
                           <button
                             type="button"
                             onClick={() => setShowForm(false)}
-                            className="flex-1 px-5 py-3 rounded-xl bg-gray-800/50 text-gray-300 hover:bg-gray-800 transition-all font-medium"
+                            className="flex-1 px-5 py-3 rounded-xl bg-gray-800/50 text-gray-300 hover:bg-gray-800 transition-all font-medium border border-gray-700/50 hover:border-gray-600/50"
                           >
                             Cancel
                           </button>
                           <button
                             type="submit"
                             onClick={handleFormSubmit}
-                            className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
+                            className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
                             disabled={!formData.symptoms.trim()}
                           >
                             Analyze Symptoms

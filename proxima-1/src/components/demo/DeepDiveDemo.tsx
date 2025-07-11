@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Brain, MessageSquare, Sparkles, Construction, Send, MousePointer, ChevronDown, FileText, Activity, Shield, TrendingUp, Calendar, AlertCircle, Heart, Stethoscope } from 'lucide-react'
+import { ArrowLeft, Brain, Construction, Send, MousePointer, ChevronDown, FileText, Shield, TrendingUp, AlertCircle, Heart, Stethoscope } from 'lucide-react'
 
 interface DeepDiveDemoProps {
   onComplete: () => void
@@ -44,7 +44,7 @@ export function DeepDiveDemo({ onComplete }: DeepDiveDemoProps) {
     betterWhen: ''
   })
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentTyping, setCurrentTyping] = useState('')
+  // const [currentTyping, setCurrentTyping] = useState('')
   const [userInput, setUserInput] = useState('')
   const [showPresetResponses, setShowPresetResponses] = useState(false)
 
@@ -197,7 +197,7 @@ export function DeepDiveDemo({ onComplete }: DeepDiveDemoProps) {
         
         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-black text-sm font-medium">
           <Construction className="w-3 h-3" />
-          Beta Access - January 2025
+          Beta Access - Late 2025
         </div>
       </motion.div>
 
@@ -522,7 +522,7 @@ export function DeepDiveDemo({ onComplete }: DeepDiveDemoProps) {
                 </h3>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-sm">
                   <Construction className="w-3 h-3" />
-                  Demo Mode - Real AI coming January 2025
+                  Demo Mode - Real AI coming Late 2025
                 </div>
               </div>
 

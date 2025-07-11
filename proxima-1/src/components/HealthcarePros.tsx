@@ -26,7 +26,7 @@ export default function HealthcarePros() {
             Built with medical expertise
           </h2>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            We're working with experienced physicians to build a platform that actually 
+            We&apos;re working with experienced physicians to build a platform that actually 
             understands how healthcare works in the real world.
           </p>
         </motion.div>
