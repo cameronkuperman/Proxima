@@ -1,6 +1,6 @@
 'use client';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { useInView } from 'framer-motion';
 
 export default function Features() {
   return (
@@ -76,7 +76,7 @@ export default function Features() {
                   </div>
                   <div>
                     <h4 className="text-white font-medium mb-1">Anatomically Accurate</h4>
-                    <p className="text-gray-500 text-sm">Powered by BioDigital's medical-grade 3D models</p>
+                    <p className="text-gray-500 text-sm">Powered by BioDigital&apos;s medical-grade 3D models</p>
                   </div>
                 </div>
                 
@@ -109,13 +109,12 @@ export default function Features() {
               <div className="mt-8 p-6 bg-black/30 rounded-xl border border-gray-800/50">
                 <div className="aspect-square relative overflow-hidden rounded-lg">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-pink-500/20" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-gray-600">
-                      <svg className="w-32 h-32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={0.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
-                  </div>
+                  <Image 
+                    src="/picturefor.png" 
+                    alt="3D Body Mapping Interface"
+                    fill
+                    className="object-cover rounded-lg"
+                  />
                   {/* Floating points */}
                   <div className="absolute top-1/4 left-1/3 w-3 h-3 bg-purple-500 rounded-full animate-pulse" />
                   <div className="absolute top-1/2 right-1/3 w-3 h-3 bg-pink-500 rounded-full animate-pulse" style={{animationDelay: '0.5s'}} />
@@ -196,15 +195,13 @@ export default function Features() {
                 <div className="aspect-square relative overflow-hidden rounded-lg">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/20" />
                   
-                  {/* Photo grid in center */}
-                  <div className="absolute inset-0 flex items-center justify-center p-8">
-                    <div className="grid grid-cols-2 gap-2 w-full h-full max-w-[200px] max-h-[200px]">
-                      <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg animate-pulse" />
-                      <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.2s'}} />
-                      <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.4s'}} />
-                      <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg animate-pulse" style={{animationDelay: '0.6s'}} />
-                    </div>
-                  </div>
+                  {/* Medical condition image */}
+                  <Image
+                    src="/skinconditionactualreal.png"
+                    alt="Medical Condition Analysis"
+                    fill
+                    className="object-cover rounded-lg opacity-80"
+                  />
                   
                   {/* Analysis overlay */}
                   <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3">
@@ -304,7 +301,7 @@ export default function Features() {
                 </div>
                 <p className="text-gray-400 mb-4">
                   Want the full picture? Our AI asks follow-up questions to really understand 
-                  what's going on. Takes a bit longer but worth it for complex symptoms.
+                  what&apos;s going on. Takes a bit longer but worth it for complex symptoms.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li className="flex items-center gap-2">

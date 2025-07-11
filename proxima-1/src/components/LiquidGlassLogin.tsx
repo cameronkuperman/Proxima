@@ -21,7 +21,7 @@ export default function LiquidGlassLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
+  const [, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Check for existing session

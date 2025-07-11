@@ -90,7 +90,7 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
         }
       }
     }
-  }, [charIndex, isTyping, exampleIndex, step])
+  }, [charIndex, isTyping, exampleIndex, step, EXAMPLE_QUERIES])
 
   const handlePhotoUpload = () => {
     const newPhoto: UploadedPhoto = {

@@ -1,6 +1,5 @@
 'use client';
 import { FormEvent, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 
 export default function EmailSignupForm() {
   const [email, setEmail] = useState('');
@@ -31,7 +30,7 @@ export default function EmailSignupForm() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          Thanks! We'll notify you when we launch.
+          Thanks! We&apos;ll notify you when we launch.
         </div>
       </div>
     )}

@@ -23,8 +23,8 @@ export default function About() {
         </h2>
         
         <p className="text-xl text-gray-400 leading-relaxed mb-12">
-          We believe everyone deserves to understand what's happening with their body. 
-          That's why we're combining the latest in AI with intuitive design to create 
+          We believe everyone deserves to understand what&apos;s happening with their body. 
+          That&apos;s why we&apos;re combining the latest in AI with intuitive design to create 
           a health companion that actually speaks your language.
         </p>
         

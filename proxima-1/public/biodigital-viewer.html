@@ -8,55 +8,10 @@
             margin: 0;
             overflow: hidden;
             background: #1a1a1a;
-            font-family: -apple-system, sans-serif;
-        }
-        #container {
-            height: 100%;
-            position: relative;
-        }
-        #status {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #fff;
-            background: rgba(0,0,0,0.9);
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 1000;
-            max-width: 500px;
-            border: 1px solid #333;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        #status h3 {
-            margin: 0 0 10px 0;
-            color: #4ade80;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .log-entry {
-            font-size: 12px;
-            margin: 3px 0;
-            color: #cbd5e1;
-            font-family: 'Monaco', 'Menlo', monospace;
-        }
-        .log-entry.success { color: #4ade80; }
-        .log-entry.error { color: #f87171; }
-        .log-entry.pick { 
-            color: #60a5fa;
-            font-weight: bold;
-            background: rgba(96, 165, 250, 0.1);
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin: 5px 0;
         }
     </style>
 </head>
 <body style="height: 100%; margin: 0">
-    <div id="status">
-        <h3>BioDigital Selection Status</h3>
-        <div id="logs"></div>
-    </div>
     
     <!-- Using the exact iframe code provided, with ID for JavaScript API -->
     <iframe 
@@ -72,32 +27,12 @@
     <script src="https://developer.biodigital.com/builds/api/human-api-3.0.0.min.js"></script>
     
     <script>
-        const logsDiv = document.getElementById('logs');
-        let logCount = 0;
         let lastSelectedId = null;
         let isFirstLoad = true;
         let human = null;
         
-        function log(msg, type = '') {
-            console.log(msg);
-            const entry = document.createElement('div');
-            entry.className = 'log-entry ' + type;
-            entry.textContent = `[${new Date().toISOString().substr(11, 8)}] ${msg}`;
-            logsDiv.appendChild(entry);
-            
-            if (++logCount > 15) {
-                logsDiv.removeChild(logsDiv.firstChild);
-            }
-            
-            logsDiv.scrollTop = logsDiv.scrollHeight;
-        }
-        
-        log('Page loaded, waiting for iframe...', 'success');
-        
         // Initialize after window loads
         window.addEventListener('load', function() {
-            log('Window loaded, waiting a moment for iframe...', '');
-            
             // Give the iframe time to load
             setTimeout(function() {
                 initializeBioDigital();
@@ -108,26 +43,20 @@
             try {
                 // Check if HumanAPI is available
                 if (typeof HumanAPI === 'undefined') {
-                    log('✗ HumanAPI not loaded, retrying...', 'error');
                     setTimeout(initializeBioDigital, 1000);
                     return;
                 }
-                
-                log('✓ HumanAPI detected, creating instance...', 'success');
                 
                 // Create HumanAPI instance with the iframe ID
                 human = new HumanAPI("embedded-human");
                 
                 // Wait for the API to be ready
                 human.on('human.ready', function() {
-                    log('✓ Human API is READY!', 'success');
-                    
                     // Enable selection if needed
                     try {
                         human.send('scene.selectionEnabled', true);
-                        log('Selection mode enabled', '');
                     } catch (e) {
-                        log('Could not enable selection mode', '');
+                        // Silently continue
                     }
                     
                     // Primary pick event handler
@@ -139,31 +68,25 @@
                     human.on('scene.objectsSelected', function(event) {
                         const selectedIds = Object.keys(event).filter(id => event[id]);
                         if (selectedIds.length > 0) {
-                            log(`Objects selected: ${selectedIds.length} items`, '');
                             selectedIds.forEach(id => getObjectInfo(id));
                         }
                     });
                     
                     // Listen for any click events as backup
                     human.on('click', function(event) {
-                        log('Click event detected', '');
                         if (event && event.objectId) {
                             getObjectInfo(event.objectId);
                         }
                     });
-                    
-                    log('✓ All event handlers registered', 'success');
-                    log('Click on any body part to select it', '');
                 });
                 
                 // Error handling
                 human.on('human.error', function(err) {
-                    log('✗ API Error: ' + JSON.stringify(err), 'error');
+                    console.error('BioDigital API Error:', err);
                 });
                 
             } catch (e) {
-                log('✗ Failed to initialize: ' + e.message, 'error');
-                console.error(e);
+                console.error('Failed to initialize BioDigital:', e);
             }
         }
         
@@ -175,25 +98,21 @@
                  pickEvent.objectId.includes('_system-') ||
                  pickEvent.objectId.includes('_system_') ||
                  pickEvent.mode !== 'object')) {
-                log('Ignoring system-level selection', '');
                 return;
             }
             
             if (pickEvent && pickEvent.objectId) {
                 // Check if this is a different body part than last selection
                 if (isFirstLoad) {
-                    log('First load - ignoring initial selection', '');
                     isFirstLoad = false;
                     lastSelectedId = pickEvent.objectId;
                     return;
                 }
                 
                 if (pickEvent.objectId === lastSelectedId) {
-                    log('Same body part clicked - ignoring', '');
                     return;
                 }
                 
-                log(`Pick event: ${pickEvent.objectId}`, '');
                 lastSelectedId = pickEvent.objectId;
                 getObjectInfo(pickEvent.objectId, pickEvent);
             }
@@ -203,9 +122,15 @@
             // Clean up the anatomical name
             let cleaned = name;
             
-            // Remove common prefixes
+            // Remove common prefixes and system names
             cleaned = cleaned.replace(/^(human_\d+_|male_|female_|maleAdult_|femaleAdult_)/g, '');
             cleaned = cleaned.replace(/_standard-?/g, '');
+            cleaned = cleaned.replace(/muscular_system_/g, '');
+            cleaned = cleaned.replace(/skeletal_system_/g, '');
+            cleaned = cleaned.replace(/nervous_system_/g, '');
+            cleaned = cleaned.replace(/cardiovascular_system_/g, '');
+            cleaned = cleaned.replace(/respiratory_system_/g, '');
+            cleaned = cleaned.replace(/digestive_system_/g, '');
             
             // Remove ID suffixes
             cleaned = cleaned.replace(/_ID$/g, '');
@@ -216,6 +141,9 @@
             
             // Replace dashes with spaces
             cleaned = cleaned.replace(/-/g, ' ');
+            
+            // Remove redundant words including "muscular"
+            cleaned = cleaned.replace(/\b(male|female|adult|system|muscular)\b/gi, '');
             
             // Capitalize each word
             cleaned = cleaned.split(' ').map(word => 
@@ -237,8 +165,6 @@
                     const rawName = objectInfo.displayName || objectInfo.name || objectId;
                     const formattedName = formatAnatomicalName(rawName);
                     
-                    log(`🎯 SELECTED: ${formattedName}`, 'pick');
-                    
                     // Send to parent window
                     window.parent.postMessage({
                         type: 'BIODIGITAL_PICK',
@@ -257,7 +183,6 @@
                 } else {
                     // Fallback - format the objectId
                     const formattedName = formatAnatomicalName(objectId);
-                    log(`Selected object: ${formattedName}`, 'pick');
                     window.parent.postMessage({
                         type: 'BIODIGITAL_PICK',
                         data: {
@@ -268,29 +193,6 @@
                 }
             });
         }
-        
-        // Add programmatic testing capability
-        window.testPick = function() {
-            if (human) {
-                const iframe = document.getElementById("embedded-human");
-                const w = iframe.clientWidth;
-                const h = iframe.clientHeight;
-                const x = w / 2;
-                const y = h / 2;
-                
-                log(`Testing pick at center (${x}, ${y})`, '');
-                human.send('scene.pick', { x: x, y: y, triggerActions: true }, function(hit) {
-                    if (hit) {
-                        log('Test pick hit: ' + JSON.stringify(hit), 'success');
-                        if (hit.objectId) {
-                            getObjectInfo(hit.objectId, hit);
-                        }
-                    } else {
-                        log('Test pick missed', 'error');
-                    }
-                });
-            }
-        };
     </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect } from 'react'
-import { Play, Construction } from 'lucide-react'
+import React from 'react'
+import { Play } from 'lucide-react'
 
 interface DemoButtonProps {
   variant?: 'primary' | 'secondary'

@@ -47,6 +47,7 @@ export function InteractiveDemo() {
 
   const exploreFeature = (feature: string) => {
     setState(prev => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...prev,
       currentView: feature as any,
       exploredFeatures: [...new Set([...prev.exploredFeatures, feature])]
@@ -61,7 +62,7 @@ export function InteractiveDemo() {
     }))
   }
 
-  const backToCards = () => {
+  const backToCards = () => { return; // unused
     setState(prev => ({ ...prev, currentView: 'cards' }))
   }
 
@@ -91,7 +92,7 @@ export function InteractiveDemo() {
       subtitle: 'Comprehensive analysis',
       description: 'AI-powered follow-up questions for accuracy',
       status: 'beta' as const,
-      releaseDate: 'January 2025',
+      releaseDate: 'Late 2025',
       icon: <Dna className="w-6 h-6" />,
       gradient: 'from-purple-500 via-pink-500 to-rose-500',
       prerequisites: ['quickScan'] as string[],
@@ -103,7 +104,7 @@ export function InteractiveDemo() {
       subtitle: 'Visual symptom tracking',
       description: 'Track changes and healing over time',
       status: 'coming-soon' as const,
-      releaseDate: 'Q1 2025',
+      releaseDate: 'Late 2025',
       icon: <Camera className="w-6 h-6" />,
       gradient: 'from-orange-500 via-red-500 to-pink-500',
       prerequisites: ['quickScan', 'deepDive'] as string[],
