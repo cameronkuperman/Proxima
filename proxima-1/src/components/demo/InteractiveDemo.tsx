@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { X, Sparkles, ChevronRight } from 'lucide-react'
+import { X, Sparkles, Zap, Dna, Camera } from 'lucide-react'
 import { FeatureCard } from './FeatureCard'
 import { QuickScanDemo } from './QuickScanDemo'
 import { DeepDiveDemo } from './DeepDiveDemo'
@@ -80,7 +80,7 @@ export function InteractiveDemo() {
       subtitle: 'Instant health insights',
       description: 'Click on your body, get answers in seconds',
       status: 'available' as const,
-      icon: '⚡',
+      icon: <Zap className="w-6 h-6" />,
       gradient: 'from-blue-500 via-cyan-500 to-teal-500',
       prerequisites: [] as string[],
       demo: <QuickScanDemo onComplete={() => completeFeature('quickScan')} />
@@ -92,7 +92,7 @@ export function InteractiveDemo() {
       description: 'AI-powered follow-up questions for accuracy',
       status: 'beta' as const,
       releaseDate: 'January 2025',
-      icon: '🧬',
+      icon: <Dna className="w-6 h-6" />,
       gradient: 'from-purple-500 via-pink-500 to-rose-500',
       prerequisites: ['quickScan'] as string[],
       demo: <DeepDiveDemo onComplete={() => completeFeature('deepDive')} />
@@ -104,7 +104,7 @@ export function InteractiveDemo() {
       description: 'Track changes and healing over time',
       status: 'coming-soon' as const,
       releaseDate: 'Q1 2025',
-      icon: '📸',
+      icon: <Camera className="w-6 h-6" />,
       gradient: 'from-orange-500 via-red-500 to-pink-500',
       prerequisites: ['quickScan', 'deepDive'] as string[],
       demo: <PhotoAnalysisDemo onComplete={() => completeFeature('photoAnalysis')} />

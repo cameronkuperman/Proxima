@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import SubscriptionCard from '@/components/profile/SubscriptionCard';
 import AccountSettings from '@/components/profile/AccountSettings';
 import HealthDataSummary from '@/components/profile/HealthDataSummary';
@@ -11,13 +12,29 @@ import OnboardingGuard from '@/components/OnboardingGuard';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [user] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    memberSince: 'January 2024',
-    avatar: null
-  });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Function to trigger refresh of health data
+  const handleProfileSave = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+  
+  // Get user display name and email - with safety checks
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+  const userEmail = user?.email || '';
+  
+  // Format member since date
+  const memberSince = user?.created_at 
+    ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+    : 'Recently';
+    
+  // Safety check for avatar initials
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
 
   return (
     <OnboardingGuard>
@@ -61,16 +78,13 @@ export default function ProfilePage() {
           <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
             <div className="flex items-center gap-6">
               <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-2xl font-semibold text-white">
-                {user.name.split(' ').map(n => n[0]).join('')}
+                {getInitials(displayName)}
               </div>
               <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-white">{user.name}</h2>
-                <p className="text-gray-400">{user.email}</p>
-                <p className="text-sm text-gray-500 mt-1">Member since {user.memberSince}</p>
+                <h2 className="text-2xl font-semibold text-white">{displayName}</h2>
+                <p className="text-gray-400">{userEmail}</p>
+                <p className="text-sm text-gray-500 mt-1">Member since {memberSince}</p>
               </div>
-              <button className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all">
-                Edit Profile
-              </button>
             </div>
           </div>
 
@@ -78,7 +92,10 @@ export default function ProfilePage() {
           <SubscriptionCard />
 
           {/* Health Data Summary */}
-          <HealthDataSummary onConfigureClick={() => setProfileModalOpen(true)} />
+          <HealthDataSummary 
+            onConfigureClick={() => setProfileModalOpen(true)} 
+            refreshTrigger={refreshTrigger}
+          />
 
           {/* Account Settings */}
           <AccountSettings />
@@ -89,6 +106,7 @@ export default function ProfilePage() {
       <HealthProfileModal 
         isOpen={profileModalOpen} 
         onClose={() => setProfileModalOpen(false)} 
+        onSave={handleProfileSave}
       />
     </div>
     </OnboardingGuard>

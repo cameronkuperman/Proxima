@@ -23,6 +23,16 @@ export interface OnboardingData {
   personal_health_context: string;
   family_history: FamilyHistoryEntry[];
   allergies: string[];
+  lifestyle_smoking_status?: string;
+  lifestyle_alcohol_consumption?: string;
+  lifestyle_exercise_frequency?: string;
+  lifestyle_sleep_hours?: string;
+  lifestyle_stress_level?: string;
+  lifestyle_diet_type?: string;
+  emergency_contact_name?: string;
+  emergency_contact_relation?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_email?: string;
 }
 
 // Fetch user's medical profile
@@ -38,6 +48,47 @@ export async function getUserProfile(
       .select('*')
       .eq('id', userId)
       .single();
+    
+
+    
+    // Process medications data to ensure proper structure
+    if (data && data.medications) {
+      // Ensure medications is an array of objects with the correct structure
+      data.medications = Array.isArray(data.medications) 
+        ? data.medications.map((med: any) => {
+            if (typeof med === 'string') {
+              try {
+                // Try to parse JSON string
+                const parsedMed = JSON.parse(med);
+                return {
+                  name: parsedMed.name || '',
+                  dosage: parsedMed.dosage || '',
+                  frequency: parsedMed.frequency || ''
+                };
+              } catch (e) {
+                // If parsing fails, treat as medication name
+                return {
+                  name: med,
+                  dosage: '',
+                  frequency: ''
+                };
+              }
+            } else if (typeof med === 'object' && med !== null) {
+              return {
+                name: med.name || '',
+                dosage: med.dosage || '',
+                frequency: med.frequency || ''
+              };
+            }
+            // Fallback
+            return {
+              name: String(med),
+              dosage: '',
+              frequency: ''
+            };
+          })
+        : [];
+    }
 
     // If no profile exists, create one
     if (error && error.code === 'PGRST116') {
@@ -56,7 +107,17 @@ export async function getUserProfile(
             medications: [],
             personal_health_context: '',
             family_history: [],
-            allergies: []
+            allergies: [],
+            lifestyle_smoking_status: '',
+            lifestyle_alcohol_consumption: '',
+            lifestyle_exercise_frequency: '',
+            lifestyle_sleep_hours: '',
+            lifestyle_stress_level: '',
+            lifestyle_diet_type: '',
+            emergency_contact_name: '',
+            emergency_contact_relation: '',
+            emergency_contact_phone: '',
+            emergency_contact_email: ''
           }
         ])
         .select()
@@ -148,6 +209,15 @@ export async function completeOnboarding(
   data: OnboardingData
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Ensure medications array has the correct structure
+    const medications = data.medications?.map(med => ({
+      name: med.name || '',
+      dosage: med.dosage || '',
+      frequency: med.frequency || ''
+    })) || [];
+    
+
+    
     // Update user's medical data
     const { error: medicalError } = await supabase
       .from('medical')
@@ -157,10 +227,20 @@ export async function completeOnboarding(
         weight: data.weight,
         race: data.race,
         is_male: data.is_male,
-        medications: data.medications,
+        medications: medications,
         personal_health_context: data.personal_health_context,
         family_history: data.family_history,
-        allergies: data.allergies
+        allergies: data.allergies,
+        lifestyle_smoking_status: data.lifestyle_smoking_status || '',
+        lifestyle_alcohol_consumption: data.lifestyle_alcohol_consumption || '',
+        lifestyle_exercise_frequency: data.lifestyle_exercise_frequency || '',
+        lifestyle_sleep_hours: data.lifestyle_sleep_hours || '',
+        lifestyle_stress_level: data.lifestyle_stress_level || '',
+        lifestyle_diet_type: data.lifestyle_diet_type || '',
+        emergency_contact_name: data.emergency_contact_name || '',
+        emergency_contact_relation: data.emergency_contact_relation || '',
+        emergency_contact_phone: data.emergency_contact_phone || '',
+        emergency_contact_email: data.emergency_contact_email || ''
       })
       .eq('id', userId);
 

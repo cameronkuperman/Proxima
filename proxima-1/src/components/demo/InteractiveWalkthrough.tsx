@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Play, Sparkles, ChevronRight, Check, Lock, Construction } from 'lucide-react'
+import { X, Play, Sparkles, ChevronRight, Check, Lock, Construction, Zap, Dna, Camera } from 'lucide-react'
 import { FeatureCard } from './FeatureCard'
 import { QuickScanDemo } from './QuickScanDemo'
 import { DeepDiveDemo } from './DeepDiveDemo'
@@ -85,21 +85,18 @@ export function InteractiveWalkthrough() {
     {
       id: 'quickScan',
       title: 'Quick Scan',
-      subtitle: 'Instant health insights',
-      description: 'Click on your body, get answers in seconds',
-      status: 'available' as const,
-      icon: '⚡',
+      subtitle: 'Instant health insights from body interaction',
+      description: 'Simply click on any part of your body to get instant AI-powered health insights. Our advanced system analyzes your query and provides relevant information in seconds.',
+      icon: <Zap className="w-8 h-8" />,
       gradient: 'from-blue-500 to-cyan-500',
       demo: <QuickScanDemo onComplete={backToCards} />
     },
     {
       id: 'deepDive',
       title: 'Deep Dive',
-      subtitle: 'Comprehensive analysis',
-      description: 'AI-powered follow-up questions for accuracy',
-      status: 'beta' as const,
-      releaseDate: 'January 2025',
-      icon: '🧬',
+      subtitle: 'Comprehensive health analysis',
+      description: 'Our AI asks follow-up questions to understand your symptoms better, providing more accurate and personalized health insights.',
+      icon: <Dna className="w-8 h-8" />,
       gradient: 'from-purple-500 to-pink-500',
       demo: <DeepDiveDemo onComplete={backToCards} />
     },
@@ -107,10 +104,8 @@ export function InteractiveWalkthrough() {
       id: 'photoAnalysis',
       title: 'Photo Analysis',
       subtitle: 'Visual symptom tracking',
-      description: 'Track changes and healing over time',
-      status: 'coming-soon' as const,
-      releaseDate: 'Q1 2025',
-      icon: '📸',
+      description: 'Upload photos of symptoms or conditions to track changes over time. Our AI analyzes visual patterns to provide insights.',
+      icon: <Camera className="w-8 h-8" />,
       gradient: 'from-orange-500 to-red-500',
       demo: <PhotoAnalysisDemo onComplete={backToCards} />
     }
