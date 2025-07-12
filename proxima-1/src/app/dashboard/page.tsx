@@ -282,7 +282,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Dashboard Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               {/* Health Profile Card */}
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -340,6 +340,7 @@ export default function DashboardPage() {
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
+                onClick={() => router.push('/scan?mode=quick')}
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-600/20 to-green-600/20 flex items-center justify-center mb-4 group-hover:from-emerald-600/30 group-hover:to-green-600/30 transition-all">
                   <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,6 +357,26 @@ export default function DashboardPage() {
                 >
                   Last used: {lastActivityTimes.quickScan}
                 </motion.p>
+              </motion.div>
+
+              {/* Deep Dive Card */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
+                onClick={() => router.push('/scan?mode=deep')}
+              >
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-indigo-600/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:from-indigo-600/30 group-hover:to-purple-600/30 transition-all">
+                  <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Deep Dive</h3>
+                <p className="text-gray-400 text-sm mb-2">Advanced analysis with follow-up questions</p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-indigo-400">2-3 min</span>
+                  <span className="text-gray-500">•</span>
+                  <span className="text-gray-500">Premium</span>
+                </div>
               </motion.div>
 
               {/* 3D Body Visualization Card */}
