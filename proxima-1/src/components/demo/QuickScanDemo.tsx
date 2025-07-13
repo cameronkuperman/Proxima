@@ -2,7 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, MousePointer, Sparkles, Check, ChevronDown, AlertCircle, Activity, Clock, BedDouble, TrendingUp, Shield, Calendar, Eye, Briefcase, Users, Dumbbell } from 'lucide-react'
+import { ArrowLeft, MousePointer, Sparkles, Check, ChevronDown, AlertCircle, Activity, Clock, BedDouble, TrendingUp, Shield, Calendar, Eye, Briefcase, Users, Dumbbell, Brain, FileText, Download, ChevronRight, X, Zap } from 'lucide-react'
+import { useQuickScan } from '@/hooks/useQuickScan'
+import { useRouter } from 'next/navigation'
+import OracleEmbedded from '@/components/OracleEmbedded'
 
 interface QuickScanDemoProps {
   onComplete: () => void
@@ -17,6 +20,12 @@ interface FormData {
   worseWhen: string
   betterWhen: string
   sleepImpact: string
+  // New fields
+  frequency: string
+  whatTried: string
+  didItHelp: string
+  associatedSymptoms: string
+  triggerEvent: string
 }
 
 interface AnalysisResult {
@@ -35,12 +44,19 @@ interface AnalysisResult {
 }
 
 export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
+  const router = useRouter()
+  const { performScan, isLoading, error, scanResult, reset } = useQuickScan()
   const [step, setStep] = useState<'intro' | 'interact' | 'form' | 'analyzing' | 'result'>('intro')
   const [selectedBodyPart, setSelectedBodyPart] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [, ] = useState({ x: 50, y: 50 })
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [activeTab, setActiveTab] = useState(0)
+  const [showWhy, setShowWhy] = useState(false)
+  const [showOraclePanel, setShowOraclePanel] = useState(false)
+  const [scanId, setScanId] = useState<string | null>(null)
+  const [hadTrigger, setHadTrigger] = useState<boolean | null>(null)
   
   const [formData, setFormData] = useState<FormData>({
     symptoms: '',
@@ -50,7 +66,12 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     dailyImpact: [],
     worseWhen: '',
     betterWhen: '',
-    sleepImpact: ''
+    sleepImpact: '',
+    frequency: 'first',
+    whatTried: '',
+    didItHelp: '',
+    associatedSymptoms: '',
+    triggerEvent: ''
   })
 
   // BioDigital configuration - exact URL with all UI elements
@@ -82,18 +103,26 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.symptoms.trim()) {
+    if (!formData.symptoms.trim() || !selectedBodyPart) {
       return
     }
     setShowForm(false)
     setStep('analyzing')
     
-    // Simulate analysis
-    setTimeout(() => {
+    try {
+      console.log('Submitting Quick Scan:', { selectedBodyPart, formData })
+      const result = await performScan(selectedBodyPart, formData)
+      console.log('Quick Scan result:', result)
+      setScanId(result.scan_id)
       setStep('result')
-    }, 3000)
+    } catch (err) {
+      console.error('Quick Scan error:', err)
+      // If error, go back to form
+      setStep('interact')
+      setShowForm(true)
+    }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -112,65 +141,55 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
     }))
   }
 
-  // Mock analysis result based on selected body part
-  const analysisResult: AnalysisResult = {
-    confidence: 82,
-    primaryCondition: selectedBodyPart === 'Head' ? 'Tension Headache' : 
-                     selectedBodyPart === 'Neck/Shoulders' ? 'Muscle Strain' :
-                     selectedBodyPart === 'Chest/Arms' ? 'Musculoskeletal Pain' :
-                     selectedBodyPart === 'Abdomen/Lower Back' ? 'Lumbar Strain' :
-                     selectedBodyPart === 'Hips/Thighs' ? 'Hip Flexor Strain' :
-                     'General Muscle Discomfort',
-    likelihood: 'High',
-    symptoms: [
-      formData.painType.includes('sharp') ? 'Sharp, localized pain' : 'Dull, aching pain',
-      `Pain level ${formData.painLevel}/10`,
-      formData.dailyImpact.includes('work') ? 'Affecting work performance' : 'Limited daily activities',
-      formData.sleepImpact ? 'Sleep disturbance' : 'No sleep issues'
-    ],
-    recommendations: [
-      'Schedule appointment with primary care physician within 3-5 days',
-      'Apply ice for 15-20 minutes every 2-3 hours for first 48 hours',
-      'Over-the-counter pain relief: Ibuprofen 400mg every 6 hours with food',
-      'Gentle stretching exercises - avoid activities that worsen pain',
-      'Monitor symptoms - seek immediate care if worsening'
-    ],
-    urgency: parseInt(formData.painLevel) > 7 ? 'high' : 
-             parseInt(formData.painLevel) > 4 ? 'medium' : 'low',
-    differentials: [
-      { condition: 'Inflammation', probability: 15 },
-      { condition: 'Nerve Involvement', probability: 8 },
-      { condition: 'Referred Pain', probability: 5 }
-    ],
-    redFlags: [
-      'Sudden severe pain with no clear cause',
-      'Numbness or tingling spreading to other areas',
-      'Loss of bladder/bowel control',
-      'Fever above 101°F with pain',
-      'Progressive weakness'
-    ],
-    selfCare: [
-      'Rest in comfortable position',
-      'Stay hydrated - aim for 8 glasses of water daily',
-      'Practice stress reduction techniques',
-      'Maintain good posture',
-      'Use ergonomic supports if needed'
-    ],
-    timeline: formData.duration === 'hours' ? 'Acute onset - monitor closely for 24-48 hours' :
-              formData.duration === 'days' ? 'Sub-acute - improvement expected within 1-2 weeks' :
-              'Chronic pattern - comprehensive evaluation recommended',
-    followUp: 'If no improvement in 3-5 days or worsening at any time',
-    relatedSymptoms: [
-      'Watch for: fever, rash, swelling, or color changes',
-      'Note any new symptoms or pain spreading',
-      'Track pain patterns throughout the day'
-    ]
+  // Handler functions for new actions
+  const handleAskOracle = () => {
+    setShowOraclePanel(true)
   }
 
+  const handleGenerateReport = () => {
+    // TODO: Implement physician report generation
+    console.log('Generating physician report for scan:', scanId)
+    alert('Report generation will be implemented soon')
+  }
+
+  const handleTrackProgress = () => {
+    // Navigate to symptom tracking (requires auth)
+    router.push('/dashboard/symptoms')
+  }
+
+  // Use the actual analysis result from the API
+  const analysisResult: AnalysisResult = scanResult?.analysis || {
+    confidence: 0,
+    primaryCondition: 'Loading...',
+    likelihood: 'Analyzing...',
+    symptoms: [],
+    recommendations: [],
+    urgency: 'low' as const,
+    differentials: [],
+    redFlags: [],
+    selfCare: [],
+    timeline: 'Processing...',
+    followUp: 'Please wait...',
+    relatedSymptoms: []
+  }
+
+  // Debug: Log when we have scan results
+  useEffect(() => {
+    if (scanResult) {
+      console.log('Quick Scan Results:', {
+        scanId: scanResult.scan_id,
+        confidence: scanResult.confidence,
+        bodyPart: scanResult.body_part,
+        analysis: scanResult.analysis
+      })
+    }
+  }, [scanResult])
+
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <motion.div
+    <>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between mb-8"
@@ -434,6 +453,65 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                             </div>
                           </div>
 
+                          {/* How did it start */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                              <div className="flex items-center gap-2">
+                                <Zap className="w-4 h-4 text-amber-400" />
+                                <span>Was there something specific that triggered this?</span>
+                              </div>
+                            </label>
+                            <div className="space-y-3">
+                              <div className="flex gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setHadTrigger(true)}
+                                  className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+                                    hadTrigger === true
+                                      ? 'bg-blue-500/20 border-2 border-blue-500 text-blue-400'
+                                      : 'bg-gray-800/50 border-2 border-gray-700 text-gray-300 hover:border-gray-600'
+                                  }`}
+                                >
+                                  Yes, I remember
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHadTrigger(false)
+                                    setFormData(prev => ({ ...prev, triggerEvent: '' }))
+                                  }}
+                                  className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+                                    hadTrigger === false
+                                      ? 'bg-blue-500/20 border-2 border-blue-500 text-blue-400'
+                                      : 'bg-gray-800/50 border-2 border-gray-700 text-gray-300 hover:border-gray-600'
+                                  }`}
+                                >
+                                  No / Not sure
+                                </button>
+                              </div>
+                              
+                              <AnimatePresence>
+                                {hadTrigger === true && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <textarea
+                                      name="triggerEvent"
+                                      value={formData.triggerEvent}
+                                      onChange={handleInputChange}
+                                      placeholder="What happened? (e.g., 'Lifted a heavy box', 'Slept in an awkward position', 'After eating certain food'...)"
+                                      rows={2}
+                                      className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none transition-all placeholder-gray-500"
+                                    />
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+
                           {/* Advanced questions toggle */}
                           <button
                             type="button"
@@ -502,6 +580,66 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                                     <option value="position">Can't find comfortable position</option>
                                   </select>
                                 </div>
+
+                                {/* Previous episodes */}
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Have you experienced this before?
+                                  </label>
+                                  <select
+                                    name="frequency"
+                                    value={formData.frequency}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all appearance-none"
+                                  >
+                                    <option value="first">This is the first time</option>
+                                    <option value="rarely">Rarely (few times a year)</option>
+                                    <option value="sometimes">Sometimes (monthly)</option>
+                                    <option value="often">Often (weekly)</option>
+                                    <option value="veryOften">Very often (daily)</option>
+                                    <option value="constant">Constantly</option>
+                                  </select>
+                                </div>
+
+                                {/* What have you tried */}
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Have you tried anything for this?
+                                  </label>
+                                  <div className="space-y-3">
+                                    <textarea
+                                      name="whatTried"
+                                      value={formData.whatTried}
+                                      onChange={handleInputChange}
+                                      placeholder="What did you try? (e.g., rest, ice, medication...)"
+                                      rows={2}
+                                      className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none transition-all placeholder-gray-500"
+                                    />
+                                    <textarea
+                                      name="didItHelp"
+                                      value={formData.didItHelp}
+                                      onChange={handleInputChange}
+                                      placeholder="Did it help? How?"
+                                      rows={2}
+                                      className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none transition-all placeholder-gray-500"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Associated symptoms */}
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Any other symptoms elsewhere in your body?
+                                  </label>
+                                  <input
+                                    type="text"
+                                    name="associatedSymptoms"
+                                    value={formData.associatedSymptoms}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g., Fatigue, fever, other areas affected..."
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-800/50 text-white border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all placeholder-gray-500"
+                                  />
+                                </div>
                               </motion.div>
                             )}
                           </AnimatePresence>
@@ -556,7 +694,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
           )}
 
           {/* Result */}
-          {step === 'result' && (
+          {step === 'result' && scanResult && (
             <motion.div
               key="result"
               initial={{ opacity: 0 }}
@@ -565,208 +703,282 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
               className="max-w-4xl mx-auto"
             >
               <div className="space-y-6">
-                {/* Main Analysis Card */}
+                {/* Main Analysis Card with Tabbed Interface */}
                 <div className="bg-gray-900/50 rounded-3xl border border-white/10 overflow-hidden">
-                  {/* Header with Urgency */}
+                  {/* Header with dynamic confidence coloring */}
                   <div className={`p-8 border-b border-white/10 bg-gradient-to-r ${
-                    analysisResult.urgency === 'high' ? 'from-red-500/20 to-red-600/20' :
-                    analysisResult.urgency === 'medium' ? 'from-amber-500/20 to-orange-500/20' :
-                    'from-green-500/20 to-emerald-500/20'
+                    scanResult.confidence > 85 ? 'from-green-500/20 to-emerald-500/20' :
+                    scanResult.confidence > 70 ? 'from-blue-500/20 to-cyan-500/20' :
+                    'from-amber-500/20 to-orange-500/20'
                   }`}>
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-3xl font-bold text-white mb-2">AI Health Analysis Complete</h3>
+                        <h3 className="text-3xl font-bold text-white mb-2">Your Health Analysis</h3>
                         <p className="text-gray-300">Analysis for {selectedBodyPart.toLowerCase()} symptoms</p>
                       </div>
-                      <div className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
-                        analysisResult.urgency === 'high' ? 'bg-red-500/30 text-red-400 border border-red-500/50' :
-                        analysisResult.urgency === 'medium' ? 'bg-amber-500/30 text-amber-400 border border-amber-500/50' :
-                        'bg-green-500/30 text-green-400 border border-green-500/50'
-                      }`}>
-                        <Shield className="w-4 h-4" />
-                        {analysisResult.urgency === 'high' ? 'Urgent Care Advised' :
-                         analysisResult.urgency === 'medium' ? 'Medical Attention Recommended' :
-                         'Self-Care Appropriate'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Primary Diagnosis with Confidence */}
-                  <div className="p-8 bg-gradient-to-br from-blue-500/5 to-cyan-500/5">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-400 mb-2">PRIMARY DIAGNOSIS</h4>
-                        <h3 className="text-3xl font-bold text-white">{analysisResult.primaryCondition}</h3>
-                      </div>
                       <div className="text-right">
-                        <div className="text-4xl font-bold text-white mb-1">{analysisResult.confidence}%</div>
+                        <div className="text-4xl font-bold text-white mb-1">{scanResult.confidence}%</div>
                         <div className="text-sm text-gray-400">Confidence</div>
+                        {scanResult.confidence < 70 && (
+                          <div className="mt-2 text-xs text-amber-400">Consider Oracle consultation</div>
+                        )}
                       </div>
                     </div>
-                    <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden">
+                    {/* Doctor report button in header */}
+                    <div className="absolute top-8 right-8">
+                      <button
+                        onClick={handleGenerateReport}
+                        className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Doctor Report
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Three-stage tabs */}
+                  <div className="flex border-b border-gray-800">
+                    {['Diagnosis', 'Care Plan', 'Watch For'].map((tab, index) => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(index)}
+                        className={`flex-1 py-4 px-6 font-medium transition-all relative ${
+                          activeTab === index 
+                            ? 'text-white bg-gray-800/30' 
+                            : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800/10'
+                        }`}
+                      >
+                        <span className="relative z-10">{tab}</span>
+                        {activeTab === index && (
+                          <motion.div
+                            layoutId="activeTab"
+                            className="absolute inset-0 border-b-2 border-blue-500"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                          />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Tab content */}
+                  <AnimatePresence mode="wait">
+                    {activeTab === 0 && (
                       <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${analysisResult.confidence}%` }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
-                      />
-                    </div>
-                  </div>
-                </div>
+                        key="diagnosis"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="p-8"
+                      >
+                        {/* Primary diagnosis */}
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold text-gray-400 mb-3">Most Likely Condition</h4>
+                          <h3 className="text-3xl font-bold text-white mb-3">{analysisResult.primaryCondition}</h3>
+                          <p className="text-gray-300 mb-3">{analysisResult.likelihood}</p>
+                          
+                          {/* Why this diagnosis - collapsible */}
+                          <button
+                            onClick={() => setShowWhy(!showWhy)}
+                            className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2 transition-colors"
+                          >
+                            Why this diagnosis? 
+                            <ChevronDown className={`w-4 h-4 transition-transform ${showWhy ? 'rotate-180' : ''}`} />
+                          </button>
+                          <AnimatePresence>
+                            {showWhy && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-3 p-4 bg-gray-800/50 rounded-xl text-sm text-gray-300">
+                                  Based on your symptoms of {formData.symptoms} in the {selectedBodyPart} area, 
+                                  along with the {formData.painType.join(', ')} pain pattern and {formData.duration} duration, 
+                                  this diagnosis best matches your presentation.
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
 
-                {/* Key Information Grid */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Symptoms & Timeline */}
-                  <div className="bg-gray-900/50 rounded-2xl border border-white/10 p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                        <Activity className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-white">Symptoms & Timeline</h4>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-gray-400 mb-2">Identified Symptoms:</p>
-                        <ul className="space-y-1">
-                          {analysisResult.symptoms.map((symptom, index) => (
-                            <li key={index} className="flex items-center gap-2 text-gray-300 text-sm">
-                              <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                              {symptom}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="pt-3 border-t border-gray-800">
-                        <p className="text-sm text-gray-400 mb-1">Expected Timeline:</p>
-                        <p className="text-gray-300">{analysisResult.timeline}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Differential Diagnosis */}
-                  <div className="bg-gray-900/50 rounded-2xl border border-white/10 p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-purple-400" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-white">Other Possibilities</h4>
-                    </div>
-                    <div className="space-y-3">
-                      {analysisResult.differentials.map((diff, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <span className="text-gray-300">{diff.condition}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-purple-500/50"
-                                style={{ width: `${diff.probability}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-gray-500 w-10 text-right">{diff.probability}%</span>
+                        {/* Differential diagnoses */}
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-400 mb-3">Other Possibilities</h4>
+                          <div className="space-y-3">
+                            {analysisResult.differentials.map((diff, index) => (
+                              <div key={index} className="bg-gray-800/30 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-medium text-white">{diff.condition}</span>
+                                  <span className="text-sm text-gray-400">{diff.probability}% likely</span>
+                                </div>
+                                <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${diff.probability}%` }}
+                                    transition={{ duration: 0.8, ease: "easeOut" }}
+                                    className="h-full bg-gradient-to-r from-purple-500 to-purple-600"
+                                  />
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                      </motion.div>
+                    )}
 
-                {/* Red Flags Warning */}
-                <div className="bg-red-500/10 rounded-2xl border border-red-500/30 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-5 h-5 text-red-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-white mb-3">Seek Immediate Care If You Experience:</h4>
-                      <div className="grid md:grid-cols-2 gap-2">
-                        {analysisResult.redFlags.map((flag, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-                            <span className="text-gray-300 text-sm">{flag}</span>
+                    {activeTab === 1 && (
+                      <motion.div
+                        key="care"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="p-8"
+                      >
+                        {/* Immediate actions */}
+                        <div className="mb-8">
+                          <h4 className="text-lg font-semibold text-gray-400 mb-4">Immediate Actions</h4>
+                          <div className="space-y-3">
+                            {analysisResult.recommendations.slice(0, 3).map((rec, index) => (
+                              <div key={index} className="flex items-start gap-4 p-4 bg-gray-800/30 rounded-lg">
+                                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-green-400 font-bold">{index + 1}</span>
+                                </div>
+                                <p className="text-gray-300">{rec}</p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                        </div>
+
+                        {/* Self-care */}
+                        <div className="mb-8">
+                          <h4 className="text-lg font-semibold text-gray-400 mb-4">Self-Care Guidelines</h4>
+                          <div className="grid gap-3">
+                            {analysisResult.selfCare.map((care, index) => (
+                              <div key={index} className="flex items-center gap-3 text-gray-300">
+                                <Sparkles className="w-4 h-4 text-cyan-400" />
+                                <span>{care}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Timeline */}
+                        <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                          <h4 className="text-sm font-medium text-blue-400 mb-2">Expected Timeline</h4>
+                          <p className="text-gray-300">{analysisResult.timeline}</p>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {activeTab === 2 && (
+                      <motion.div
+                        key="watch"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="p-8"
+                      >
+                        {/* Red flags */}
+                        <div className="mb-8">
+                          <h4 className="text-lg font-semibold text-red-400 mb-4">Seek Immediate Care If:</h4>
+                          <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
+                            <div className="space-y-2">
+                              {analysisResult.redFlags.map((flag, index) => (
+                                <div key={index} className="flex items-start gap-3">
+                                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5" />
+                                  <span className="text-gray-300">{flag}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Monitor symptoms */}
+                        <div className="mb-8">
+                          <h4 className="text-lg font-semibold text-gray-400 mb-4">Monitor These Changes</h4>
+                          <div className="space-y-3">
+                            {analysisResult.relatedSymptoms.map((symptom, index) => (
+                              <div key={index} className="flex items-start gap-3 p-3 bg-gray-800/30 rounded-lg">
+                                <Eye className="w-5 h-5 text-amber-400 mt-0.5" />
+                                <span className="text-gray-300">{symptom}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Follow-up */}
+                        <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                          <h4 className="text-sm font-medium text-amber-400 mb-2">When to Follow Up</h4>
+                          <p className="text-gray-300">{analysisResult.followUp}</p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* Treatment & Care Plan */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Immediate Actions */}
-                  <div className="bg-gray-900/50 rounded-2xl border border-white/10 p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                        <Check className="w-5 h-5 text-green-400" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-white">Immediate Actions</h4>
-                    </div>
-                    <ul className="space-y-3">
-                      {analysisResult.recommendations.slice(0, 3).map((rec, index) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <span className="text-green-400 font-medium mt-0.5">{index + 1}.</span>
-                          <span className="text-gray-300 text-sm">{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Self-Care Tips */}
-                  <div className="bg-gray-900/50 rounded-2xl border border-white/10 p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-cyan-400" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-white">Self-Care Guidelines</h4>
-                    </div>
-                    <ul className="space-y-2">
-                      {analysisResult.selfCare.map((care, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-1.5" />
-                          <span className="text-gray-300 text-sm">{care}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Follow-up & Monitoring */}
+                {/* Action Buttons with subtle Oracle integration */}
                 <div className="bg-gray-900/50 rounded-2xl border border-white/10 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-white">Follow-up & Monitoring</h4>
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="text-lg font-semibold text-white">Next Steps</h4>
+                    {scanResult.confidence < 70 && (
+                      <div className="flex items-center gap-2 text-sm text-amber-400">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Low confidence - consider deeper analysis</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">When to follow up:</p>
-                      <p className="text-gray-300">{analysisResult.followUp}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400 mb-2">Monitor for these changes:</p>
-                      <ul className="space-y-1">
-                        {analysisResult.relatedSymptoms.map((symptom, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <Eye className="w-4 h-4 text-amber-400 mt-0.5" />
-                            <span className="text-gray-300 text-sm">{symptom}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="bg-gray-900/50 rounded-2xl border border-white/10 p-6">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <button className="px-6 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors font-medium">
-                      📥 Download Report
+                  <div className="grid md:grid-cols-2 gap-4 mb-6">
+                    <button 
+                      onClick={handleGenerateReport}
+                      className="px-6 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 transition-all flex items-center justify-center gap-3 group"
+                    >
+                      <FileText className="w-5 h-5 text-gray-400 group-hover:text-gray-300" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Generate Detailed Report</div>
+                        <div className="text-xs text-gray-400">For your doctor visit</div>
+                      </div>
                     </button>
-                    <button className="px-6 py-3 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30 transition-colors font-medium">
-                      📅 Schedule Follow-up
+                    
+                    <button 
+                      onClick={handleTrackProgress}
+                      className="px-6 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 transition-all flex items-center justify-center gap-3 group"
+                    >
+                      <TrendingUp className="w-5 h-5 text-gray-400 group-hover:text-gray-300" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Track Over Time</div>
+                        <div className="text-xs text-gray-400">Monitor symptom changes</div>
+                      </div>
                     </button>
-                    <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 transition-all font-medium">
-                      🥼 Find Nearby Doctors
+                  </div>
+
+                  {/* Subtle Oracle prompt based on confidence or complexity */}
+                  <div className={`p-4 rounded-xl transition-all ${
+                    scanResult.confidence < 70 
+                      ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30' 
+                      : 'bg-gray-800/50 border border-gray-700'
+                  }`}>
+                    <button
+                      onClick={handleAskOracle}
+                      className="w-full flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Brain className={`w-5 h-5 ${
+                          scanResult.confidence < 70 ? 'text-purple-400' : 'text-gray-400'
+                        }`} />
+                        <div className="text-left">
+                          <div className="font-medium text-white">
+                            {scanResult.confidence < 70 
+                              ? 'Get a deeper analysis with Oracle AI' 
+                              : 'Have questions? Ask Oracle AI'}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Advanced reasoning for complex symptoms
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-300 transition-transform group-hover:translate-x-1" />
                     </button>
                   </div>
                 </div>
@@ -791,8 +1003,88 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
               </motion.div>
             </motion.div>
           )}
+
+          {/* Error display */}
+          {error && step === 'interact' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-2xl mx-auto mt-4"
+            >
+              <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-300">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="font-medium">Analysis Error</span>
+                </div>
+                <p className="text-sm">{error}</p>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </div>
+
+    {/* Oracle slide-in panel */}
+      <AnimatePresence>
+        {showOraclePanel && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setShowOraclePanel(false)}
+            />
+          
+          {/* Oracle panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed inset-y-0 right-0 w-full max-w-lg bg-gray-900 shadow-2xl z-50 flex flex-col"
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-gray-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">Oracle Deep Analysis</h3>
+                <button
+                  onClick={() => setShowOraclePanel(false)}
+                  className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-400 mt-1">
+                Continuing from your Quick Scan results...
+              </p>
+            </div>
+
+            {/* Oracle chat embedded */}
+            <div className="flex-1 overflow-hidden bg-gray-950">
+              {scanResult ? (
+                <OracleEmbedded
+                  quickScanContext={{
+                    scanId: scanId,
+                    bodyPart: selectedBodyPart,
+                    analysis: analysisResult,
+                    confidence: scanResult.confidence
+                  }}
+                  onClose={() => setShowOraclePanel(false)}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <p>Complete a Quick Scan first</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   )
 }

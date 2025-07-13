@@ -101,3 +101,36 @@ Inspired by Linear and Stripe - clean, modern, and trustworthy with smooth anima
 
 ---
 *This document serves as the source of truth for Proxima-1's product vision and implementation guidelines.*
+
+# Important Implementation Instructions
+
+## Backend API Guidelines
+
+**NEVER modify API request/response structures without understanding the backend implementation.**
+
+### Critical Rules:
+1. The backend API is fully documented in `BACKEND_API_DOCS.md` - always refer to this
+2. Quick Scan is working correctly - use it as a reference implementation
+3. Deep Dive uses the same structure as Quick Scan (nested `form_data` object)
+4. The continue endpoint expects `answer` NOT `user_answer`
+5. If API returns empty/blank responses, the issue is likely on the backend side, not the request format
+6. Always check existing working code (like Quick Scan) before modifying API calls
+
+### API Structure Reference:
+- Quick Scan sends: `{ body_part, form_data: { symptoms, painLevel, ... }, user_id }`
+- Deep Dive Start sends: `{ body_part, form_data: { symptoms, ... }, user_id, model }`
+- Deep Dive Continue sends: `{ session_id, answer, question_number }`
+- Deep Dive Complete sends: `{ session_id, final_answer }`
+
+### When Backend Returns Empty Responses:
+1. Add logging but DO NOT change request structure
+2. Implement fallback questions on frontend
+3. The backend might be having model issues - try different models
+4. Check Railway logs for actual backend errors
+
+## General Development Rules
+
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files unless explicitly requested.
