@@ -20,6 +20,7 @@ interface Tab {
   id: string;
   label: string;
   icon: React.ReactNode;
+  showAlert?: boolean;
 }
 
 export default function HealthProfileModal({ isOpen, onClose, onSave, missingLifestyle, missingEmergency }: HealthProfileModalProps) {
@@ -107,8 +108,18 @@ export default function HealthProfileModal({ isOpen, onClose, onSave, missingLif
     setError(null);
     setSuccess(null);
 
-    if (currentMissingLifestyle) {
-      setError('Please complete all lifestyle fields.');
+    // Only validate lifestyle if user has started filling it
+    const hasAnyLifestyleData = [
+      userProfile.lifestyle_smoking_status,
+      userProfile.lifestyle_alcohol_consumption,
+      userProfile.lifestyle_exercise_frequency,
+      userProfile.lifestyle_sleep_hours,
+      userProfile.lifestyle_stress_level,
+      userProfile.lifestyle_diet_type
+    ].some(field => field && field.trim() !== '');
+    
+    if (hasAnyLifestyleData && currentMissingLifestyle) {
+      setError('Please complete all lifestyle fields or clear them all.');
       setSaving(false);
       return;
     }
@@ -212,17 +223,14 @@ export default function HealthProfileModal({ isOpen, onClose, onSave, missingLif
     { 
       id: 'lifestyle', 
       label: 'Lifestyle', 
-      icon: <Activity className="w-4 h-4" />
+      icon: <Activity className="w-4 h-4" />,
+      showAlert: currentMissingLifestyle
     },
     { 
       id: 'emergency', 
       label: 'Emergency', 
-      icon: (
-        <div className="flex items-center gap-1">
-          <AlertTriangle className="w-4 h-4" />
-          {currentMissingEmergency && <AlertCircle className="w-3 h-3 text-red-400" />}
-        </div>
-      )
+      icon: <AlertTriangle className="w-4 h-4" />,
+      showAlert: currentMissingEmergency
     },
   ];
 
@@ -277,6 +285,7 @@ export default function HealthProfileModal({ isOpen, onClose, onSave, missingLif
                   <span className="flex items-center justify-center gap-2">
                     <span>{tab.icon}</span>
                     {tab.label}
+                    {tab.showAlert && <AlertCircle className="w-3 h-3 text-red-400 ml-1" />}
                   </span>
                 </button>
               ))}
@@ -904,6 +913,18 @@ function LifestyleTab({ userProfile, setUserProfile, missing }: {
   const stressOptions = ['Low', 'Moderate', 'High', 'Very High'];
   const dietOptions = ['Standard', 'Vegetarian', 'Vegan', 'Keto', 'Mediterranean', 'Other'];
 
+  // Check if any lifestyle field has data
+  const lifestyleFields = [
+    userProfile.lifestyle_smoking_status,
+    userProfile.lifestyle_alcohol_consumption,
+    userProfile.lifestyle_exercise_frequency,
+    userProfile.lifestyle_sleep_hours,
+    userProfile.lifestyle_stress_level,
+    userProfile.lifestyle_diet_type
+  ];
+  const hasAnyLifestyleData = lifestyleFields.some(field => field && field.trim() !== '');
+  const hasAllLifestyleData = lifestyleFields.every(field => field && field.trim() !== '');
+
   return (
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
@@ -911,6 +932,30 @@ function LifestyleTab({ userProfile, setUserProfile, missing }: {
       exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
+      {hasAnyLifestyleData && !hasAllLifestyleData && (
+        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-yellow-300">
+              <AlertCircle className="w-4 h-4 inline mr-2" />
+              Please complete all lifestyle fields or clear them all.
+            </p>
+            <button
+              onClick={() => setUserProfile({
+                ...userProfile,
+                lifestyle_smoking_status: '',
+                lifestyle_alcohol_consumption: '',
+                lifestyle_exercise_frequency: '',
+                lifestyle_sleep_hours: '',
+                lifestyle_stress_level: '',
+                lifestyle_diet_type: ''
+              })}
+              className="px-3 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 rounded transition-colors"
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+      )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
           <label className="block text-sm font-medium text-gray-400 mb-2">
@@ -1039,14 +1084,14 @@ function EmergencyTab({ userProfile, setUserProfile, missing }: {
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">
                       Emergency Contact Name
-                      {missing && <span className="text-red-400 ml-1">*</span>}
+                      {hasAnyEmergencyData && <span className="text-red-400 ml-1">*</span>}
                     </label>
                     <input
                       type="text"
             value={userProfile.emergency_contact_name || ''}
             onChange={(e) => setUserProfile({ ...userProfile, emergency_contact_name: e.target.value })}
                       className={`w-full bg-white/[0.03] border rounded-lg px-4 py-3 text-white focus:outline-none transition-colors ${
-                        missing && !userProfile.emergency_contact_name?.trim() 
+                        hasAnyEmergencyData && !userProfile.emergency_contact_name?.trim() 
                           ? 'border-red-500/50 focus:border-red-500' 
                           : 'border-white/[0.05] focus:border-purple-500'
                       }`}
@@ -1057,14 +1102,14 @@ function EmergencyTab({ userProfile, setUserProfile, missing }: {
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">
                       Relationship
-                      {missing && <span className="text-red-400 ml-1">*</span>}
+                      {hasAnyEmergencyData && <span className="text-red-400 ml-1">*</span>}
                     </label>
                     <input
                       type="text"
             value={userProfile.emergency_contact_relation || ''}
             onChange={(e) => setUserProfile({ ...userProfile, emergency_contact_relation: e.target.value })}
                       className={`w-full bg-white/[0.03] border rounded-lg px-4 py-3 text-white focus:outline-none transition-colors ${
-                        missing && !userProfile.emergency_contact_relation?.trim() 
+                        hasAnyEmergencyData && !userProfile.emergency_contact_relation?.trim() 
                           ? 'border-red-500/50 focus:border-red-500' 
                           : 'border-white/[0.05] focus:border-purple-500'
                       }`}
@@ -1075,14 +1120,14 @@ function EmergencyTab({ userProfile, setUserProfile, missing }: {
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">
                       Phone Number
-                      {missing && <span className="text-red-400 ml-1">*</span>}
+                      {hasAnyEmergencyData && <span className="text-red-400 ml-1">*</span>}
                     </label>
                     <input
                       type="tel"
             value={userProfile.emergency_contact_phone || ''}
             onChange={(e) => setUserProfile({ ...userProfile, emergency_contact_phone: e.target.value })}
                       className={`w-full bg-white/[0.03] border rounded-lg px-4 py-3 text-white focus:outline-none transition-colors ${
-                        missing && !userProfile.emergency_contact_phone?.trim() 
+                        hasAnyEmergencyData && !userProfile.emergency_contact_phone?.trim() 
                           ? 'border-red-500/50 focus:border-red-500' 
                           : 'border-white/[0.05] focus:border-purple-500'
                       }`}
