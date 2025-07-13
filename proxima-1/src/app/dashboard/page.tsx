@@ -107,6 +107,7 @@ export default function DashboardPage() {
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [quickScanLoading, setQuickScanLoading] = useState(false);
   const [lastActivityTimes, setLastActivityTimes] = useState({
     quickScan: '2 hours ago',
     bodyMap: '3 days ago',
@@ -435,23 +436,86 @@ export default function DashboardPage() {
 
               {/* Quick Scan Card */}
               <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
-                onClick={() => router.push('/scan?mode=quick')}
+                whileHover={{ scale: quickScanLoading ? 1 : 1.02 }}
+                className={`backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden ${
+                  quickScanLoading ? 'pointer-events-none' : ''
+                }`}
+                onClick={() => {
+                  if (!quickScanLoading) {
+                    setQuickScanLoading(true);
+                    router.push('/scan?mode=quick');
+                  }
+                }}
               >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-600/20 to-green-600/20 flex items-center justify-center mb-4 group-hover:from-emerald-600/30 group-hover:to-green-600/30 transition-all">
-                  <Zap className="w-6 h-6 text-emerald-400" />
+                {/* Loading overlay with shimmer effect */}
+                <AnimatePresence>
+                  {quickScanLoading && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 z-10 flex items-center justify-center"
+                    >
+                      {/* Background blur */}
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                      
+                      {/* Shimmer effect */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
+                        animate={{ x: [-400, 400] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      />
+                      
+                      {/* Pulse circles */}
+                      <div className="relative">
+                        <motion.div
+                          className="absolute inset-0 w-24 h-24 bg-emerald-500/20 rounded-full"
+                          animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+                        <motion.div
+                          className="absolute inset-0 w-24 h-24 bg-emerald-500/30 rounded-full"
+                          animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                        />
+                        <motion.div
+                          className="w-24 h-24 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center justify-center"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        >
+                          <Zap className="w-10 h-10 text-white" />
+                        </motion.div>
+                      </div>
+                      
+                      {/* Loading text */}
+                      <motion.p
+                        className="absolute bottom-6 text-white font-medium"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        Initializing Quick Scan...
+                      </motion.p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Normal content */}
+                <div className={`transition-all duration-300 ${quickScanLoading ? 'opacity-30' : ''}`}>
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-600/20 to-green-600/20 flex items-center justify-center mb-4 group-hover:from-emerald-600/30 group-hover:to-green-600/30 transition-all">
+                    <Zap className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">Quick Scan</h3>
+                  <p className="text-gray-400 text-sm mb-2">Get instant AI-powered health insights</p>
+                  <motion.p 
+                    className="text-xs text-gray-500"
+                    initial={{ opacity: 0.5 }}
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    Last used: {lastActivityTimes.quickScan}
+                  </motion.p>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Quick Scan</h3>
-                <p className="text-gray-400 text-sm mb-2">Get instant AI-powered health insights</p>
-                <motion.p 
-                  className="text-xs text-gray-500"
-                  initial={{ opacity: 0.5 }}
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  Last used: {lastActivityTimes.quickScan}
-                </motion.p>
               </motion.div>
 
               {/* Deep Dive Card */}
