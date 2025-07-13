@@ -7,6 +7,7 @@ import { MousePointer, Sparkles, ChevronDown, Activity, BedDouble, TrendingUp, B
 interface UnifiedScanFormProps {
   mode: 'quick' | 'deep'
   onComplete: (data: any) => void
+  demoMode?: boolean
 }
 
 interface FormData {
@@ -25,7 +26,7 @@ interface FormData {
   triggerEvent: string
 }
 
-export default function UnifiedScanForm({ mode, onComplete }: UnifiedScanFormProps) {
+export default function UnifiedScanForm({ mode, onComplete, demoMode = false }: UnifiedScanFormProps) {
   const [selectedBodyPart, setSelectedBodyPart] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)

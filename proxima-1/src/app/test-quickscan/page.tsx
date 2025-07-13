@@ -65,7 +65,7 @@ export default function TestQuickScan() {
       const response = await quickScanClient.performQuickScan(
         scenario.bodyPart,
         scenario.formData,
-        null
+        undefined
       )
       setResult(response)
     } catch (err) {

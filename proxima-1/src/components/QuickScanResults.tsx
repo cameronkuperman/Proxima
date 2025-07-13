@@ -27,19 +27,20 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
   const analysis = scanData.analysis || {}
   const confidence = scanData.confidence || 0
   
+  // Ensure all fields have defaults to prevent undefined errors
   const analysisResult = {
     confidence,
-    primaryCondition: analysis.primaryCondition || 'Unknown Condition',
-    likelihood: analysis.likelihood || 'Unable to determine likelihood',
-    symptoms: analysis.symptoms || [],
-    recommendations: analysis.recommendations || [],
+    primaryCondition: analysis.primaryCondition || 'Health Analysis',
+    likelihood: analysis.likelihood || 'Based on your symptoms, further evaluation may be helpful',
+    symptoms: Array.isArray(analysis.symptoms) ? analysis.symptoms : [],
+    recommendations: Array.isArray(analysis.recommendations) ? analysis.recommendations : ['Consult with a healthcare professional', 'Monitor your symptoms', 'Rest and stay hydrated'],
     urgency: analysis.urgency || 'medium',
-    differentials: analysis.differentials || [],
-    redFlags: analysis.redFlags || [],
-    selfCare: analysis.selfCare || [],
-    timeline: analysis.timeline || 'Timeline not available',
-    followUp: analysis.followUp || 'Follow up as needed',
-    relatedSymptoms: analysis.relatedSymptoms || []
+    differentials: Array.isArray(analysis.differentials) ? analysis.differentials : [],
+    redFlags: Array.isArray(analysis.redFlags) ? analysis.redFlags : ['Severe or worsening symptoms', 'Difficulty breathing', 'Chest pain', 'High fever'],
+    selfCare: Array.isArray(analysis.selfCare) ? analysis.selfCare : ['Get adequate rest', 'Stay hydrated', 'Monitor symptoms'],
+    timeline: analysis.timeline || 'Recovery time varies by condition',
+    followUp: analysis.followUp || 'Follow up if symptoms persist or worsen',
+    relatedSymptoms: Array.isArray(analysis.relatedSymptoms) ? analysis.relatedSymptoms : []
   }
 
   const handleGenerateReport = () => {
@@ -152,7 +153,7 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
                 <div>
                   <h4 className="text-lg font-semibold text-gray-400 mb-3">Other Possibilities</h4>
                   <div className="space-y-3">
-                    {analysisResult.differentials.map((diff, index) => (
+                    {analysisResult.differentials.map((diff: any, index: number) => (
                       <div key={index} className="bg-gray-800/30 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-white">{diff.condition}</span>
@@ -185,7 +186,7 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-400 mb-4">Immediate Actions</h4>
                   <div className="space-y-3">
-                    {analysisResult.recommendations.slice(0, 3).map((rec, index) => (
+                    {analysisResult.recommendations.slice(0, 3).map((rec: any, index: number) => (
                       <div key={index} className="flex items-start gap-4 p-4 bg-gray-800/30 rounded-lg">
                         <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                           <span className="text-green-400 font-bold">{index + 1}</span>
@@ -200,7 +201,7 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-400 mb-4">Self-Care Guidelines</h4>
                   <div className="grid gap-3">
-                    {analysisResult.selfCare.map((care, index) => (
+                    {analysisResult.selfCare.map((care: any, index: number) => (
                       <div key={index} className="flex items-center gap-3 text-gray-300">
                         <Sparkles className="w-4 h-4 text-cyan-400" />
                         <span>{care}</span>
@@ -230,7 +231,7 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
                   <h4 className="text-lg font-semibold text-red-400 mb-4">Seek Immediate Care If:</h4>
                   <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
                     <div className="space-y-2">
-                      {analysisResult.redFlags.map((flag, index) => (
+                      {analysisResult.redFlags.map((flag: any, index: number) => (
                         <div key={index} className="flex items-start gap-3">
                           <AlertCircle className="w-5 h-5 text-red-400 mt-0.5" />
                           <span className="text-gray-300">{flag}</span>
@@ -244,7 +245,7 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-400 mb-4">Monitor These Changes</h4>
                   <div className="space-y-3">
-                    {analysisResult.relatedSymptoms.map((symptom, index) => (
+                    {analysisResult.relatedSymptoms.map((symptom: any, index: number) => (
                       <div key={index} className="flex items-start gap-3 p-3 bg-gray-800/30 rounded-lg">
                         <Eye className="w-5 h-5 text-amber-400 mt-0.5" />
                         <span className="text-gray-300">{symptom}</span>
@@ -353,23 +354,56 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden relative"
+              className="bg-gray-900 rounded-3xl shadow-2xl max-w-5xl w-full h-[90vh] flex flex-col relative overflow-hidden"
+              style={{
+                boxShadow: '0 0 50px rgba(168, 85, 247, 0.15), 0 0 100px rgba(236, 72, 153, 0.1)'
+              }}
             >
-              <button
-                onClick={() => setShowOraclePanel(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-300 z-10"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              {/* Gradient border effect */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-20" />
+              <div className="absolute inset-[1px] rounded-3xl bg-gray-900" />
               
-              <OracleEmbedded 
-                quickScanContext={{
-                  confidence,
-                  analysis: analysisResult,
-                  bodyPart: scanData.bodyPart,
-                  symptoms: scanData.formData.symptoms
-                }}
-              />
+              {/* Header */}
+              <div className="relative px-6 py-5 border-b border-gray-800/50 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-lg opacity-50" />
+                      <div className="relative w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                        <Brain className="w-7 h-7 text-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        Oracle AI Assistant
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-normal">
+                          Advanced Mode
+                        </span>
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-0.5">Powered by Claude 3 • Deep reasoning analysis</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowOraclePanel(false)}
+                    className="p-2.5 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 transition-all text-gray-400 hover:text-gray-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Oracle Chat */}
+              <div className="relative flex-1 overflow-hidden">
+                <OracleEmbedded 
+                  quickScanContext={{
+                    scanId: scanData.scan_id || null,
+                    confidence,
+                    analysis: analysisResult,
+                    bodyPart: scanData.bodyPart,
+                    symptoms: scanData.formData?.symptoms || ''
+                  }}
+                />
+              </div>
             </motion.div>
           </motion.div>
         )}

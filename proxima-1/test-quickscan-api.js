@@ -1,6 +1,6 @@
 // Test Quick Scan API directly
 const testQuickScan = async () => {
-  const API_URL = 'http://localhost:8000/api/quick-scan';
+  const API_URL = 'https://web-production-945c4.up.railway.app/api/quick-scan';
   
   const testData = {
     body_part: 'Head',

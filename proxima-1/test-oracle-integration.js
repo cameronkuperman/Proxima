@@ -7,7 +7,7 @@
 
 const axios = require('axios');
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://web-production-945c4.up.railway.app';
 
 async function testHealth() {
   console.log('🏥 Testing Oracle Backend Health...');

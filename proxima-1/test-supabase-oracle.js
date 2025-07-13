@@ -10,7 +10,7 @@ const axios = require('axios');
 // NOTE: Update these with your actual test values
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ekaxwbatykostnmopnhn.supabase.co';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://web-production-945c4.up.railway.app';
 
 const TEST_USER_ID = 'test-user-' + Date.now();
 const TEST_CONVERSATION_ID = 'test-conv-' + Date.now();

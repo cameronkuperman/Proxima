@@ -8,7 +8,7 @@
 const axios = require('axios');
 
 // Configuration
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://web-production-945c4.up.railway.app';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ekaxwbatykostnmopnhn.supabase.co';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
