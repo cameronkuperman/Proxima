@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserProfile, completeOnboarding, OnboardingData, MedicationEntry, FamilyHistoryEntry } from '@/utils/onboarding';
 import { supabase } from '@/lib/supabase';
-import { DropdownSelect } from '@/components/onboarding/DropdownSelect';
 
 interface HealthProfileModalProps {
   isOpen: boolean;
