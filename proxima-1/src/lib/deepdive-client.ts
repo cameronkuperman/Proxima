@@ -1,6 +1,6 @@
 import { QuickScanFormData } from './quickscan-client'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || 'https://web-production-945c4.up.railway.app'
 
 export interface DeepDiveStartRequest {
   body_part: string
@@ -61,6 +61,13 @@ export const deepDiveClient = {
     userId?: string,
     model?: string
   ): Promise<DeepDiveStartResponse> {
+    console.log('Deep Dive Start Request:', {
+      body_part: bodyPart,
+      form_data: formData,
+      user_id: userId,
+      model: model || 'deepseek/deepseek-r1-distill-llama-70b:free'
+    })
+    
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -71,7 +78,7 @@ export const deepDiveClient = {
           painLevel: formData.painLevel ? parseInt(formData.painLevel) : undefined
         },
         user_id: userId,
-        model: model || 'deepseek/deepseek-r1-distill-llama-70b:free'
+        model: model || 'deepseek/deepseek-r1-0528:free'
       }),
     })
 
@@ -80,7 +87,21 @@ export const deepDiveClient = {
       throw new Error(error.error || 'Failed to start deep dive')
     }
     
-    return response.json()
+    const result = await response.json()
+    console.log('Deep Dive Start Raw Response:', JSON.stringify(result, null, 2))
+    
+    // Check if it's an error response
+    if (result.error || result.status === 'error') {
+      throw new Error(result.error || 'Deep dive failed')
+    }
+    
+    // Validate response has required fields
+    if (!result.session_id) {
+      console.error('Invalid response structure:', result)
+      throw new Error('Invalid response: Missing session_id')
+    }
+    
+    return result
   },
 
   async continueDeepDive(
@@ -88,14 +109,18 @@ export const deepDiveClient = {
     answer: string,
     questionNumber: number
   ): Promise<DeepDiveContinueResponse> {
+    const requestBody = {
+      session_id: sessionId,
+      answer: answer,
+      question_number: questionNumber,
+    }
+    
+    console.log('Deep Dive Continue Request:', requestBody)
+    
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/continue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: sessionId,
-        answer: answer,
-        question_number: questionNumber,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {
@@ -103,20 +128,32 @@ export const deepDiveClient = {
       throw new Error(error.error || 'Failed to continue deep dive')
     }
     
-    return response.json()
+    const result = await response.json()
+    console.log('Deep Dive Continue Raw Response:', JSON.stringify(result, null, 2))
+    
+    // Check if it's an error response
+    if (result.error || result.status === 'error') {
+      throw new Error(result.error || 'Deep dive continue failed')
+    }
+    
+    return result
   },
 
   async completeDeepDive(
     sessionId: string,
     finalAnswer?: string
   ): Promise<DeepDiveCompleteResponse> {
+    const requestBody = {
+      session_id: sessionId,
+      final_answer: finalAnswer,
+    }
+    
+    console.log('Deep Dive Complete Request:', requestBody)
+    
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: sessionId,
-        final_answer: finalAnswer,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {
@@ -124,16 +161,24 @@ export const deepDiveClient = {
       throw new Error(error.error || 'Failed to complete deep dive')
     }
     
-    return response.json()
+    const result = await response.json()
+    console.log('Deep Dive Complete Raw Response:', JSON.stringify(result, null, 2))
+    
+    // Check if it's an error response
+    if (result.error || result.status === 'error') {
+      throw new Error(result.error || 'Deep dive complete failed')
+    }
+    
+    return result
   },
 
   async generateSummary(deepDiveId: string, userId: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/deep-dive/summary`, {
+      const response = await fetch(`${API_BASE_URL}/api/generate_summary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deep_dive_id: deepDiveId,
+          conversation_id: deepDiveId,
           user_id: userId,
         }),
       })

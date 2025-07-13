@@ -12,6 +12,7 @@ interface OracleEmbeddedProps {
     bodyPart: string;
     analysis: any;
     confidence: number;
+    symptoms?: string;
   };
   onClose?: () => void;
 }
@@ -74,14 +75,11 @@ export default function OracleEmbedded({ quickScanContext, onClose }: OracleEmbe
     setInput('');
     
     // Include Quick Scan context in metadata if this is a follow-up
-    await sendMessage(message, quickScanContext ? {
-      quick_scan_context: {
-        scan_id: quickScanContext.scanId,
-        body_part: quickScanContext.bodyPart,
-        primary_condition: quickScanContext.analysis.primaryCondition,
-        confidence: quickScanContext.confidence
-      }
-    } : undefined);
+    const fullMessage = quickScanContext 
+      ? `${message}\n\n[Context: Recent Quick Scan for ${quickScanContext.bodyPart} - ${quickScanContext.analysis.primaryCondition} (${quickScanContext.confidence}% confidence)]`
+      : message;
+    
+    await sendMessage(fullMessage);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -142,10 +140,14 @@ export default function OracleEmbedded({ quickScanContext, onClose }: OracleEmbe
                   <span className="text-xs text-purple-400 font-medium">Oracle AI</span>
                 </div>
               )}
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-              {message.metadata?.tokens_used && (
+              <p className="text-sm whitespace-pre-wrap">
+                {typeof message.content === 'string' 
+                  ? message.content 
+                  : JSON.stringify(message.content, null, 2)}
+              </p>
+              {message.metadata?.tokens && (
                 <p className="text-xs opacity-50 mt-2">
-                  Tokens: {message.metadata.tokens_used}
+                  Tokens: {message.metadata.tokens}
                 </p>
               )}
             </div>
@@ -169,7 +171,7 @@ export default function OracleEmbedded({ quickScanContext, onClose }: OracleEmbe
 
         {error && (
           <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-red-300 text-sm">
-            {error}
+            {error.message || 'An error occurred'}
           </div>
         )}
 
@@ -201,9 +203,9 @@ export default function OracleEmbedded({ quickScanContext, onClose }: OracleEmbe
           </button>
         </div>
         
-        {quickScanContext && (
+        {quickScanContext && quickScanContext.scanId && (
           <div className="mt-2 text-xs text-gray-500">
-            Connected to Quick Scan #{quickScanContext.scanId?.slice(0, 8)}
+            Connected to Quick Scan #{quickScanContext.scanId.slice(0, 8)}
           </div>
         )}
       </div>

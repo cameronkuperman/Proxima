@@ -1,6 +1,6 @@
 // Quick Scan API client
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
 console.log('Quick Scan API URL:', API_BASE_URL);
 
 export interface QuickScanFormData {
@@ -81,7 +81,7 @@ export class QuickScanClient {
       }
 
       const data = await response.json();
-      console.log('Quick Scan API response:', data);
+      console.log('Quick Scan API response:', JSON.stringify(data, null, 2));
       
       if (data.status === 'error') {
         console.error('API returned error status:', data.error);

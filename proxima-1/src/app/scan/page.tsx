@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Zap, Brain } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -11,7 +11,7 @@ import DeepDiveChat from '@/components/DeepDiveChat'
 import AuthGuard from '@/components/AuthGuard'
 import { useQuickScan } from '@/hooks/useQuickScan'
 
-export default function ScanPage() {
+function ScanPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const mode = searchParams.get('mode') || 'quick'
@@ -196,5 +196,17 @@ export default function ScanPage() {
         </div>
       </div>
     </AuthGuard>
+  )
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <ScanPageContent />
+    </Suspense>
   )
 }
