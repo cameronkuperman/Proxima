@@ -168,7 +168,7 @@ export function useOracle({
         });
         
         navigator.sendBeacon(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/generate_summary`,
+          `${process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app'}/api/generate_summary`,
           payload
         );
       }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight, Construction } from 'lucide-react'
 
 interface PhotoAnalysisDemoProps {
   onComplete: () => void
@@ -168,9 +168,9 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
           Back to features
         </button>
         
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm">
-          <Lock className="w-3 h-3" />
-          Coming Soon - Q1 2025
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-sm">
+          <Construction className="w-3 h-3" />
+          Under Maintenance
         </div>
       </motion.div>
 
@@ -201,6 +201,15 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                 <p className="text-gray-300">
                   Upload photos of your symptoms for AI-powered visual analysis
                 </p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs"
+                >
+                  <Construction className="w-3 h-3" />
+                  AI integration temporarily under maintenance
+                </motion.div>
               </div>
             </motion.div>
           )}
@@ -435,7 +444,11 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                 {/* Header */}
                 <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 p-6 border-b border-white/10">
                   <h3 className="text-2xl font-bold text-white mb-2">Medical Analysis</h3>
-                  <p className="text-gray-400">AI assessment complete</p>
+                  <p className="text-gray-400">Mock analysis for demonstration</p>
+                  <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs">
+                    <Construction className="w-3 h-3" />
+                    Real AI integration under maintenance
+                  </div>
                 </div>
 
                 {/* Analysis Confidence */}
@@ -531,7 +544,7 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                   Explore More Features
                 </button>
                 <p className="text-sm text-gray-500 mt-2">
-                  Get notified when Photo Analysis launches
+                  Photo Analysis AI will be back online soon
                 </p>
               </motion.div>
             </motion.div>

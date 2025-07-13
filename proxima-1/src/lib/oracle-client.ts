@@ -3,7 +3,7 @@ import axios from 'axios';
 import { ConversationService } from './supabase-conversations';
 import { LLMContextService } from './supabase-llm-context';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
 
 export interface OracleMessage {
   query: string;
