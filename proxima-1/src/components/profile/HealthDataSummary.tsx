@@ -8,7 +8,8 @@ import { Building, Pill, AlertTriangle, Users, Lock, X } from 'lucide-react';
 
 interface HealthDataItem {
   label: string;
-  count: number;
+  count?: number;
+  preview?: string;
   icon: React.ReactNode;
   lastUpdated: string;
   onClick: () => void;
@@ -47,7 +48,9 @@ export default function HealthDataSummary({ onConfigureClick, refreshTrigger }: 
   const healthData: HealthDataItem[] = [
     {
       label: 'Personal Health Context',
-      count: userProfile?.personal_health_context ? 1 : 0,
+      preview: userProfile?.personal_health_context 
+        ? userProfile.personal_health_context.slice(0, 30) + (userProfile.personal_health_context.length > 30 ? '...' : '')
+        : 'Not provided',
       icon: <Building className="w-5 h-5 text-blue-400" />,
       lastUpdated: '2 days ago',
       onClick: () => setSelectedCategory('personal_health_context')
@@ -243,8 +246,9 @@ export default function HealthDataSummary({ onConfigureClick, refreshTrigger }: 
                   {item.icon}
                   <p className="text-sm text-gray-400">{item.label}</p>
                 </div>
-                <p className="text-2xl font-semibold text-white">{item.count}</p>
-                <p className="text-xs text-gray-500 mt-1">Updated {item.lastUpdated}</p>
+                <p className="text-2xl font-semibold text-white">
+                  {item.preview || item.count}
+                </p>
               </div>
               <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

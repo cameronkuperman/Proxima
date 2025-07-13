@@ -636,7 +636,7 @@ function BasicInfoStep({
                   scale: 0.95 
                 }}
                 transition={{ duration: 0.2 }}
-                className={`absolute left-0 right-0 z-[9999] backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl shadow-2xl max-h-60 overflow-auto ${
+                className={`absolute left-0 right-0 z-[9999] backdrop-blur-md bg-white/[0.08] border border-white/[0.1] rounded-xl shadow-2xl max-h-60 overflow-auto ${
                   dropdownDirection === 'up' 
                     ? 'bottom-full mb-1' 
                     : 'top-full mt-1'
@@ -759,7 +759,7 @@ function BasicInfoStep({
                   scale: 0.95 
                 }}
                 transition={{ duration: 0.2 }}
-                className={`absolute left-0 right-0 z-[9999] backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl shadow-2xl max-h-60 overflow-auto ${
+                className={`absolute left-0 right-0 z-[9999] backdrop-blur-md bg-white/[0.08] border border-white/[0.1] rounded-xl shadow-2xl max-h-60 overflow-auto ${
                   dropdownDirection === 'up' 
                     ? 'bottom-full mb-1' 
                     : 'top-full mt-1'
