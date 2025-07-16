@@ -6,6 +6,7 @@ import { Brain, Send, Loader2, CheckCircle, MessageSquare, FileText } from 'luci
 import QuickScanResults from './QuickScanResults'
 import { deepDiveClient } from '@/lib/deepdive-client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTrackingStore } from '@/stores/useTrackingStore'
 
 interface DeepDiveChatProps {
   scanData: {
@@ -106,6 +107,7 @@ const generateContextualQuestion = (bodyPart: string, symptoms: string, question
 
 export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps) {
   const { user } = useAuth()
+  const { generateSuggestion } = useTrackingStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializingRef = useRef(false)
   const processingRef = useRef(false)
@@ -376,6 +378,11 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       })
       setIsComplete(true)
       onComplete(result.analysis)
+      
+      // Generate tracking suggestion
+      if (result.deep_dive_id && user?.id) {
+        await generateSuggestion('deep_dive', result.deep_dive_id, user.id)
+      }
       
       // Add final diagnosis message with proper null checking
       const primaryCondition = result.analysis?.primaryCondition || 'Unknown Condition'

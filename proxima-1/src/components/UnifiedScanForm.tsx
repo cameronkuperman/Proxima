@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MousePointer, Sparkles, ChevronDown, Activity, BedDouble, TrendingUp, Briefcase, Users, Dumbbell, Zap, Brain } from 'lucide-react'
+import { MousePointer, Sparkles, ChevronDown, Activity, BedDouble, TrendingUp, Briefcase, Users, Dumbbell, Zap, Brain, Loader2 } from 'lucide-react'
 
 interface UnifiedScanFormProps {
   mode: 'quick' | 'deep'
@@ -31,6 +31,7 @@ export default function UnifiedScanForm({ mode, onComplete, demoMode = false }: 
   const [showForm, setShowForm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [hadTrigger, setHadTrigger] = useState<boolean | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   const [formData, setFormData] = useState<FormData>({
@@ -79,17 +80,23 @@ export default function UnifiedScanForm({ mode, onComplete, demoMode = false }: 
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.symptoms.trim() || !selectedBodyPart) {
+    if (!formData.symptoms.trim() || !selectedBodyPart || isSubmitting) {
       return
     }
     
-    onComplete({
+    setIsSubmitting(true)
+    
+    // Call onComplete which will handle the scan
+    await onComplete({
       bodyPart: selectedBodyPart,
       formData: formData,
       mode: mode
     })
+    
+    // Note: setIsSubmitting(false) is not called here because 
+    // the component will unmount when moving to results
   }
 
   return (
@@ -491,14 +498,19 @@ export default function UnifiedScanForm({ mode, onComplete, demoMode = false }: 
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={!formData.symptoms.trim()}
+                disabled={!formData.symptoms.trim() || isSubmitting}
                 className={`w-full py-4 px-6 rounded-xl font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   mode === 'quick'
-                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600'
-                    : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600'
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 disabled:hover:from-emerald-500 disabled:hover:to-green-500'
+                    : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:hover:from-indigo-500 disabled:hover:to-purple-500'
                 }`}
               >
-                {mode === 'quick' ? (
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {mode === 'quick' ? 'Analyzing...' : 'Preparing Deep Dive...'}
+                  </span>
+                ) : mode === 'quick' ? (
                   <span className="flex items-center justify-center gap-2">
                     <Zap className="w-5 h-5" />
                     Start Quick Scan

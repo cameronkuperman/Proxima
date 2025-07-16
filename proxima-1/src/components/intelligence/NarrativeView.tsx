@@ -167,6 +167,7 @@ export default function NarrativeView() {
       setRefreshInfo(refreshCheck.refreshInfo || null);
 
       const response = await healthStoryService.generateWeeklyHealthStory(user.id);
+      console.log('Health story generation response:', response);
 
       if (response.success && response.health_story) {
         const newStory: HealthStoryData = {
@@ -182,6 +183,10 @@ export default function NarrativeView() {
         updateEpisodesFromStories([newStory, ...healthStories]);
       } else {
         setError(response.error || 'Failed to generate health story');
+        // Show demo content when API fails
+        if (episodes.length === 0) {
+          setEpisodes(getDefaultEpisodes());
+        }
       }
     } catch (err) {
       setError('Failed to generate health story');
@@ -346,7 +351,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={generateNewStory}
-                disabled={isLoading || !user?.id || (refreshInfo && !refreshInfo.can_refresh)}
+                disabled={isLoading || !user?.id || (refreshInfo ? !refreshInfo.can_refresh : false)}
                 className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title={refreshInfo && !refreshInfo.can_refresh ? "Refresh limit reached" : "Regenerate story"}
               >
