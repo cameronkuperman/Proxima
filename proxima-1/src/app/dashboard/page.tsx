@@ -6,11 +6,18 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import HealthProfileModal from '@/components/HealthProfileModal';
 import OracleChat from '@/components/OracleChat';
+import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import OnboardingGuard from '@/components/OnboardingGuard';
-import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, AlertCircle } from 'lucide-react';
+import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
+import { useTrackingStore } from '@/stores/useTrackingStore';
+import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
+import ActiveTrackingCard from '@/components/tracking/ActiveTrackingCard';
+import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal';
+import LogDataModal from '@/components/tracking/LogDataModal';
+import TrackingChart from '@/components/tracking/TrackingChart';
 
 // Mock data for timeline
 const mockTimelineData = [
@@ -19,8 +26,8 @@ const mockTimelineData = [
   { id: 3, date: '2024-01-10', type: '3d-body', title: 'Lower back pain', areas: ['lower-back', 'hip'], aiProvider: 'google' },
 ];
 
-// Mock graph data
-const mockGraphData = [
+// Mock graph data - Removed, no longer needed for tracking dashboard
+/*const mockGraphData = [
   {
     id: 'headache',
     name: 'Headache Severity',
@@ -93,7 +100,7 @@ const mockGraphData = [
     strokeColor: '#f59e0b',
     fillColor: '#eab308'
   }
-];
+];*/
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -101,21 +108,41 @@ export default function DashboardPage() {
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
-  const [currentGraphIndex, setCurrentGraphIndex] = useState(0);
+  // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
   const [healthScore] = useState(92);
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [quickScanLoading, setQuickScanLoading] = useState(false);
-  const [lastActivityTimes, setLastActivityTimes] = useState({
+  const [showQuickReportChat, setShowQuickReportChat] = useState(false);
+  const [lastActivityTimes] = useState({
     quickScan: '2 hours ago',
     bodyMap: '3 days ago',
     photoAnalysis: 'Yesterday'
   });
   
+  // Tracking state
+  const { 
+    dashboardItems, 
+    fetchDashboard, 
+    approveSuggestion,
+    configureSuggestion,
+    currentSuggestion,
+    suggestionId,
+    logDataPoint,
+    clearSuggestion
+  } = useTrackingStore();
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
+  const [showChartModal, setShowChartModal] = useState(false);
+  const [chartConfigId, setChartConfigId] = useState<string | null>(null);
+  const [trackingPage, setTrackingPage] = useState(0);
+  const itemsPerPage = 4;
+  
   // Past reports queue
-  const [reportQueue, setReportQueue] = useState([
+  const [reportQueue] = useState([
     { id: 1, title: 'Severe Headache Report', time: '2 days ago', content: 'You reported a throbbing headache (7/10) on the right side of your head. You mentioned it started after a stressful meeting and lack of sleep.', tags: [{ icon: <MapPin className="w-3 h-3" />, text: 'Right temporal' }, { icon: <Pill className="w-3 h-3" />, text: 'Took ibuprofen' }] },
     { id: 2, title: 'Chest Discomfort Analysis', time: '3 days ago', content: 'You reported mild chest tightness (4/10) during exercise. Symptoms resolved with rest. You noted it might be stress-related.', tags: [{ icon: <Heart className="w-3 h-3" />, text: 'During exercise' }, { icon: <Clock className="w-3 h-3" />, text: '5 min duration' }] },
     { id: 3, title: 'Sleep Quality Check', time: '5 days ago', content: 'You reported poor sleep (4/10) with frequent wake-ups. Mentioned anxiety about upcoming deadlines affecting rest.', tags: [{ icon: <Moon className="w-3 h-3" />, text: '4 hrs total' }, { icon: <Moon className="w-3 h-3" />, text: '3 wake-ups' }] },
@@ -142,6 +169,13 @@ export default function DashboardPage() {
 
     fetchUserProfile();
   }, [user]);
+
+  // Fetch tracking dashboard data
+  useEffect(() => {
+    if (user?.id) {
+      fetchDashboard(user.id);
+    }
+  }, [user?.id, fetchDashboard]);
 
   // Calculate profile completion percentage
   const calculateProfileCompletion = () => {
@@ -226,7 +260,7 @@ export default function DashboardPage() {
     }
   };
 
-  const currentGraph = mockGraphData[currentGraphIndex];
+  // Removed: const currentGraph = mockGraphData[currentGraphIndex]; - No longer needed for tracking dashboard
   // const maxValue = Math.max(...currentGraph.data.map(d => d.value));
   // const minValue = Math.min(...currentGraph.data.map(d => d.value));
 
@@ -538,42 +572,41 @@ export default function DashboardPage() {
                 </div>
               </motion.div>
 
-              {/* 3D Body Visualization Card */}
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
-              >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
-                  <Camera className="w-6 h-6 text-blue-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2">3D Body Visualization</h3>
-                <p className="text-gray-400 text-sm mb-2">Click exactly where you feel symptoms</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">3 areas tracked</span>
-                  <div className="flex -space-x-1">
-                    {['bg-red-500', 'bg-yellow-500', 'bg-blue-500'].map((color, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${color} ring-1 ring-[#0a0a0a]`} />
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-
               {/* Photo Analysis Card */}
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:from-pink-600/30 group-hover:to-purple-600/30 transition-all">
-                  <AlertTriangle className="w-6 h-6 text-pink-400" />
+                  <Camera className="w-6 h-6 text-pink-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Photo Analysis</h3>
-                <p className="text-gray-400 text-sm mb-2">Upload photos for visual analysis</p>
+                <p className="text-gray-400 text-sm mb-2">Upload photos for visual symptom tracking</p>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-purple-400">2 active</span>
                   <span className="text-gray-500">•</span>
                   <span className="text-gray-500">5 total</span>
                 </div>
               </motion.div>
+
+              {/* Reports Card */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
+                onClick={() => router.push('/reports')}
+              >
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
+                  <FileText className="w-6 h-6 text-blue-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Health Reports</h3>
+                <p className="text-gray-400 text-sm mb-2">Generate medical reports from your data</p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-blue-400">{reportQueue.length} reports</span>
+                  <span className="text-gray-500">•</span>
+                  <span className="text-gray-500">View all</span>
+                </div>
+              </motion.div>
+
             </div>
 
             {/* Analytics Section - Past Reports & Graph */}
@@ -654,144 +687,83 @@ export default function DashboardPage() {
                   </div>
                 </motion.div>
 
-                {/* Line Graph Section (Right) */}
+                {/* Symptom Tracking Dashboard (Right) */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
                   <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h2 className="text-xl font-semibold text-white">{currentGraph.name}</h2>
-                      <p className="text-sm text-gray-400 mt-1">{currentGraph.description}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setCurrentGraphIndex((prev) => (prev - 1 + mockGraphData.length) % mockGraphData.length)}
-                        className="p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
-                      >
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => setCurrentGraphIndex((prev) => (prev + 1) % mockGraphData.length)}
-                        className="p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
-                      >
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  
-                    {/* Beautiful Line Graph */}
-                    <div className="relative h-64">
-                      <div className="flex h-full">
-                        {/* Y-axis labels */}
-                        <div className="w-8 flex flex-col justify-between py-2 pr-2 text-right">
-                          <span className="text-xs text-gray-500">10</span>
-                          <span className="text-xs text-gray-500">5</span>
-                          <span className="text-xs text-gray-500">0</span>
-                        </div>
-                        
-                        {/* Graph area */}
-                        <div className="flex-1 relative">
-                          <svg className="w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet">
-                            {/* Grid lines */}
-                            {[0, 1, 2].map((i) => (
-                              <line
-                                key={i}
-                                x1="0"
-                                y1={i * 80}
-                                x2="400"
-                                y2={i * 80}
-                                stroke="white"
-                                strokeOpacity="0.05"
-                              />
-                            ))}
-                            
-                            {/* Area fill */}
-                            <motion.path
-                              d={`M ${currentGraph.data.map((point, index) => {
-                                const x = (index / (currentGraph.data.length - 1)) * 380 + 10;
-                                const y = 180 - (point.value / 10) * 160;
-                                return `${x},${y}`;
-                              }).join(' L ')} L 390,180 L 10,180 Z`}
-                            fill={`url(#areaGradient-${currentGraph.id})`}
-                            opacity="0.1"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.1 }}
-                            transition={{ duration: 1, delay: 0.5 }}
-                          />
-                          
-                            {/* Create path data for line */}
-                            <motion.path
-                              d={`M ${currentGraph.data.map((point, index) => {
-                                const x = (index / (currentGraph.data.length - 1)) * 380 + 10;
-                                const y = 180 - (point.value / 10) * 160;
-                                return `${x},${y}`;
-                              }).join(' L ')}`}
-                              fill="none"
-                              stroke={`url(#gradient-${currentGraph.id})`}
-                              strokeWidth="3"
-                              initial={{ pathLength: 0 }}
-                              animate={{ pathLength: 1 }}
-                              transition={{ duration: 1, ease: "easeInOut" }}
-                            />
-                          
-                          {/* Gradient definitions */}
-                          <defs>
-                            <linearGradient id={`gradient-${currentGraph.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor={currentGraph.strokeColor} />
-                              <stop offset="100%" stopColor={currentGraph.fillColor} />
-                            </linearGradient>
-                            <linearGradient id={`areaGradient-${currentGraph.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor={currentGraph.strokeColor} stopOpacity="0.3" />
-                              <stop offset="100%" stopColor={currentGraph.fillColor} stopOpacity="0" />
-                            </linearGradient>
-                          </defs>
-                          
-                            {/* Data points */}
-                            {currentGraph.data.map((point, index) => {
-                              const x = (index / (currentGraph.data.length - 1)) * 380 + 10;
-                              const y = 180 - (point.value / 10) * 160;
-                              return (
-                              <g key={index}>
-                                <motion.circle
-                                  cx={x}
-                                  cy={y}
-                                  r="6"
-                                  fill={currentGraph.strokeColor}
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ delay: index * 0.1 }}
-                                  className="cursor-pointer"
-                                />
-                                <circle
-                                  cx={x}
-                                  cy={y}
-                                  r="3"
-                                  fill="white"
-                                />
-                                <title>{`${point.value}/10 on ${new Date(point.date).toLocaleDateString()}`}</title>
-                              </g>
-                            );
-                          })}
-                        </svg>
-                        
-                        {/* X-axis labels */}
-                        <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2">
-                          {currentGraph.data.map((point, index) => (
-                            <span key={index} className="text-xs text-gray-500">
-                              {new Date(point.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                            </span>
-                          ))}
-                        </div>
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h2 className="text-xl font-semibold text-white">Symptom Tracking</h2>
+                        <p className="text-sm text-gray-400 mt-1">Monitor your health metrics over time</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {trackingPage > 0 && (
+                          <button
+                            onClick={() => setTrackingPage(trackingPage - 1)}
+                            className="p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
+                          >
+                            <ChevronLeft className="w-5 h-5 text-gray-400" />
+                          </button>
+                        )}
+                        {(trackingPage + 1) * itemsPerPage < dashboardItems.length && (
+                          <button
+                            onClick={() => setTrackingPage(trackingPage + 1)}
+                            className="p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
+                          >
+                            <ChevronRight className="w-5 h-5 text-gray-400" />
+                          </button>
+                        )}
                       </div>
                     </div>
-                    </div>
+                    {/* Tracking Dashboard */}
+                    {dashboardItems.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="mb-4">
+                          <div className="w-16 h-16 mx-auto bg-gray-800 rounded-full flex items-center justify-center">
+                            <Brain className="w-8 h-8 text-gray-600" />
+                          </div>
+                        </div>
+                        <p className="text-gray-400 mb-4">No tracking data yet</p>
+                        <p className="text-sm text-gray-500">Complete a health scan to start tracking symptoms</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {dashboardItems
+                          .slice(trackingPage * itemsPerPage, (trackingPage + 1) * itemsPerPage)
+                          .map((item) => (
+                            item.type === 'active' ? (
+                              <ActiveTrackingCard
+                                key={item.id}
+                                item={item}
+                                onLogValue={(configId) => {
+                                  setSelectedConfigId(configId);
+                                  setShowLogModal(true);
+                                }}
+                                onViewChart={(configId) => {
+                                  setChartConfigId(configId);
+                                  setShowChartModal(true);
+                                }}
+                              />
+                            ) : (
+                              <TrackingSuggestionCard
+                                key={item.id}
+                                suggestion={item}
+                                onApprove={async () => {
+                                  if (user?.id) {
+                                    await approveSuggestion(item.id);
+                                  }
+                                }}
+                                onCustomize={() => {
+                                  setShowCustomizeModal(true);
+                                }}
+                              />
+                            )
+                          ))}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </div>
@@ -911,13 +883,13 @@ export default function DashboardPage() {
               >
                 <button
                   onClick={() => {
-                    // Generate doctor report logic
+                    setShowQuickReportChat(true);
                     setFloatingMenuOpen(false);
                   }}
                   className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
                 >
-                  <Zap className="w-5 h-5" />
-                  Generate Doctor Report
+                  <FileText className="w-5 h-5" />
+                  Generate Report
                 </button>
                 <button
                   onClick={() => {
@@ -983,6 +955,64 @@ export default function DashboardPage() {
           onClose={() => setOracleChatOpen(false)}
           healthScore={healthScore}
         />
+
+        {/* Quick Report Chat */}
+        <QuickReportChat
+          isOpen={showQuickReportChat}
+          onClose={() => setShowQuickReportChat(false)}
+        />
+
+        {/* Tracking Modals */}
+        {showCustomizeModal && currentSuggestion && suggestionId && (
+          <CustomizeTrackingModal
+            suggestion={{ 
+              id: suggestionId,
+              ...currentSuggestion 
+            }}
+            onSave={async (metricName, yAxisLabel) => {
+              if (user?.id && suggestionId) {
+                await configureSuggestion({
+                  suggestion_id: suggestionId,
+                  user_id: user.id,
+                  metric_name: metricName,
+                  y_axis_label: yAxisLabel,
+                  show_on_homepage: true
+                });
+                setShowCustomizeModal(false);
+              }
+            }}
+            onClose={() => {
+              setShowCustomizeModal(false);
+              clearSuggestion();
+            }}
+          />
+        )}
+
+        {showLogModal && selectedConfigId && (
+          <LogDataModal
+            configId={selectedConfigId}
+            onSave={async (value, notes) => {
+              await logDataPoint(selectedConfigId, value, notes);
+              setShowLogModal(false);
+              setSelectedConfigId(null);
+            }}
+            onClose={() => {
+              setShowLogModal(false);
+              setSelectedConfigId(null);
+            }}
+          />
+        )}
+
+        {showChartModal && chartConfigId && (
+          <TrackingChart
+            configId={chartConfigId}
+            isOpen={showChartModal}
+            onClose={() => {
+              setShowChartModal(false);
+              setChartConfigId(null);
+            }}
+          />
+        )}
       </div>
       </OnboardingGuard>
     </AuthGuard>

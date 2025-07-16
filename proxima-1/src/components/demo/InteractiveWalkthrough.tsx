@@ -88,6 +88,7 @@ export function InteractiveWalkthrough() {
       title: 'Quick Scan',
       subtitle: 'Instant health insights from body interaction',
       description: 'Simply click on any part of your body to get instant AI-powered health insights. Our advanced system analyzes your query and provides relevant information in seconds.',
+      status: 'available' as const,
       icon: <Zap className="w-8 h-8" />,
       gradient: 'from-blue-500 to-cyan-500',
       prerequisites: [],

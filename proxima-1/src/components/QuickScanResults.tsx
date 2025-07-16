@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X } from 'lucide-react'
+import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2 } from 'lucide-react'
 import OracleEmbedded from '@/components/OracleEmbedded'
 import { useRouter } from 'next/navigation'
+import { useTrackingStore } from '@/stores/useTrackingStore'
+import { supabase } from '@/lib/supabase'
 
 interface QuickScanResultsProps {
   scanData: {
@@ -22,6 +24,11 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
   const [activeTab, setActiveTab] = useState(0)
   const [showWhy, setShowWhy] = useState(false)
   const [showOraclePanel, setShowOraclePanel] = useState(false)
+  const [showTrackingSuggestion, setShowTrackingSuggestion] = useState(false)
+  const [isGeneratingTracking, setIsGeneratingTracking] = useState(false)
+  const [isLoadingTrackButton, setIsLoadingTrackButton] = useState(false)
+  
+  const { generateSuggestion, currentSuggestion, suggestionId, loading: trackingStoreLoading } = useTrackingStore()
 
   // Extract analysis data with fallbacks
   const analysis = scanData.analysis || {}
@@ -43,14 +50,59 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
     relatedSymptoms: Array.isArray(analysis.relatedSymptoms) ? analysis.relatedSymptoms : []
   }
 
+  // Generate tracking suggestion when scan completes
+  useEffect(() => {
+    const generateTrackingSuggestion = async () => {
+      if (scanData.scan_id && !isGeneratingTracking) {
+        setIsGeneratingTracking(true)
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          
+          if (user) {
+            await generateSuggestion('quick_scan', scanData.scan_id, user.id)
+            // Small delay to ensure the suggestion is loaded
+            setTimeout(() => {
+              setShowTrackingSuggestion(true)
+              setIsGeneratingTracking(false)
+            }, 500)
+          }
+        } catch (error) {
+          console.error('Error generating tracking suggestion:', error)
+          setIsGeneratingTracking(false)
+        }
+      }
+    }
+    
+    generateTrackingSuggestion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanData.scan_id]) // Intentionally omit generateSuggestion to avoid infinite loop
+
   const handleGenerateReport = () => {
     console.log('Generating physician report...')
     // TODO: Implement report generation
   }
 
-  const handleTrackProgress = () => {
-    console.log('Starting symptom tracking...')
-    // TODO: Implement symptom tracking
+  const handleTrackProgress = async () => {
+    setIsLoadingTrackButton(true)
+    
+    // If we don't have a suggestion yet, generate one
+    if (!currentSuggestion && scanData.scan_id) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          await generateSuggestion('quick_scan', scanData.scan_id, user.id)
+        }
+      } catch (error) {
+        console.error('Error generating tracking suggestion:', error)
+      }
+    }
+    
+    // Small delay for smooth UX
+    setTimeout(() => {
+      setShowTrackingSuggestion(true)
+      setIsLoadingTrackButton(false)
+    }, 300)
   }
 
   const handleAskOracle = () => {
@@ -290,12 +342,21 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
             
             <button 
               onClick={handleTrackProgress}
-              className="px-6 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 transition-all flex items-center justify-center gap-3 group"
+              disabled={isLoadingTrackButton || isGeneratingTracking}
+              className="px-6 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 group"
             >
-              <TrendingUp className="w-5 h-5 text-gray-400 group-hover:text-gray-300" />
+              {isLoadingTrackButton || isGeneratingTracking ? (
+                <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+              ) : (
+                <TrendingUp className="w-5 h-5 text-gray-400 group-hover:text-gray-300" />
+              )}
               <div className="text-left">
-                <div className="font-medium text-white">Track Over Time</div>
-                <div className="text-xs text-gray-400">Monitor symptom changes</div>
+                <div className="font-medium text-white">
+                  {isLoadingTrackButton || isGeneratingTracking ? 'Preparing Tracking...' : 'Track Over Time'}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {isLoadingTrackButton || isGeneratingTracking ? 'Setting up your tracking' : 'Monitor symptom changes'}
+                </div>
               </div>
             </button>
           </div>
@@ -339,6 +400,57 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
             Start New Scan
           </button>
         </div>
+        {/* Tracking Suggestion */}
+        <AnimatePresence>
+          {showTrackingSuggestion && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mt-6"
+            >
+              <div className="backdrop-blur-[20px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
+                {(trackingStoreLoading || !currentSuggestion) ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                    <span className="ml-3 text-gray-300">Preparing your personalized tracking plan...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                      <TrendingUp className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-white mb-2">
+                        Track Your Symptoms Over Time
+                      </h3>
+                      <p className="text-gray-300 mb-4">
+                        Based on your scan, we recommend tracking: <strong>{currentSuggestion.metric_name}</strong>
+                      </p>
+                      <p className="text-sm text-gray-400 mb-4">
+                        {currentSuggestion.metric_description}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => router.push('/dashboard')}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all"
+                        >
+                          Start Tracking
+                        </button>
+                        <button
+                          onClick={() => setShowTrackingSuggestion(false)}
+                          className="px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-lg hover:bg-white/10 transition-all"
+                        >
+                          Maybe Later
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Oracle Panel Overlay */}
