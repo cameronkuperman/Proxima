@@ -295,7 +295,7 @@ export function QuickScanDemo({ onComplete }: QuickScanDemoProps) {
                 <iframe
                   id="biodigital-iframe"
                   ref={iframeRef}
-                  src="/biodigital-viewer.html"
+                  src="/biodigital-viewer.html?gender=male"
                   className="w-full h-full"
                   style={{ border: 'none', pointerEvents: showForm ? 'none' : 'auto' }}
                   allow="autoplay; fullscreen; vr"

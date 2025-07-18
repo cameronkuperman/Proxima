@@ -99,7 +99,15 @@ export default function PhotoAnalysisPage() {
           condition_name: conditionName,
           description: context
         });
-        sessionId = session.id;
+        
+        console.log('Created session:', session);
+        
+        if (!session || (!session.id && !session.session_id)) {
+          throw new Error('Session creation failed - no session ID returned');
+        }
+        
+        sessionId = session.id || session.session_id;
+        console.log('Using session ID:', sessionId);
       }
       
       // Upload and categorize photos

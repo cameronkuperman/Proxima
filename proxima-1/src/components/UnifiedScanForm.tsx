@@ -8,6 +8,7 @@ interface UnifiedScanFormProps {
   mode: 'quick' | 'deep'
   onComplete: (data: any) => void
   demoMode?: boolean
+  userGender?: 'male' | 'female'
 }
 
 interface FormData {
@@ -26,7 +27,7 @@ interface FormData {
   triggerEvent: string
 }
 
-export default function UnifiedScanForm({ mode, onComplete, demoMode = false }: UnifiedScanFormProps) {
+export default function UnifiedScanForm({ mode, onComplete, demoMode = false, userGender = 'male' }: UnifiedScanFormProps) {
   const [selectedBodyPart, setSelectedBodyPart] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -120,7 +121,7 @@ export default function UnifiedScanForm({ mode, onComplete, demoMode = false }: 
             <div className="relative aspect-[4/5] bg-gray-950">
               <iframe
                 ref={iframeRef}
-                src="/biodigital-viewer.html"
+                src={`/biodigital-viewer.html?gender=${userGender}`}
                 className="absolute inset-0 w-full h-full"
                 title="BioDigital Human Viewer"
               />

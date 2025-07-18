@@ -10,6 +10,8 @@ import QuickScanResults from '@/components/QuickScanResults'
 import DeepDiveChat from '@/components/DeepDiveChat'
 import AuthGuard from '@/components/AuthGuard'
 import { useQuickScan } from '@/hooks/useQuickScan'
+import { useAuth } from '@/contexts/AuthContext'
+import { getUserProfile } from '@/utils/onboarding'
 
 function ScanPageContent() {
   const router = useRouter()
@@ -20,7 +22,27 @@ function ScanPageContent() {
   const fromScan = searchParams.get('fromScan')
   const [currentStep, setCurrentStep] = useState<'intro' | 'form' | 'analysis'>('intro')
   const [scanData, setScanData] = useState<any>(null)
+  const [userGender, setUserGender] = useState<'male' | 'female'>('male') // Default to male
   const { performScan, isLoading, error, scanResult } = useQuickScan()
+  const { user } = useAuth()
+
+  // Fetch user profile to get gender
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user?.id) {
+        try {
+          const profile = await getUserProfile(user.id)
+          // Convert is_male to gender string
+          const gender = profile.is_male === false ? 'female' : 'male' // Default to male for null/true
+          setUserGender(gender)
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error)
+          // Keep default of male
+        }
+      }
+    }
+    fetchUserProfile()
+  }, [user?.id])
 
   useEffect(() => {
     // If coming from a Quick Scan, skip intro and go directly to Deep Dive
@@ -180,6 +202,7 @@ function ScanPageContent() {
                 <UnifiedScanForm 
                   mode={mode as 'quick' | 'deep'}
                   onComplete={handleFormComplete}
+                  userGender={userGender}
                 />
               </motion.div>
             )}

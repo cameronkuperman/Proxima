@@ -63,14 +63,25 @@ export function usePhotoAnalysis() {
 
   // Upload photos
   const uploadPhotos = async (sessionId: string, photos: File[]): Promise<UploadResponse> => {
-    if (!user?.id) {
+    if (!user) {
       throw new Error('User not authenticated');
     }
 
+    // Get user ID from different possible locations
+    const userId = user.id || user.sub || user.user_id;
+    
+    if (!userId) {
+      console.error('User object structure:', user);
+      throw new Error('Unable to find user ID in user object');
+    }
+    
     const formData = new FormData();
     photos.forEach(photo => formData.append('photos', photo));
-    formData.append('user_id', user.id);
+    formData.append('user_id', userId);
     formData.append('session_id', sessionId);
+    
+    console.log('Uploading photos with user_id:', userId);
+    console.log('Session ID:', sessionId);
 
     const response = await fetch(`${API_URL}/api/photo-analysis/upload`, {
       method: 'POST',
@@ -117,17 +128,30 @@ export function usePhotoAnalysis() {
     condition_name: string;
     description?: string;
   }): Promise<PhotoSession> => {
-    if (!user?.id) {
+    if (!user) {
       throw new Error('User not authenticated');
     }
 
+    // Get user ID from different possible locations
+    const userId = user.id || user.sub || user.user_id;
+    
+    if (!userId) {
+      console.error('User object structure:', user);
+      throw new Error('Unable to find user ID in user object');
+    }
+    
+    const requestBody = {
+      ...params,
+      user_id: userId
+    };
+    
+    console.log('Creating session with:', requestBody);
+    console.log('User ID found:', userId);
+    
     const response = await fetch(`${API_URL}/api/photo-analysis/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...params,
-        user_id: user.id
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -136,7 +160,15 @@ export function usePhotoAnalysis() {
       throw new Error('Failed to create session');
     }
     
-    const session = await response.json();
+    const sessionData = await response.json();
+    
+    // Normalize the session object - backend returns session_id, frontend expects id
+    const session: PhotoSession = {
+      ...sessionData,
+      id: sessionData.id || sessionData.session_id,
+      session_id: sessionData.session_id || sessionData.id
+    };
+    
     setSessions(prev => [session, ...prev]);
     setActiveSession(session);
     return session;

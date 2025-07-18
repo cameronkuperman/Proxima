@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2 } from 'lucide-react'
+import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2, MessageSquare } from 'lucide-react'
 import OracleEmbedded from '@/components/OracleEmbedded'
 import { useRouter } from 'next/navigation'
 import { useTrackingStore } from '@/stores/useTrackingStore'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface QuickScanResultsProps {
   scanData: {
@@ -21,12 +22,15 @@ interface QuickScanResultsProps {
 
 export default function QuickScanResults({ scanData, onNewScan }: QuickScanResultsProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState(0)
   const [showWhy, setShowWhy] = useState(false)
   const [showOraclePanel, setShowOraclePanel] = useState(false)
   const [showTrackingSuggestion, setShowTrackingSuggestion] = useState(false)
   const [isGeneratingTracking, setIsGeneratingTracking] = useState(false)
   const [isLoadingTrackButton, setIsLoadingTrackButton] = useState(false)
+  const [isThinkingHarder, setIsThinkingHarder] = useState(false)
+  const [isAskingMore, setIsAskingMore] = useState(false)
   
   const { generateSuggestion, currentSuggestion, suggestionId, loading: trackingStoreLoading } = useTrackingStore()
 
@@ -107,6 +111,56 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
 
   const handleAskOracle = () => {
     setShowOraclePanel(true)
+  }
+
+  const handleThinkHarder = async () => {
+    if (!scanData.scan_id || isThinkingHarder) return
+    
+    setIsThinkingHarder(true)
+    
+    try {
+      // Call backend API for "Think Harder" functionality
+      const response = await fetch('/api/quick-scan/think-harder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scan_id: scanData.scan_id,
+          current_analysis: scanData.analysis,
+          model: 'gpt-4o', // Use premium model for thinking harder
+          user_id: user?.id
+        })
+      })
+      
+      if (!response.ok) throw new Error('Failed to get enhanced analysis')
+      const result = await response.json()
+      
+      // Show result in Oracle panel or update the current analysis
+      alert(`Enhanced Analysis: ${result.key_insights || 'Enhanced analysis completed with higher confidence.'}`)
+      
+    } catch (error) {
+      console.error('Think Harder failed:', error)
+      alert('Unable to enhance analysis right now. Please try again later.')
+    } finally {
+      setIsThinkingHarder(false)
+    }
+  }
+
+  const handleAskMeMore = async () => {
+    if (!scanData.scan_id || isAskingMore) return
+    
+    setIsAskingMore(true)
+    
+    try {
+      // Redirect to Deep Dive with current scan data to continue questioning
+      const formDataEncoded = encodeURIComponent(JSON.stringify(scanData.formData))
+      router.push(`/scan?mode=deep&bodyPart=${scanData.bodyPart}&formData=${formDataEncoded}&fromScan=${scanData.scan_id}&continueToTarget=90`)
+      
+    } catch (error) {
+      console.error('Ask Me More failed:', error)
+      alert('Unable to continue questioning right now. Please try again later.')
+    } finally {
+      setIsAskingMore(false)
+    }
   }
 
   return (
@@ -430,6 +484,53 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-300 transition-transform group-hover:translate-x-1" />
             </button>
+          </div>
+        </div>
+
+        {/* Enhanced Analysis Options */}
+        <div className="space-y-3">
+          <div className="text-center text-sm text-gray-400 mb-4">
+            Need even more certainty about your diagnosis?
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              onClick={() => handleThinkHarder()}
+              disabled={isThinkingHarder || isAskingMore}
+              className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:bg-gradient-to-r hover:from-purple-500/30 hover:to-pink-500/30 hover:text-purple-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isThinkingHarder ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Brain className="w-4 h-4 group-hover:animate-pulse" />
+              )}
+              {isThinkingHarder ? 'Thinking...' : 'Think Harder'}
+            </motion.button>
+            
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              onClick={() => handleAskMeMore()}
+              disabled={isThinkingHarder || isAskingMore}
+              className="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-gradient-to-r hover:from-emerald-500/30 hover:to-cyan-500/30 hover:text-emerald-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAskingMore ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <MessageSquare className="w-4 h-4 group-hover:animate-bounce" />
+              )}
+              {isAskingMore ? 'Preparing...' : 'Ask Me More'}
+            </motion.button>
+          </div>
+
+          {/* Subtle explanation */}
+          <div className="text-xs text-gray-400 text-center space-y-1">
+            <p><span className="text-purple-400">Think Harder:</span> Advanced AI reasoning for complex cases</p>
+            <p><span className="text-emerald-400">Ask Me More:</span> Get questioned until 90%+ confidence</p>
           </div>
         </div>
 

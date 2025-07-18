@@ -483,7 +483,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     const moreQuestionsMessage: Message = {
       id: `more-questions-${Date.now()}`,
       role: 'assistant',
-      content: "I'd like to ask you a few more targeted questions to reach 95%+ diagnostic confidence. This will help provide even more accurate insights.",
+      content: "I'd like to ask you a few more targeted questions to reach 90%+ diagnostic confidence. This will help provide even more accurate insights.",
       timestamp: new Date()
     }
     setMessages(prev => [...prev, moreQuestionsMessage])
@@ -496,7 +496,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         body: JSON.stringify({
           session_id: sessionId,
           current_confidence: finalAnalysis?.confidence || 0,
-          target_confidence: 95,
+          target_confidence: 90,
           user_id: user?.id
         })
       })
@@ -680,7 +680,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           className="text-xs text-gray-400 text-center space-y-1"
                         >
                           <p><span className="text-purple-400">Think Harder:</span> Advanced AI reasoning for complex cases</p>
-                          <p><span className="text-emerald-400">Ask Me More:</span> Continue until 95%+ confidence</p>
+                          <p><span className="text-emerald-400">Ask Me More:</span> Continue until 90%+ confidence</p>
                         </motion.div>
                       </div>
                     </div>
