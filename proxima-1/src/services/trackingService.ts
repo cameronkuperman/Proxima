@@ -165,6 +165,13 @@ class TrackingService {
     return this.fetchWithAuth(`${API_URL}/api/tracking/chart/${configId}?days=${days}`)
   }
 
+  async getDataPoints(
+    configId: string,
+    days: number = 30
+  ): Promise<any> {
+    return this.fetchWithAuth(`${API_URL}/api/tracking/data-points/${configId}?days=${days}`)
+  }
+
   async getPastScans(
     userId: string,
     limit: number = 20

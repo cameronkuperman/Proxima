@@ -167,6 +167,7 @@ export const useTrackingStore = create<TrackingStore>()(
         set({ loading: true, error: null })
         try {
           const data = await trackingService.getChartData(configId, days)
+          console.log('Chart API response:', data)
           
           // Update chart data map
           const newChartData = new Map(get().chartData)
@@ -177,6 +178,7 @@ export const useTrackingStore = create<TrackingStore>()(
             loading: false 
           })
         } catch (error) {
+          console.error('Chart data fetch error:', error)
           set({ 
             error: error instanceof Error ? error.message : 'Failed to fetch chart data',
             loading: false 

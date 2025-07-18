@@ -12,17 +12,28 @@ interface TrackingChartProps {
 }
 
 export default function TrackingChart({ configId, isOpen, onClose }: TrackingChartProps) {
-  const { chartData, fetchChartData } = useTrackingStore()
+  const { chartData, fetchChartData, error } = useTrackingStore()
   const [days, setDays] = useState(30)
+  const [isLoading, setIsLoading] = useState(false)
   const data = chartData.get(configId)
 
   useEffect(() => {
     if (isOpen && configId) {
-      fetchChartData(configId, days)
+      console.log('Fetching chart data for config:', configId, 'days:', days)
+      setIsLoading(true)
+      fetchChartData(configId, days).finally(() => setIsLoading(false))
     }
   }, [isOpen, configId, days, fetchChartData])
 
-  if (!isOpen || !data || !data.config) return null
+  useEffect(() => {
+    console.log('Chart data for config', configId, ':', data)
+  }, [data, configId])
+
+  if (!isOpen) return null
+
+  if (error) {
+    console.error('Chart error:', error)
+  }
 
   // Calculate chart dimensions
   const chartWidth = 400
@@ -35,8 +46,8 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
   const createPath = () => {
     if (!data?.data || data.data.length === 0) return ''
     
-    const yMin = data.config?.y_axis_min ?? 0
-    const yMax = data.config?.y_axis_max ?? 10
+    const yMin = data?.config?.y_axis_min ?? 0
+    const yMax = data?.config?.y_axis_max ?? 10
     
     return data.data.map((point, index) => {
       const x = (index / (data.data.length - 1)) * graphWidth + padding.left
@@ -76,7 +87,7 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
           <div className="p-6">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-white">{data.config?.metric_name || 'Tracking Data'}</h2>
+                <h2 className="text-xl font-semibold text-white">{data?.config?.metric_name || 'Tracking Data'}</h2>
                 <p className="text-sm text-gray-400 mt-1">Tracking history and trends</p>
               </div>
               <button
@@ -103,6 +114,20 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
 
             {/* Chart */}
             <div className="bg-white/[0.02] rounded-xl p-4">
+              {isLoading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="text-gray-400">Loading chart data...</div>
+                </div>
+              ) : error ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="text-red-400">Failed to load chart data</div>
+                </div>
+              ) : !data || !data.config ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="text-gray-400">No data available</div>
+                </div>
+              ) : (
+              <>
               <svg 
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
                 className="w-full h-auto"
@@ -123,8 +148,8 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
 
                 {/* Y-axis labels */}
                 {[0, 1, 2, 3, 4].map((i) => {
-                  const yMin = data.config?.y_axis_min ?? 0
-                  const yMax = data.config?.y_axis_max ?? 10
+                  const yMin = data?.config?.y_axis_min ?? 0
+                  const yMax = data?.config?.y_axis_max ?? 10
                   const value = yMax - (i * (yMax - yMin) / 4)
                   return (
                     <text
@@ -153,7 +178,7 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
                 <motion.path
                   d={createPath()}
                   fill="none"
-                  stroke={data.config?.color || '#a855f7'}
+                  stroke={data?.config?.color || '#a855f7'}
                   strokeWidth="3"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
@@ -162,8 +187,8 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
 
                 {/* Data points */}
                 {data.data?.map((point, index) => {
-                  const yMin = data.config?.y_axis_min ?? 0
-                  const yMax = data.config?.y_axis_max ?? 10
+                  const yMin = data?.config?.y_axis_min ?? 0
+                  const yMax = data?.config?.y_axis_max ?? 10
                   const x = (index / (data.data.length - 1)) * graphWidth + padding.left
                   const y = chartHeight - padding.bottom - ((point.y - yMin) / (yMax - yMin)) * graphHeight
                   
@@ -173,7 +198,7 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
                         cx={x}
                         cy={y}
                         r="4"
-                        fill={data.config?.color || '#a855f7'}
+                        fill={data?.config?.color || '#a855f7'}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: index * 0.05 }}
@@ -189,8 +214,8 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
                 {/* Gradient definition */}
                 <defs>
                   <linearGradient id={`gradient-${configId}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor={data.config?.color || '#a855f7'} stopOpacity="0.3" />
-                    <stop offset="100%" stopColor={data.config?.color || '#a855f7'} stopOpacity="0" />
+                    <stop offset="0%" stopColor={data?.config?.color || '#a855f7'} stopOpacity="0.3" />
+                    <stop offset="100%" stopColor={data?.config?.color || '#a855f7'} stopOpacity="0" />
                   </linearGradient>
                 </defs>
               </svg>
@@ -199,17 +224,19 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
               {data.data?.length > 0 && (
                 <div className="flex justify-between mt-2 px-10">
                   <span className="text-xs text-gray-500">
-                    {new Date(data.data[0].x).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                    {data.data && data.data[0] && new Date(data.data[0].x).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
                   </span>
                   <span className="text-xs text-gray-500">
-                    {new Date(data.data[data.data.length - 1].x).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                    {data.data && data.data.length > 0 && new Date(data.data[data.data.length - 1].x).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
                   </span>
                 </div>
+              )}
+              </>
               )}
             </div>
 
             {/* Statistics */}
-            {data.statistics && (
+            {data && data.statistics && (
               <div className="grid grid-cols-4 gap-4 mt-6">
                 <div className="text-center">
                   <p className="text-xs text-gray-400">Average</p>

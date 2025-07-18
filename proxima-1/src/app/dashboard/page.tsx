@@ -18,6 +18,7 @@ import ActiveTrackingCard from '@/components/tracking/ActiveTrackingCard';
 import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal';
 import LogDataModal from '@/components/tracking/LogDataModal';
 import TrackingChart from '@/components/tracking/TrackingChart';
+import { DashboardItem } from '@/services/trackingService';
 
 // Mock data for timeline
 const mockTimelineData = [
@@ -139,6 +140,7 @@ export default function DashboardPage() {
   const [showChartModal, setShowChartModal] = useState(false);
   const [chartConfigId, setChartConfigId] = useState<string | null>(null);
   const [trackingPage, setTrackingPage] = useState(0);
+  const [selectedTrackingItem, setSelectedTrackingItem] = useState<DashboardItem | null>(null);
   const itemsPerPage = 4;
   
   // Past reports queue
@@ -747,6 +749,10 @@ export default function DashboardPage() {
                                   setChartConfigId(configId);
                                   setShowChartModal(true);
                                 }}
+                                onCustomize={(item) => {
+                                  setSelectedTrackingItem(item);
+                                  setShowCustomizeModal(true);
+                                }}
                               />
                             ) : (
                               <TrackingSuggestionCard
@@ -964,27 +970,49 @@ export default function DashboardPage() {
         />
 
         {/* Tracking Modals */}
-        {showCustomizeModal && currentSuggestion && suggestionId && (
+        {showCustomizeModal && ((currentSuggestion && suggestionId) || selectedTrackingItem) && (
           <CustomizeTrackingModal
-            suggestion={{ 
-              id: suggestionId,
-              ...currentSuggestion 
-            }}
+            suggestion={
+              selectedTrackingItem
+                ? {
+                    id: selectedTrackingItem.id,
+                    metric_name: selectedTrackingItem.metric_name,
+                    metric_description: selectedTrackingItem.description || '',
+                    y_axis_label: selectedTrackingItem.y_axis_label || 'Value',
+                    y_axis_type: 'numeric',
+                    tracking_type: 'symptom',
+                    confidence_score: 0.9
+                  }
+                : {
+                    id: suggestionId!,
+                    ...currentSuggestion!
+                  }
+            }
             onSave={async (metricName, yAxisLabel) => {
-              if (user?.id && suggestionId) {
-                await configureSuggestion({
-                  suggestion_id: suggestionId,
-                  user_id: user.id,
-                  metric_name: metricName,
-                  y_axis_label: yAxisLabel,
-                  show_on_homepage: true
-                });
+              if (user?.id) {
+                if (selectedTrackingItem) {
+                  // Update existing tracking config
+                  // TODO: Add API endpoint to update existing configs
+                  console.log('Update existing config:', selectedTrackingItem.id, metricName, yAxisLabel);
+                  await fetchDashboard(user.id);
+                } else if (suggestionId) {
+                  await configureSuggestion({
+                    suggestion_id: suggestionId,
+                    user_id: user.id,
+                    metric_name: metricName,
+                    y_axis_label: yAxisLabel,
+                    show_on_homepage: true
+                  });
+                }
                 setShowCustomizeModal(false);
               }
             }}
             onClose={() => {
               setShowCustomizeModal(false);
-              clearSuggestion();
+              setSelectedTrackingItem(null);
+              if (!selectedTrackingItem) {
+                clearSuggestion();
+              }
             }}
           />
         )}
