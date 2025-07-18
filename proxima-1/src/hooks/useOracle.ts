@@ -205,7 +205,7 @@ export function useOracle({
     }
     
     return newId;
-  }, [userId, clearMessages, messages, generateSummary, onSummaryGenerated]);
+  }, [userId, clearMessages, messages, onSummaryGenerated]);
 
   const generateSummary = useCallback(async (): Promise<SummaryResponse | null> => {
     // Only generate if we have user messages

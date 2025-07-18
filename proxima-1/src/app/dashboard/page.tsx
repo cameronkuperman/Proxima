@@ -576,6 +576,7 @@ export default function DashboardPage() {
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
+                onClick={() => router.push('/photo-analysis')}
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:from-pink-600/30 group-hover:to-purple-600/30 transition-all">
                   <Camera className="w-6 h-6 text-pink-400" />
@@ -583,9 +584,9 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-semibold text-white mb-2">Photo Analysis</h3>
                 <p className="text-gray-400 text-sm mb-2">Upload photos for visual symptom tracking</p>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-purple-400">2 active</span>
+                  <span className="text-purple-400">Start Analysis</span>
                   <span className="text-gray-500">•</span>
-                  <span className="text-gray-500">5 total</span>
+                  <span className="text-gray-500">AI-Powered</span>
                 </div>
               </motion.div>
 
