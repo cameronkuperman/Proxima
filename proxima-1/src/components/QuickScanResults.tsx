@@ -18,9 +18,10 @@ interface QuickScanResultsProps {
     scan_id?: string
   }
   onNewScan: () => void
+  mode?: 'quick' | 'deep'
 }
 
-export default function QuickScanResults({ scanData, onNewScan }: QuickScanResultsProps) {
+export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }: QuickScanResultsProps) {
   const router = useRouter()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState(0)
@@ -120,7 +121,8 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
     
     try {
       // Call backend API for "Think Harder" functionality
-      const response = await fetch('/api/quick-scan/think-harder', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app'
+      const response = await fetch(`${API_URL}/api/quick-scan/think-harder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -487,7 +489,8 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
           </div>
         </div>
 
-        {/* Enhanced Analysis Options */}
+        {/* Enhanced Analysis Options - Only show for Quick Scan */}
+        {mode === 'quick' && (
         <div className="space-y-3">
           <div className="text-center text-sm text-gray-400 mb-4">
             Need even more certainty about your diagnosis?
@@ -533,6 +536,7 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
             <p><span className="text-emerald-400">Ask Me More:</span> Get questioned until 90%+ confidence</p>
           </div>
         </div>
+        )}
 
         {/* New Scan Button */}
         <div className="text-center">

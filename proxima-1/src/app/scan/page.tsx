@@ -225,6 +225,7 @@ function ScanPageContent() {
                       setScanData(null)
                       setCurrentStep('form')
                     }}
+                    mode="quick"
                   />
                 ) : (
                   <DeepDiveChat 

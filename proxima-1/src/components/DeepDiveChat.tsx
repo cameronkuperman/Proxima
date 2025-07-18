@@ -544,7 +544,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
 
   if (showReport && finalAnalysis) {
     console.log('Rendering QuickScanResults with finalAnalysis:', finalAnalysis)
-    return <QuickScanResults scanData={finalAnalysis} onNewScan={() => window.location.reload()} />
+    return <QuickScanResults scanData={finalAnalysis} onNewScan={() => window.location.reload()} mode="deep" />
   }
 
   // Show loading state during initialization
