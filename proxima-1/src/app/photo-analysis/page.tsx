@@ -317,10 +317,13 @@ export default function PhotoAnalysisPage() {
                   exit={{ opacity: 0, x: -20 }}
                 >
                   <PhotoSessionHistory
-                    sessions={sessions.filter(s => s.photo_count > 0)}
+                    sessions={sessions.filter(s => s.photo_count && s.photo_count > 0)}
                     onSelectSession={(session) => {
-                      continueSession(session.id);
-                      setMode('new');
+                      const sessionId = session.id || session.session_id;
+                      if (sessionId) {
+                        continueSession(sessionId);
+                        setMode('new');
+                      }
                     }}
                     showContinueButton={true}
                   />

@@ -67,8 +67,8 @@ export function usePhotoAnalysis() {
       throw new Error('User not authenticated');
     }
 
-    // Get user ID from different possible locations
-    const userId = user.id || user.sub || user.user_id;
+    // Get user ID
+    const userId = user.id;
     
     if (!userId) {
       console.error('User object structure:', user);
@@ -132,8 +132,8 @@ export function usePhotoAnalysis() {
       throw new Error('User not authenticated');
     }
 
-    // Get user ID from different possible locations
-    const userId = user.id || user.sub || user.user_id;
+    // Get user ID
+    const userId = user.id;
     
     if (!userId) {
       console.error('User object structure:', user);

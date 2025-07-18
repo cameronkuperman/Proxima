@@ -31,10 +31,12 @@ function ScanPageContent() {
     const fetchUserProfile = async () => {
       if (user?.id) {
         try {
-          const profile = await getUserProfile(user.id)
+          const profile = await getUserProfile(user.id, user.email || '', user.user_metadata?.full_name || null)
           // Convert is_male to gender string
-          const gender = profile.is_male === false ? 'female' : 'male' // Default to male for null/true
-          setUserGender(gender)
+          if (profile) {
+            const gender = profile.is_male === false ? 'female' : 'male' // Default to male for null/true
+            setUserGender(gender)
+          }
         } catch (error) {
           console.error('Failed to fetch user profile:', error)
           // Keep default of male
