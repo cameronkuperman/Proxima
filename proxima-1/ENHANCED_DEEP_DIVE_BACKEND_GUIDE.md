@@ -3,7 +3,7 @@
 ## Overview
 This guide details the backend implementation for two new Deep Dive features:
 1. **Think Harder**: Advanced AI reasoning using premium models for complex cases
-2. **Ask Me More**: Continue questioning until 95%+ diagnostic confidence
+2. **Ask Me More**: Continue questioning until 90%+ diagnostic confidence
 
 ## API Endpoints Required
 
@@ -405,7 +405,7 @@ ENHANCED_DEEP_DIVE_CONFIG = {
     },
     
     "ask_me_more": {
-        "target_confidence": 95,
+        "target_confidence": 90,
         "max_additional_questions": 5,
         "min_confidence_gain_per_question": 5,
         "question_generation_model": "deepseek/deepseek-chat"

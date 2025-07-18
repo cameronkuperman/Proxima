@@ -14,14 +14,15 @@ export interface PhotoUpload {
 }
 
 export interface PhotoSession {
-  id: string;
+  id?: string;
+  session_id?: string; // Backend returns this instead of id
   condition_name: string;
   description?: string;
   created_at: string;
   last_photo_at?: string;
-  photo_count: number;
-  analysis_count: number;
-  is_sensitive: boolean;
+  photo_count?: number;
+  analysis_count?: number;
+  is_sensitive?: boolean;
   latest_summary?: string;
   thumbnail_url?: string;
 }
