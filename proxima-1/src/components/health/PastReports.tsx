@@ -45,6 +45,8 @@ export const PastReports: React.FC<PastReportsProps> = ({ onSelectReport }) => {
 
     try {
       let fetchedReports = await reportsService.fetchUserReports(user.id);
+      console.log('📋 PastReports - Fetched reports from backend:', fetchedReports);
+      console.log('📋 PastReports - Number of reports:', fetchedReports?.length);
       
       // Apply filters
       if (searchQuery) {

@@ -5,12 +5,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useOracle } from '@/hooks/useOracle';
 import { useAuth } from '@/contexts/AuthContext';
+import { SummaryNotification } from './SummaryNotification';
 
 export default function OracleFullScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summarySuccess, setSummarySuccess] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -28,6 +32,18 @@ export default function OracleFullScreen() {
     userId: user?.id || 'anonymous',
     onError: (error) => {
       console.error('Oracle error:', error);
+    },
+    onSummaryGenerated: (summary) => {
+      // Show notification when auto-summary is generated
+      setIsGeneratingSummary(true);
+      setSummarySuccess(true);
+      setSummaryError(null);
+      
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        setIsGeneratingSummary(false);
+        setSummarySuccess(false);
+      }, 3000);
     }
   });
 
@@ -124,7 +140,14 @@ export default function OracleFullScreen() {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] z-50 flex flex-col">
+    <>
+      <SummaryNotification 
+        isGenerating={isGeneratingSummary}
+        success={summarySuccess}
+        error={summaryError || undefined}
+      />
+      
+      <div className="fixed inset-0 bg-[#0a0a0a] z-50 flex flex-col">
       {/* Header - Minimal like Claude */}
       <div className="border-b border-white/[0.08] bg-[#0a0a0a]/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -371,5 +394,6 @@ export default function OracleFullScreen() {
         </div>
       </div>
     </div>
+    </>
   );
 }

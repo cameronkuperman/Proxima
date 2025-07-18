@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { reportService } from '@/services/reportService';
 import { ReportAnalysisRequest, SpecialtyType } from '@/types/reports';
-import { useAuthContext } from '@/lib/auth-context';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ReportGeneratorProps {
   userId?: string;
@@ -20,7 +20,7 @@ export function ReportGenerator({
   photoSessionIds = [],
   onComplete 
 }: ReportGeneratorProps) {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const userId = propUserId || user?.id;
   
   const [loading, setLoading] = useState(false);

@@ -3,6 +3,13 @@ import { motion } from 'framer-motion';
 import { Download, Share2, Mail, FileText, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { generateReportPDF, shareReportText } from '@/utils/pdfGenerator';
 
+// Import all report type components
+import { ComprehensiveReport } from './reports/ComprehensiveReport';
+import { UrgentTriageReport } from './reports/UrgentTriageReport';
+import { SymptomTimelineReport } from './reports/SymptomTimelineReport';
+import { SpecialistReport } from './reports/SpecialistReport';
+import { TimePeriodReport } from './reports/TimePeriodReport';
+
 interface ReportViewerProps {
   report: any;
   onBack?: () => void;
@@ -14,6 +21,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report, onBack }) =>
   const [activeTab, setActiveTab] = useState<TabType>('summary');
   const [isExporting, setIsExporting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  
+  console.log('📊 ReportViewer - Received report:', report);
+  console.log('📊 ReportViewer - Report type:', report?.report_type);
+  console.log('📊 ReportViewer - Report data:', report?.report_data);
   
   // Determine available tabs based on report data
   const getAvailableTabs = (): TabType[] => {
@@ -71,40 +82,110 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report, onBack }) =>
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
-  // Render different report types
-  if (report.report_type === 'urgent_triage') {
-    return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
-            <h1 className="text-2xl font-bold text-red-900">Urgent Medical Summary</h1>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-red-800 mb-2">Immediate Action Required:</h3>
-              <p className="text-xl font-bold text-red-900">
-                {report.triage_summary?.recommended_action || 'Seek immediate medical attention'}
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-red-200">
-              <button
-                onClick={exportPDF}
-                disabled={isExporting}
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white 
-                  font-medium rounded-lg transition-colors disabled:opacity-50 
-                  disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <Download className={`w-4 h-4 ${isExporting ? 'animate-spin' : ''}`} />
-                {isExporting ? 'Generating PDF...' : 'Download Emergency Summary'}
-              </button>
-            </div>
-          </div>
+  // Common header for all reports
+  const ReportHeader = () => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Medical Report
+        </h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={exportPDF}
+            disabled={isExporting}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white 
+              rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 
+              disabled:cursor-not-allowed"
+          >
+            <Download className={`w-4 h-4 ${isExporting ? 'animate-spin' : ''}`} />
+            {isExporting ? 'Exporting...' : 'Export PDF'}
+          </button>
+          <button
+            onClick={shareReport}
+            disabled={isSharing}
+            className="px-4 py-2 border border-gray-300 hover:bg-gray-50 
+              rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 
+              disabled:cursor-not-allowed"
+          >
+            <Share2 className={`w-4 h-4 ${isSharing ? 'animate-spin' : ''}`} />
+            {isSharing ? 'Sharing...' : 'Share'}
+          </button>
+          <button
+            onClick={emailReport}
+            className="px-4 py-2 border border-gray-300 hover:bg-gray-50 
+              rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Mail className="w-4 h-4" />
+            Email
+          </button>
         </div>
       </div>
-    );
+      
+      <div className="flex items-center gap-4 text-sm text-gray-600">
+        <span>Report Type: {report.report_type?.replace(/_/g, ' ').toUpperCase()}</span>
+        <span>•</span>
+        <span>Generated: {new Date(report.generated_at || Date.now()).toLocaleDateString()}</span>
+        {report.report_id && (
+          <>
+            <span>•</span>
+            <span>ID: {report.report_id}</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // Render specific report type components
+  switch (report.report_type) {
+    case 'urgent_triage':
+      return <UrgentTriageReport report={report} onExport={exportPDF} onShare={shareReport} onEmail={emailReport} />;
+    
+    case 'comprehensive':
+      return (
+        <div className="max-w-6xl mx-auto">
+          <ReportHeader />
+          <ComprehensiveReport report={report} />
+        </div>
+      );
+    
+    case 'symptom_timeline':
+      return (
+        <div className="max-w-6xl mx-auto">
+          <ReportHeader />
+          <SymptomTimelineReport report={report} />
+        </div>
+      );
+    
+    case 'specialist_focused':
+      return (
+        <div className="max-w-6xl mx-auto">
+          <ReportHeader />
+          <SpecialistReport report={report} />
+        </div>
+      );
+    
+    case 'annual_summary':
+    case '30_day_summary':
+    case '30-day':
+      return (
+        <div className="max-w-6xl mx-auto">
+          <ReportHeader />
+          <TimePeriodReport report={report} />
+        </div>
+      );
+    
+    case 'photo_progression':
+      // For now, use comprehensive report component
+      return (
+        <div className="max-w-6xl mx-auto">
+          <ReportHeader />
+          <ComprehensiveReport report={report} />
+        </div>
+      );
+    
+    default:
+      // Fallback to the original tab-based viewer
+      break;
   }
 
   // Standard report viewer for other types
@@ -217,7 +298,19 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report, onBack }) =>
 
 // Summary Tab Component
 const SummaryTab: React.FC<{ reportData: any }> = ({ reportData }) => {
-  if (!reportData) return <div>No report data available</div>;
+  console.log('📄 SummaryTab - Received reportData:', reportData);
+  
+  if (!reportData) {
+    return (
+      <div className="p-8 text-center">
+        <div className="text-gray-500 mb-4">
+          <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-medium mb-2">No Report Data Available</h3>
+          <p className="text-sm">This report appears to be empty or corrupted.</p>
+        </div>
+      </div>
+    );
+  };
   
   const summary = reportData.executive_summary || reportData.triage_summary;
   

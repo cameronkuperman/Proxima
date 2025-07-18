@@ -223,6 +223,48 @@ export default function QuickScanResults({ scanData, onNewScan }: QuickScanResul
                     ))}
                   </div>
                 </div>
+
+                {/* Dive Deeper - Analysis depth indicator */}
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 max-w-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-400">Analysis Depth</span>
+                        <span className="text-xs text-gray-400">{confidence}% confidence</span>
+                      </div>
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${confidence}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                          className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Dive deeper button - shows always but more prominent when confidence < 85 */}
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    onClick={() => {
+                      // Encode the form data to pass to Deep Dive
+                      const formDataEncoded = encodeURIComponent(JSON.stringify(scanData.formData))
+                      router.push(`/scan?mode=deep&bodyPart=${scanData.bodyPart}&formData=${formDataEncoded}&fromScan=${scanData.scan_id}`)
+                    }}
+                    className={`
+                      w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2
+                      ${confidence < 85
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg'
+                        : 'bg-gray-800/50 hover:bg-gray-700/50 text-purple-400 hover:text-purple-300'
+                      }
+                    `}
+                  >
+                    <Brain className="w-5 h-5" />
+                    Dive deeper
+                  </motion.button>
+                </div>
               </motion.div>
             )}
 

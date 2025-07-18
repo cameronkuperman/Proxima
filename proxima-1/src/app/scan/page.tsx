@@ -15,17 +15,37 @@ function ScanPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const mode = searchParams.get('mode') || 'quick'
+  const bodyPart = searchParams.get('bodyPart')
+  const formDataParam = searchParams.get('formData')
+  const fromScan = searchParams.get('fromScan')
   const [currentStep, setCurrentStep] = useState<'intro' | 'form' | 'analysis'>('intro')
   const [scanData, setScanData] = useState(null)
   const { performScan, isLoading, error, scanResult } = useQuickScan()
 
   useEffect(() => {
-    // Show intro for 2 seconds
-    const timer = setTimeout(() => {
-      setCurrentStep('form')
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [])
+    // If coming from a Quick Scan, skip intro and go directly to Deep Dive
+    if (fromScan && bodyPart && formDataParam && mode === 'deep') {
+      try {
+        const formData = JSON.parse(decodeURIComponent(formDataParam))
+        setScanData({
+          bodyPart,
+          formData,
+          mode: 'deep',
+          fromScan
+        })
+        setCurrentStep('analysis')
+      } catch (error) {
+        console.error('Failed to parse form data from Quick Scan:', error)
+        setCurrentStep('form')
+      }
+    } else {
+      // Show intro for 2 seconds
+      const timer = setTimeout(() => {
+        setCurrentStep('form')
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [fromScan, bodyPart, formDataParam, mode])
 
   const handleFormComplete = async (data: any) => {
     if (mode === 'quick') {

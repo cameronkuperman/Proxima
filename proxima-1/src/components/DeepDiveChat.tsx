@@ -123,6 +123,8 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   const [showReport, setShowReport] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+  const [isThinkingHarder, setIsThinkingHarder] = useState(false)
+  const [isAskingMore, setIsAskingMore] = useState(false)
 
   // Initialize deep dive session with proper guards
   useEffect(() => {
@@ -411,6 +413,135 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     }
   }
 
+  const handleThinkHarder = async () => {
+    if (!sessionId || isThinkingHarder) return
+    
+    setIsThinkingHarder(true)
+    setError(null)
+    
+    const thinkingMessage: Message = {
+      id: `thinking-${Date.now()}`,
+      role: 'assistant',
+      content: "Let me think harder about your case using advanced AI reasoning. This may take a moment...",
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, thinkingMessage])
+    
+    try {
+      // Call backend API for "Think Harder" functionality
+      const response = await fetch('/api/deep-dive/think-harder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          current_analysis: finalAnalysis?.analysis,
+          model: 'gpt-4o', // Use premium model for thinking harder
+          user_id: user?.id
+        })
+      })
+      
+      if (!response.ok) throw new Error('Failed to get enhanced analysis')
+      const result = await response.json()
+      
+      // Update with enhanced analysis
+      setFinalAnalysis(prev => ({
+        ...prev,
+        analysis: result.enhanced_analysis,
+        confidence: result.enhanced_confidence,
+        reasoning_snippets: result.reasoning_snippets || []
+      }))
+      
+      const enhancedMessage: Message = {
+        id: `enhanced-${Date.now()}`,
+        role: 'assistant',
+        content: `**Enhanced Analysis Complete** 🧠\n\nAfter deeper reasoning, I have ${result.enhanced_confidence}% confidence. ${result.key_insights || 'The enhanced analysis provides additional insights into your condition.'}`,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, enhancedMessage])
+      
+    } catch (error) {
+      console.error('Think Harder failed:', error)
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: "I'm having trouble accessing the advanced reasoning model right now. The original analysis remains accurate.",
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsThinkingHarder(false)
+    }
+  }
+
+  const handleAskMeMore = async () => {
+    if (!sessionId || isAskingMore) return
+    
+    setIsAskingMore(true)
+    setError(null)
+    setIsComplete(false) // Re-enable input form
+    
+    const moreQuestionsMessage: Message = {
+      id: `more-questions-${Date.now()}`,
+      role: 'assistant',
+      content: "I'd like to ask you a few more targeted questions to reach 95%+ diagnostic confidence. This will help provide even more accurate insights.",
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, moreQuestionsMessage])
+    
+    try {
+      // Call backend API for "Ask Me More" functionality
+      const response = await fetch('/api/deep-dive/ask-more', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          current_confidence: finalAnalysis?.confidence || 0,
+          target_confidence: 95,
+          user_id: user?.id
+        })
+      })
+      
+      if (!response.ok) throw new Error('Failed to get additional questions')
+      const result = await response.json()
+      
+      if (result.question) {
+        // Add the new question
+        const newQuestion: Message = {
+          id: `additional-q-${Date.now()}`,
+          role: 'assistant',
+          content: result.question,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, newQuestion])
+        setCurrentQuestion(result.question)
+        setQuestionCount(prev => prev + 1)
+      } else {
+        // No more questions needed
+        const completeMessage: Message = {
+          id: `complete-${Date.now()}`,
+          role: 'assistant',
+          content: "After reviewing your case, I believe we have sufficient information for a highly confident diagnosis. No additional questions are needed.",
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, completeMessage])
+        setIsComplete(true)
+      }
+      
+    } catch (error) {
+      console.error('Ask Me More failed:', error)
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: "I'm having trouble generating additional questions right now. The current analysis provides good insights.",
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+      setIsComplete(true)
+    } finally {
+      setIsAskingMore(false)
+    }
+  }
+
   if (showReport && finalAnalysis) {
     console.log('Rendering QuickScanResults with finalAnalysis:', finalAnalysis)
     return <QuickScanResults scanData={finalAnalysis} onNewScan={() => window.location.reload()} />
@@ -494,16 +625,64 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                       <p className="text-sm leading-relaxed mb-4" dangerouslySetInnerHTML={{ 
                         __html: message.content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>') 
                       }} />
-                      <motion.button
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                        onClick={() => setShowReport(true)}
-                        className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2 shadow-lg"
-                      >
-                        <FileText className="w-5 h-5" />
-                        View Full Analysis Report
-                      </motion.button>
+                      {/* Enhanced analysis options */}
+                      <div className="space-y-3">
+                        <motion.button
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 }}
+                          onClick={() => setShowReport(true)}
+                          className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2 shadow-lg"
+                        >
+                          <FileText className="w-5 h-5" />
+                          View Full Analysis Report
+                        </motion.button>
+
+                        {/* Advanced analysis options */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.7 }}
+                          className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                        >
+                          <button
+                            onClick={() => handleThinkHarder()}
+                            disabled={isThinkingHarder || isAskingMore}
+                            className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:bg-gradient-to-r hover:from-purple-500/30 hover:to-pink-500/30 hover:text-purple-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isThinkingHarder ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Brain className="w-4 h-4 group-hover:animate-pulse" />
+                            )}
+                            {isThinkingHarder ? 'Thinking...' : 'Think Harder'}
+                          </button>
+                          
+                          <button
+                            onClick={() => handleAskMeMore()}
+                            disabled={isThinkingHarder || isAskingMore}
+                            className="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-gradient-to-r hover:from-emerald-500/30 hover:to-cyan-500/30 hover:text-emerald-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isAskingMore ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <MessageSquare className="w-4 h-4 group-hover:animate-bounce" />
+                            )}
+                            {isAskingMore ? 'Preparing...' : 'Ask Me More'}
+                          </button>
+                        </motion.div>
+
+                        {/* Subtle explanation */}
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 1 }}
+                          className="text-xs text-gray-400 text-center space-y-1"
+                        >
+                          <p><span className="text-purple-400">Think Harder:</span> Advanced AI reasoning for complex cases</p>
+                          <p><span className="text-emerald-400">Ask Me More:</span> Continue until 95%+ confidence</p>
+                        </motion.div>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm leading-relaxed">
