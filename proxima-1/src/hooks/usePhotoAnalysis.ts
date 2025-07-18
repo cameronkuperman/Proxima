@@ -53,16 +53,24 @@ export function usePhotoAnalysis() {
       body: formData
     });
 
-    if (!response.ok) throw new Error('Categorization failed');
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Categorization error:', error);
+      throw new Error('Categorization failed');
+    }
     return response.json();
   };
 
   // Upload photos
   const uploadPhotos = async (sessionId: string, photos: File[]): Promise<UploadResponse> => {
+    if (!user?.id) {
+      throw new Error('User not authenticated');
+    }
+
     const formData = new FormData();
     photos.forEach(photo => formData.append('photos', photo));
+    formData.append('user_id', user.id);
     formData.append('session_id', sessionId);
-    formData.append('user_id', user?.id || '');
 
     const response = await fetch(`${API_URL}/api/photo-analysis/upload`, {
       method: 'POST',
@@ -70,8 +78,14 @@ export function usePhotoAnalysis() {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Upload failed');
+      const error = await response.text();
+      console.error('Upload error:', error);
+      try {
+        const errorJson = JSON.parse(error);
+        throw new Error(errorJson.error || 'Upload failed');
+      } catch {
+        throw new Error('Upload failed');
+      }
     }
 
     return response.json();
@@ -103,22 +117,28 @@ export function usePhotoAnalysis() {
     condition_name: string;
     description?: string;
   }): Promise<PhotoSession> => {
+    if (!user?.id) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_URL}/api/photo-analysis/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...params,
-        user_id: user?.id
+        user_id: user.id
       })
     });
 
-    if (!response.ok) throw new Error('Failed to create session');
-    const session = await response.json();
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Session creation error:', error);
+      throw new Error('Failed to create session');
+    }
     
-    // Update local state
+    const session = await response.json();
     setSessions(prev => [session, ...prev]);
     setActiveSession(session);
-    
     return session;
   };
 
