@@ -77,8 +77,26 @@ export default function PhotoAnalysisPage() {
       // Create or get session
       let sessionId = activeSession?.id;
       if (!sessionId && mode === 'new') {
+        // Extract a better condition name from context
+        let conditionName = 'New Condition';
+        const contextLower = context.toLowerCase();
+        
+        // Try to extract condition from common patterns
+        if (contextLower.includes('rash')) conditionName = 'Rash';
+        else if (contextLower.includes('mole')) conditionName = 'Mole';
+        else if (contextLower.includes('wound')) conditionName = 'Wound';
+        else if (contextLower.includes('burn')) conditionName = 'Burn';
+        else if (contextLower.includes('cut')) conditionName = 'Cut';
+        else if (contextLower.includes('bruise')) conditionName = 'Bruise';
+        else if (contextLower.includes('skin')) conditionName = 'Skin Condition';
+        else if (contextLower.includes('infection')) conditionName = 'Infection';
+        else if (contextLower.includes('bite')) conditionName = 'Bite';
+        else if (contextLower.includes('acne')) conditionName = 'Acne';
+        else if (contextLower.includes('eczema')) conditionName = 'Eczema';
+        else if (contextLower.includes('psoriasis')) conditionName = 'Psoriasis';
+        
         const session = await createSession({
-          condition_name: context.split(' ')[0] || 'New Condition',
+          condition_name: conditionName,
           description: context
         });
         sessionId = session.id;
@@ -119,9 +137,9 @@ export default function PhotoAnalysisPage() {
         
         setAnalysisResult(analysis);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Analysis error:', error);
-      alert('An error occurred during analysis. Please try again.');
+      alert(error.message || 'An error occurred during analysis. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -259,7 +277,8 @@ export default function PhotoAnalysisPage() {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           const textarea = document.getElementById('analysis-context') as HTMLTextAreaElement;
-                          startAnalysis(textarea.value);
+                          const context = textarea.value.trim() || 'Please analyze this medical condition';
+                          startAnalysis(context);
                         }}
                         disabled={uploadedPhotos.length === 0 || isAnalyzing}
                         className="w-full mt-6 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"

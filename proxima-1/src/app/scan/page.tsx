@@ -19,7 +19,7 @@ function ScanPageContent() {
   const formDataParam = searchParams.get('formData')
   const fromScan = searchParams.get('fromScan')
   const [currentStep, setCurrentStep] = useState<'intro' | 'form' | 'analysis'>('intro')
-  const [scanData, setScanData] = useState(null)
+  const [scanData, setScanData] = useState<any>(null)
   const { performScan, isLoading, error, scanResult } = useQuickScan()
 
   useEffect(() => {

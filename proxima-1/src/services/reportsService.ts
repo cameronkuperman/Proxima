@@ -299,10 +299,10 @@ export const reportsService = {
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
-    console.log('🔗 reportsService - Fetching from URL:', `${API_BASE_URL}/api/reports?user_id=${userId}`);
+    console.log('🔗 reportsService - Fetching from URL:', `${API_BASE_URL}/api/report/list/${userId}`);
     
     const response = await fetch(
-      `${API_BASE_URL}/api/reports?user_id=${userId}`,
+      `${API_BASE_URL}/api/report/list/${userId}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -320,32 +320,8 @@ export const reportsService = {
     const result = await response.json();
     console.log('🔗 reportsService - Raw API response:', result);
     
-    // Handle different response formats from backend
-    if (Array.isArray(result)) {
-      console.log('🔗 reportsService - Returning array result:', result);
-      return result;
-    } else if (result && typeof result === 'object') {
-      // If backend returns an object with reports array
-      if (Array.isArray(result.reports)) {
-        console.log('🔗 reportsService - Returning result.reports:', result.reports);
-        return result.reports;
-      }
-      // If backend returns an object with data array
-      if (Array.isArray(result.data)) {
-        console.log('🔗 reportsService - Returning result.data:', result.data);
-        return result.data;
-      }
-      // If backend returns a single report, wrap it in an array
-      if (result.report_id || result.id) {
-        console.log('🔗 reportsService - Returning single report as array:', [result]);
-        return [result as GeneratedReport];
-      }
-    }
-    
-    // Default to empty array if response format is unexpected
-    console.warn('🔗 reportsService - Unexpected reports response format:', result);
-    console.log('🔗 reportsService - Returning empty array');
-    return [];
+    // Backend now returns properly structured array
+    return result as GeneratedReport[];
   },
 
   // Group reports by month for timeline view
@@ -393,7 +369,7 @@ export const reportsService = {
     }
 
     const response = await fetch(
-      `${API_BASE_URL}/api/reports/${reportId}`,
+      `${API_BASE_URL}/api/report/${reportId}`,
       {
         headers: {
           'Content-Type': 'application/json',

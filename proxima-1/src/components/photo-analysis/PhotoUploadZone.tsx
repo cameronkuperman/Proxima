@@ -128,13 +128,16 @@ export default function PhotoUploadZone({
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  {...getRootProps()}
-                  className={`aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-all flex items-center justify-center cursor-pointer group ${
-                    isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
                 >
-                  <input {...getInputProps()} />
-                  <Plus className="w-8 h-8 text-gray-600 group-hover:text-orange-500" />
+                  <div
+                    {...getRootProps()}
+                    className={`aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-all flex items-center justify-center cursor-pointer group ${
+                      isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <Plus className="w-8 h-8 text-gray-600 group-hover:text-orange-500" />
+                  </div>
                 </motion.div>
               )}
             </div>

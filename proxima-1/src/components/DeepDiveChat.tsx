@@ -444,7 +444,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       const result = await response.json()
       
       // Update with enhanced analysis
-      setFinalAnalysis(prev => ({
+      setFinalAnalysis((prev: any) => ({
         ...prev,
         analysis: result.enhanced_analysis,
         confidence: result.enhanced_confidence,
