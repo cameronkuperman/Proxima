@@ -22,7 +22,7 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
     }
   }, [isOpen, configId, days, fetchChartData])
 
-  if (!isOpen || !data) return null
+  if (!isOpen || !data || !data.config) return null
 
   // Calculate chart dimensions
   const chartWidth = 400
@@ -33,10 +33,10 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
 
   // Create SVG path for the line
   const createPath = () => {
-    if (!data.data || data.data.length === 0) return ''
+    if (!data?.data || data.data.length === 0) return ''
     
-    const yMin = data.config.y_axis_min ?? 0
-    const yMax = data.config.y_axis_max ?? 10
+    const yMin = data.config?.y_axis_min ?? 0
+    const yMax = data.config?.y_axis_max ?? 10
     
     return data.data.map((point, index) => {
       const x = (index / (data.data.length - 1)) * graphWidth + padding.left
@@ -76,7 +76,7 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
           <div className="p-6">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-white">{data.config.metric_name}</h2>
+                <h2 className="text-xl font-semibold text-white">{data.config?.metric_name || 'Tracking Data'}</h2>
                 <p className="text-sm text-gray-400 mt-1">Tracking history and trends</p>
               </div>
               <button
@@ -123,8 +123,8 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
 
                 {/* Y-axis labels */}
                 {[0, 1, 2, 3, 4].map((i) => {
-                  const yMin = data.config.y_axis_min ?? 0
-                  const yMax = data.config.y_axis_max ?? 10
+                  const yMin = data.config?.y_axis_min ?? 0
+                  const yMax = data.config?.y_axis_max ?? 10
                   const value = yMax - (i * (yMax - yMin) / 4)
                   return (
                     <text
@@ -153,7 +153,7 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
                 <motion.path
                   d={createPath()}
                   fill="none"
-                  stroke={data.config.color || '#a855f7'}
+                  stroke={data.config?.color || '#a855f7'}
                   strokeWidth="3"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
@@ -161,9 +161,9 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
                 />
 
                 {/* Data points */}
-                {data.data.map((point, index) => {
-                  const yMin = data.config.y_axis_min ?? 0
-                  const yMax = data.config.y_axis_max ?? 10
+                {data.data?.map((point, index) => {
+                  const yMin = data.config?.y_axis_min ?? 0
+                  const yMax = data.config?.y_axis_max ?? 10
                   const x = (index / (data.data.length - 1)) * graphWidth + padding.left
                   const y = chartHeight - padding.bottom - ((point.y - yMin) / (yMax - yMin)) * graphHeight
                   
@@ -173,7 +173,7 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
                         cx={x}
                         cy={y}
                         r="4"
-                        fill={data.config.color || '#a855f7'}
+                        fill={data.config?.color || '#a855f7'}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: index * 0.05 }}
@@ -189,14 +189,14 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
                 {/* Gradient definition */}
                 <defs>
                   <linearGradient id={`gradient-${configId}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor={data.config.color || '#a855f7'} stopOpacity="0.3" />
-                    <stop offset="100%" stopColor={data.config.color || '#a855f7'} stopOpacity="0" />
+                    <stop offset="0%" stopColor={data.config?.color || '#a855f7'} stopOpacity="0.3" />
+                    <stop offset="100%" stopColor={data.config?.color || '#a855f7'} stopOpacity="0" />
                   </linearGradient>
                 </defs>
               </svg>
 
               {/* X-axis labels */}
-              {data.data.length > 0 && (
+              {data.data?.length > 0 && (
                 <div className="flex justify-between mt-2 px-10">
                   <span className="text-xs text-gray-500">
                     {new Date(data.data[0].x).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
@@ -209,26 +209,28 @@ export default function TrackingChart({ configId, isOpen, onClose }: TrackingCha
             </div>
 
             {/* Statistics */}
-            <div className="grid grid-cols-4 gap-4 mt-6">
-              <div className="text-center">
-                <p className="text-xs text-gray-400">Average</p>
-                <p className="text-lg font-semibold text-white">
-                  {data.statistics.average.toFixed(1)}
-                </p>
+            {data.statistics && (
+              <div className="grid grid-cols-4 gap-4 mt-6">
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Average</p>
+                  <p className="text-lg font-semibold text-white">
+                    {data.statistics.average?.toFixed(1) || '0'}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Min</p>
+                  <p className="text-lg font-semibold text-white">{data.statistics.min || 0}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Max</p>
+                  <p className="text-lg font-semibold text-white">{data.statistics.max || 0}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Entries</p>
+                  <p className="text-lg font-semibold text-white">{data.statistics.count || 0}</p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-400">Min</p>
-                <p className="text-lg font-semibold text-white">{data.statistics.min}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-400">Max</p>
-                <p className="text-lg font-semibold text-white">{data.statistics.max}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-400">Entries</p>
-                <p className="text-lg font-semibold text-white">{data.statistics.count}</p>
-              </div>
-            </div>
+            )}
           </div>
         </motion.div>
       </div>
