@@ -35,6 +35,18 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
     userId: user?.id || 'anonymous',
     onError: (error) => {
       console.error('Oracle error:', error);
+    },
+    onSummaryGenerated: (summary) => {
+      // Show notification when auto-summary is generated
+      setIsGeneratingSummary(true);
+      setSummarySuccess(true);
+      setSummaryError(null);
+      
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        setIsGeneratingSummary(false);
+        setSummarySuccess(false);
+      }, 3000);
     }
   });
 

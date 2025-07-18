@@ -17,13 +17,15 @@ export interface UseOracleOptions {
   conversationId?: string;
   onError?: (error: Error) => void;
   onSuccess?: (response: OracleResponse) => void;
+  onSummaryGenerated?: (summary: SummaryResponse) => void;
 }
 
 export function useOracle({
   userId,
   conversationId: initialConversationId,
   onError,
-  onSuccess
+  onSuccess,
+  onSummaryGenerated
 }: UseOracleOptions) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +35,9 @@ export function useOracle({
   );
   const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
+  const [lastSummaryAt, setLastSummaryAt] = useState<number>(0);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const summaryGeneratedRef = useRef<boolean>(false);
 
   // Initialize conversation ID
   useEffect(() => {
@@ -108,6 +113,48 @@ export function useOracle({
         };
         setMessages(prev => [...prev, assistantMessage]);
 
+        // Check if we should generate a summary
+        const totalMessages = messages.length + 2; // +2 for the new messages
+        const messagesSinceLastSummary = totalMessages - lastSummaryAt;
+        
+        // Generate summary after every 5 message exchanges (10 total messages)
+        if (messagesSinceLastSummary >= 10 && !summaryGeneratedRef.current) {
+          summaryGeneratedRef.current = true;
+          generateSummary().then((summary) => {
+            setLastSummaryAt(totalMessages);
+            summaryGeneratedRef.current = false;
+            if (summary && onSummaryGenerated) {
+              onSummaryGenerated(summary);
+            }
+          }).catch(err => {
+            console.warn('Auto-summary generation failed:', err);
+            summaryGeneratedRef.current = false;
+          });
+        }
+
+        // Reset inactivity timer
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+        }
+        
+        // Set new inactivity timer (2 minutes)
+        inactivityTimerRef.current = setTimeout(() => {
+          const currentMessages = messages.concat([userMessage, assistantMessage]);
+          const hasUserMessages = currentMessages.some(m => m.role === 'user');
+          if (hasUserMessages && !summaryGeneratedRef.current) {
+            summaryGeneratedRef.current = true;
+            generateSummary().then((summary) => {
+              summaryGeneratedRef.current = false;
+              if (summary && onSummaryGenerated) {
+                onSummaryGenerated(summary);
+              }
+            }).catch(err => {
+              console.warn('Inactivity-triggered summary generation failed:', err);
+              summaryGeneratedRef.current = false;
+            });
+          }
+        }, 120000); // 2 minutes
+
         onSuccess?.(response);
         return response;
       } catch (err) {
@@ -130,12 +177,35 @@ export function useOracle({
   }, []);
 
   const startNewConversation = useCallback(async () => {
+    // Generate summary for current conversation before starting new one
+    if (messages.some(m => m.role === 'user') && !summaryGeneratedRef.current) {
+      summaryGeneratedRef.current = true;
+      try {
+        const summary = await generateSummary();
+        if (summary && onSummaryGenerated) {
+          onSummaryGenerated(summary);
+        }
+      } catch (err) {
+        console.warn('Summary generation before new conversation failed:', err);
+      } finally {
+        summaryGeneratedRef.current = false;
+      }
+    }
+    
     const newId = await oracleClient.createConversation(userId);
     setConversationId(newId);
     clearMessages();
     setIsFirstMessage(true);
+    setLastSummaryAt(0);
+    
+    // Clear inactivity timer
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+    
     return newId;
-  }, [userId, clearMessages]);
+  }, [userId, clearMessages, messages, generateSummary, onSummaryGenerated]);
 
   const generateSummary = useCallback(async (): Promise<SummaryResponse | null> => {
     // Only generate if we have user messages
@@ -177,6 +247,15 @@ export function useOracle({
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, [messages, conversationId, userId]);
+
+  // Clean up inactivity timer on unmount
+  useEffect(() => {
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, []);
 
   return {
     messages,
