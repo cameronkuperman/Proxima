@@ -773,8 +773,6 @@ export default function DashboardPage() {
                                       y_axis_label: suggestion.y_axis_label || 'Value',
                                       y_axis_type: 'numeric',
                                       tracking_type: 'symptom',
-                                      body_part: 'general',
-                                      source_type: suggestion.source_type || 'quick_scan',
                                       confidence_score: suggestion.confidence_score || 0.9
                                     },
                                     suggestionId: suggestion.id
