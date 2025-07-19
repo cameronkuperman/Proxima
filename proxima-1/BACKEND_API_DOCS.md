@@ -461,9 +461,76 @@ interface DeepDiveCompleteResponse {
 
 **Deep Dive Session Flow**:
 1. Start session with symptoms
-2. AI asks 2-3 targeted diagnostic questions
+2. AI asks up to 6 targeted diagnostic questions
 3. Each answer refines the analysis
-4. Final comprehensive analysis with reasoning
+4. Session completes when AI has sufficient confidence or after 6 questions
+5. Final comprehensive analysis with reasoning
+
+**Note**: Frontend has a safety limit of 6 questions maximum
+
+#### POST `/api/deep-dive/think-harder`
+**Description**: Re-analyze a completed deep dive session using o4-mini model for enhanced insights
+
+**Request Schema**:
+```typescript
+interface ThinkHarderRequest {
+  session_id: string;
+  current_analysis: any;           // Current analysis object
+  model?: string;                  // Default: "o4-mini"
+  user_id?: string;
+}
+```
+
+**Response Schema**:
+```typescript
+interface ThinkHarderResponse {
+  status: 'success' | 'error';
+  enhanced_analysis: any;          // Enhanced analysis with same structure
+  enhanced_confidence: number;     // Updated confidence score
+  reasoning_snippets: string[];    // Key reasoning points
+  key_insights?: string;           // Most significant new finding
+  model_used: string;
+  processing_time_ms?: number;
+}
+```
+
+#### POST `/api/deep-dive/ask-more`
+**Description**: Continue questioning after deep dive to reach 90%+ confidence
+
+**Request Schema**:
+```typescript
+interface AskMeMoreRequest {
+  session_id: string;
+  current_confidence: number;
+  target_confidence?: number;      // Default: 90
+  user_id?: string;
+}
+```
+
+**Response Schema**:
+```typescript
+interface AskMeMoreResponse {
+  question?: string;               // Next question if needed
+  question_number?: number;
+  estimated_questions_remaining?: number;
+  status: 'success' | 'error';
+}
+```
+
+#### POST `/api/quick-scan/think-harder`
+**Description**: Enhanced analysis for Quick Scan results using o4-mini model
+
+**Request Schema**:
+```typescript
+interface QuickScanThinkHarderRequest {
+  scan_id: string;
+  current_analysis: any;
+  model?: string;                  // Default: "o4-mini"
+  user_id?: string;
+}
+```
+
+**Response**: Same as Deep Dive Think Harder response
 
 #### GET `/api/health`
 **Description**: Health check endpoint
@@ -491,7 +558,12 @@ interface DeepDiveCompleteResponse {
     "deep_dive": {
       "start": "POST /api/deep-dive/start",
       "continue": "POST /api/deep-dive/continue",
-      "complete": "POST /api/deep-dive/complete"
+      "complete": "POST /api/deep-dive/complete",
+      "think_harder": "POST /api/deep-dive/think-harder",
+      "ask_more": "POST /api/deep-dive/ask-more"
+    },
+    "quick_scan_enhanced": {
+      "think_harder": "POST /api/quick-scan/think-harder"
     }
   }
 }

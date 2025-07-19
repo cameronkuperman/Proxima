@@ -129,6 +129,7 @@ export default function DashboardPage() {
     fetchDashboard, 
     approveSuggestion,
     configureSuggestion,
+    updateConfiguration,
     currentSuggestion,
     suggestionId,
     logDataPoint,
@@ -992,9 +993,12 @@ export default function DashboardPage() {
               if (user?.id) {
                 if (selectedTrackingItem) {
                   // Update existing tracking config
-                  // TODO: Add API endpoint to update existing configs
-                  console.log('Update existing config:', selectedTrackingItem.id, metricName, yAxisLabel);
-                  await fetchDashboard(user.id);
+                  await updateConfiguration({
+                    configuration_id: selectedTrackingItem.id,
+                    user_id: user.id,
+                    metric_name: metricName,
+                    y_axis_label: yAxisLabel
+                  });
                 } else if (suggestionId) {
                   await configureSuggestion({
                     suggestion_id: suggestionId,

@@ -189,5 +189,74 @@ export const deepDiveClient = {
     } catch (error) {
       console.warn('Summary generation failed:', error)
     }
+  },
+
+  async thinkHarder(
+    sessionId: string,
+    currentAnalysis: any,
+    userId?: string,
+    model: string = 'o4-mini'
+  ): Promise<any> {
+    console.log('Think Harder Request:', {
+      session_id: sessionId,
+      model,
+      user_id: userId
+    })
+    
+    const response = await fetch(`${API_BASE_URL}/api/deep-dive/think-harder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        current_analysis: currentAnalysis,
+        model,
+        user_id: userId
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to think harder' }))
+      throw new Error(error.error || 'Failed to get enhanced analysis')
+    }
+    
+    const result = await response.json()
+    console.log('Think Harder Response:', JSON.stringify(result, null, 2))
+    
+    return result
+  },
+
+  async askMeMore(
+    sessionId: string,
+    currentConfidence: number,
+    targetConfidence: number = 90,
+    userId?: string
+  ): Promise<any> {
+    console.log('Ask Me More Request:', {
+      session_id: sessionId,
+      current_confidence: currentConfidence,
+      target_confidence: targetConfidence,
+      user_id: userId
+    })
+    
+    const response = await fetch(`${API_BASE_URL}/api/deep-dive/ask-more`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        current_confidence: currentConfidence,
+        target_confidence: targetConfidence,
+        user_id: userId
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to get additional questions' }))
+      throw new Error(error.error || 'Failed to get additional questions')
+    }
+    
+    const result = await response.json()
+    console.log('Ask Me More Response:', JSON.stringify(result, null, 2))
+    
+    return result
   }
 }

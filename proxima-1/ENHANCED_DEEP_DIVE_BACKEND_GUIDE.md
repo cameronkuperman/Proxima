@@ -23,7 +23,7 @@ This guide details the backend implementation for two new Deep Dive features:
     "differentials": [],
     "recommendations": []
   },
-  "model": "gpt-4o", // Premium model for enhanced reasoning
+  "model": "o4-mini", // o4-mini (high) model for enhanced reasoning
   "user_id": "string"
 }
 ```
