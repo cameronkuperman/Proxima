@@ -308,8 +308,8 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setMessages(prev => [...prev, assistantMessage])
       } else if (!response.question || response.question.trim() === '') {
         // Check if we've asked enough questions
-        if (questionCount >= 3) {
-          console.log('Reached maximum questions (3), completing analysis')
+        if (questionCount >= 6) {
+          console.log('Reached maximum questions (6), completing analysis')
           await completeDeepDive()
           return
         }
@@ -429,19 +429,12 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     
     try {
       // Call backend API for "Think Harder" functionality
-      const response = await fetch('/api/deep-dive/think-harder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          current_analysis: finalAnalysis?.analysis,
-          model: 'gpt-4o', // Use premium model for thinking harder
-          user_id: user?.id
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to get enhanced analysis')
-      const result = await response.json()
+      const result = await deepDiveClient.thinkHarder(
+        sessionId,
+        finalAnalysis?.analysis,
+        user?.id,
+        'o4-mini' // Use o4-mini (high) model for thinking harder
+      )
       
       // Update with enhanced analysis
       setFinalAnalysis((prev: any) => ({
@@ -490,19 +483,12 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     
     try {
       // Call backend API for "Ask Me More" functionality
-      const response = await fetch('/api/deep-dive/ask-more', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          current_confidence: finalAnalysis?.confidence || 0,
-          target_confidence: 90,
-          user_id: user?.id
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to get additional questions')
-      const result = await response.json()
+      const result = await deepDiveClient.askMeMore(
+        sessionId,
+        finalAnalysis?.confidence || 0,
+        90,
+        user?.id
+      )
       
       if (result.question) {
         // Add the new question
@@ -645,31 +631,83 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           transition={{ delay: 0.7 }}
                           className="grid grid-cols-1 md:grid-cols-2 gap-3"
                         >
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => handleThinkHarder()}
                             disabled={isThinkingHarder || isAskingMore}
-                            className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:bg-gradient-to-r hover:from-purple-500/30 hover:to-pink-500/30 hover:text-purple-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 text-purple-300 hover:from-purple-600/30 hover:to-pink-600/30 hover:text-purple-200 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                           >
+                            {/* Animated background gradient */}
+                            <motion.div
+                              className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-pink-600/10"
+                              animate={{
+                                opacity: isThinkingHarder ? [0.1, 0.3, 0.1] : 0,
+                              }}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                            />
+                            
                             {isThinkingHarder ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  className="font-medium"
+                                >
+                                  Engaging o4-mini...
+                                </motion.div>
+                              </>
                             ) : (
-                              <Brain className="w-4 h-4 group-hover:animate-pulse" />
+                              <>
+                                <Brain className="w-5 h-5 group-hover:animate-pulse transition-transform group-hover:scale-110" />
+                                <span className="font-medium">Think Harder</span>
+                              </>
                             )}
-                            {isThinkingHarder ? 'Thinking...' : 'Think Harder'}
-                          </button>
+                          </motion.button>
                           
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => handleAskMeMore()}
                             disabled={isThinkingHarder || isAskingMore}
-                            className="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-gradient-to-r hover:from-emerald-500/30 hover:to-cyan-500/30 hover:text-emerald-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                           >
+                            {/* Animated background gradient */}
+                            <motion.div
+                              className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-cyan-600/10"
+                              animate={{
+                                opacity: isAskingMore ? [0.1, 0.3, 0.1] : 0,
+                              }}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                            />
+                            
                             {isAskingMore ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  className="font-medium"
+                                >
+                                  Continuing Questions...
+                                </motion.div>
+                              </>
                             ) : (
-                              <MessageSquare className="w-4 h-4 group-hover:animate-bounce" />
+                              <>
+                                <MessageSquare className="w-5 h-5 group-hover:animate-bounce transition-transform group-hover:scale-110" />
+                                <span className="font-medium">Ask Me More</span>
+                              </>
                             )}
-                            {isAskingMore ? 'Preparing...' : 'Ask Me More'}
-                          </button>
+                          </motion.button>
                         </motion.div>
 
                         {/* Subtle explanation */}

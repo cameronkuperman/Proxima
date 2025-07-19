@@ -128,7 +128,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
         body: JSON.stringify({
           scan_id: scanData.scan_id,
           current_analysis: scanData.analysis,
-          model: 'gpt-4o', // Use premium model for thinking harder
+          model: 'o4-mini', // Use o4-mini (high) model for thinking harder
           user_id: user?.id
         })
       })
@@ -500,33 +500,95 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 300 }}
               onClick={() => handleThinkHarder()}
               disabled={isThinkingHarder || isAskingMore}
-              className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:bg-gradient-to-r hover:from-purple-500/30 hover:to-pink-500/30 hover:text-purple-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 text-purple-300 hover:from-purple-600/30 hover:to-pink-600/30 hover:text-purple-200 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
             >
+              {/* Animated background gradient */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-pink-600/10"
+                animate={{
+                  opacity: isThinkingHarder ? [0.1, 0.3, 0.1] : 0,
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+              
               {isThinkingHarder ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="font-medium"
+                  >
+                    Engaging Advanced AI...
+                  </motion.div>
+                </>
               ) : (
-                <Brain className="w-4 h-4 group-hover:animate-pulse" />
+                <>
+                  <Brain className="w-5 h-5 group-hover:animate-pulse transition-transform group-hover:scale-110" />
+                  <span className="font-medium">Think Harder</span>
+                  <motion.span
+                    className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-purple-400"
+                  >
+                    o4-mini reasoning
+                  </motion.span>
+                </>
               )}
-              {isThinkingHarder ? 'Thinking...' : 'Think Harder'}
             </motion.button>
             
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
               onClick={() => handleAskMeMore()}
               disabled={isThinkingHarder || isAskingMore}
-              className="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-gradient-to-r hover:from-emerald-500/30 hover:to-cyan-500/30 hover:text-emerald-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
             >
+              {/* Animated background gradient */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-cyan-600/10"
+                animate={{
+                  opacity: isAskingMore ? [0.1, 0.3, 0.1] : 0,
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+              
               {isAskingMore ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="font-medium"
+                  >
+                    Preparing Deep Dive...
+                  </motion.div>
+                </>
               ) : (
-                <MessageSquare className="w-4 h-4 group-hover:animate-bounce" />
+                <>
+                  <MessageSquare className="w-5 h-5 group-hover:animate-bounce transition-transform group-hover:scale-110" />
+                  <span className="font-medium">Ask Me More</span>
+                  <motion.span
+                    className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-emerald-400"
+                  >
+                    90%+ confidence
+                  </motion.span>
+                </>
               )}
-              {isAskingMore ? 'Preparing...' : 'Ask Me More'}
             </motion.button>
           </div>
 

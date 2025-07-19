@@ -136,6 +136,21 @@ class TrackingService {
     })
   }
 
+  async updateConfiguration(params: {
+    configuration_id: string
+    user_id: string
+    metric_name: string
+    y_axis_label: string
+  }): Promise<{ status: string; configuration: TrackingConfiguration }> {
+    return this.fetchWithAuth(`${API_URL}/api/tracking/configurations/${params.configuration_id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        metric_name: params.metric_name,
+        y_axis_label: params.y_axis_label
+      }),
+    })
+  }
+
   async addDataPoint(params: {
     configuration_id: string
     user_id: string

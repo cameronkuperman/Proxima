@@ -26,6 +26,12 @@ interface TrackingStore {
     y_axis_label: string
     show_on_homepage?: boolean
   }) => Promise<void>
+  updateConfiguration: (params: {
+    configuration_id: string
+    user_id: string
+    metric_name: string
+    y_axis_label: string
+  }) => Promise<void>
   logDataPoint: (configId: string, value: number, notes?: string) => Promise<void>
   fetchChartData: (configId: string, days?: number) => Promise<void>
   fetchPastScans: (userId: string) => Promise<void>
@@ -133,6 +139,29 @@ export const useTrackingStore = create<TrackingStore>()(
         }
       },
 
+      // Update existing configuration
+      updateConfiguration: async (params: {
+        configuration_id: string
+        user_id: string
+        metric_name: string
+        y_axis_label: string
+      }) => {
+        set({ loading: true, error: null })
+        try {
+          await trackingService.updateConfiguration(params)
+          
+          // Refresh dashboard
+          await get().fetchDashboard(params.user_id)
+          
+          set({ loading: false })
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to update configuration',
+            loading: false 
+          })
+        }
+      },
+
       // Log a data point
       logDataPoint: async (configId: string, value: number, notes?: string) => {
         set({ loading: true, error: null })
@@ -166,12 +195,22 @@ export const useTrackingStore = create<TrackingStore>()(
       fetchChartData: async (configId: string, days: number = 30) => {
         set({ loading: true, error: null })
         try {
-          const data = await trackingService.getChartData(configId, days)
-          console.log('Chart API response:', data)
+          const response: any = await trackingService.getChartData(configId, days)
+          console.log('Chart API response:', response)
+          
+          // Transform the data to match our expected format
+          const transformedData = {
+            config: response.configuration || response.chart_data?.configuration,
+            data: response.data_points?.map((point: any) => ({
+              x: point.recorded_at || point.date,
+              y: point.value
+            })) || [],
+            statistics: response.statistics
+          }
           
           // Update chart data map
           const newChartData = new Map(get().chartData)
-          newChartData.set(configId, data.chart_data)
+          newChartData.set(configId, transformedData)
           
           set({ 
             chartData: newChartData,
