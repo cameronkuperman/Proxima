@@ -10,7 +10,7 @@ import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import OnboardingGuard from '@/components/OnboardingGuard';
-import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, Stethoscope, ClipboardList } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
 import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
@@ -19,13 +19,8 @@ import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal
 import LogDataModal from '@/components/tracking/LogDataModal';
 import TrackingChart from '@/components/tracking/TrackingChart';
 import { DashboardItem } from '@/services/trackingService';
-
-// Mock data for timeline
-const mockTimelineData = [
-  { id: 1, date: '2024-01-15', type: 'quick-scan', title: 'Headache analysis', aiProvider: 'openai' },
-  { id: 2, date: '2024-01-12', type: 'photo', title: 'Skin rash tracking', photos: 3, aiProvider: 'claude' },
-  { id: 3, date: '2024-01-10', type: '3d-body', title: 'Lower back pain', areas: ['lower-back', 'hip'], aiProvider: 'google' },
-];
+import { useTimeline } from '@/hooks/useTimeline';
+import { formatDistanceToNow } from 'date-fns';
 
 // Mock graph data - Removed, no longer needed for tracking dashboard
 /*const mockGraphData = [
@@ -107,6 +102,16 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [timelineExpanded, setTimelineExpanded] = useState(false);
+  const [timelineSearch, setTimelineSearch] = useState('');
+  const { 
+    interactions: timelineData, 
+    isLoading: timelineLoading,
+    error: timelineError,
+    hasLoaded,
+    handleItemClick,
+    getInteractionColor,
+    refetch: refetchTimeline 
+  } = useTimeline({ search: timelineSearch });
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
@@ -180,6 +185,23 @@ export default function DashboardPage() {
     }
   }, [user?.id, fetchDashboard]);
 
+  // Refresh timeline when returning to dashboard
+  useEffect(() => {
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        refetchTimeline();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refetchTimeline]);
+
   // Calculate profile completion percentage
   const calculateProfileCompletion = () => {
     if (!userProfile) return { percentage: 0, missingLifestyle: true, missingEmergency: true };
@@ -243,13 +265,15 @@ export default function DashboardPage() {
     }
   };
 
-  const getAIGradient = (provider: string) => {
-    switch(provider) {
-      case 'openai': return 'from-emerald-500/20 to-green-500/20';
-      case 'claude': return 'from-purple-500/20 to-pink-500/20';
-      case 'google': return 'from-blue-500/20 to-cyan-500/20';
-      case 'xai': return 'from-orange-500/20 to-amber-500/20';
-      default: return 'from-gray-500/20 to-gray-500/20';
+  const getInteractionIcon = (type: string) => {
+    switch(type) {
+      case 'quick_scan': return <Zap className="w-3 h-3" />;
+      case 'deep_dive': return <Brain className="w-3 h-3" />;
+      case 'photo_analysis': return <Camera className="w-3 h-3" />;
+      case 'report': return <FileText className="w-3 h-3" />;
+      case 'oracle_chat': return <BrainCircuit className="w-3 h-3" />;
+      case 'tracking_log': return <Activity className="w-3 h-3" />;
+      default: return <Heart className="w-3 h-3" />;
     }
   };
 
@@ -292,53 +316,183 @@ export default function DashboardPage() {
         <motion.div
           className="fixed left-0 top-0 h-full z-30"
           initial={{ width: '60px' }}
-          animate={{ width: timelineExpanded ? '300px' : '60px' }}
+          animate={{ width: timelineExpanded ? '320px' : '60px' }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           onMouseEnter={() => setTimelineExpanded(true)}
           onMouseLeave={() => setTimelineExpanded(false)}
         >
-          <div className="h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative">
+          <div className="h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative overflow-hidden">
             {/* Timeline gradient line */}
             <div className="absolute left-[29px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20" />
             
-            {/* Timeline entries */}
-            <div className="pt-20 px-4">
-              {mockTimelineData.map((entry, index) => (
+            {/* Search bar (only visible when expanded) */}
+            <AnimatePresence>
+              {timelineExpanded && (
                 <motion.div
-                  key={entry.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="relative mb-8"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="px-4 pt-4 pb-2"
                 >
-                  {/* Date dot */}
-                  <div className="absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 border-white/20 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search interactions..."
+                      value={timelineSearch}
+                      onChange={(e) => setTimelineSearch(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 bg-white/[0.03] border border-white/[0.05] rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-white/[0.1] transition-all"
+                    />
                   </div>
-                  
-                  {/* Content */}
-                  <AnimatePresence>
-                    {timelineExpanded && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        className="ml-12"
-                      >
-                        <div className={`p-3 rounded-lg bg-gradient-to-r ${getAIGradient(entry.aiProvider)} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all`}>
-                          <p className="text-xs text-gray-400 mb-1">
-                            {new Date(entry.date).toLocaleDateString()}
-                          </p>
-                          <p className="text-sm text-white font-medium">{entry.title}</p>
-                          {entry.photos && (
-                            <p className="text-xs text-gray-400 mt-1">📷 {entry.photos} photos</p>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </motion.div>
-              ))}
+              )}
+            </AnimatePresence>
+            
+            {/* Timeline entries */}
+            <div className="pt-4 px-4 pb-20 overflow-y-auto h-full scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+              {timelineLoading && !hasLoaded ? (
+                // Loading state
+                <div className="space-y-8">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="relative">
+                      <div className="absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 border-white/10" />
+                      {timelineExpanded && (
+                        <div className="ml-12">
+                          <div className="h-16 bg-white/[0.02] rounded-lg animate-pulse" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : timelineError ? (
+                // Error state
+                <AnimatePresence>
+                  {timelineExpanded ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-center py-8"
+                    >
+                      <p className="text-sm text-red-400">Failed to load timeline</p>
+                      <p className="text-xs text-gray-500 mt-1">Please try again later</p>
+                    </motion.div>
+                  ) : (
+                    // Just show a single error dot when collapsed
+                    <div className="relative">
+                      <div className="absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 border-red-800/50 flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-red-600/50" />
+                      </div>
+                    </div>
+                  )}
+                </AnimatePresence>
+              ) : timelineData.length === 0 ? (
+                // Empty state
+                <AnimatePresence>
+                  {timelineExpanded ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-center py-8"
+                    >
+                      <div className="mb-4">
+                        <div className="w-12 h-12 mx-auto bg-gray-800/50 rounded-full flex items-center justify-center">
+                          <Activity className="w-6 h-6 text-gray-600" />
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-2">No past interactions</p>
+                      <p className="text-xs text-gray-500">Start with a Quick Scan to begin your health journey</p>
+                    </motion.div>
+                  ) : (
+                    // Just show a single empty dot when collapsed
+                    <div className="relative">
+                      <div className="absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 border-gray-800/50 flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-gray-600/50" />
+                      </div>
+                    </div>
+                  )}
+                </AnimatePresence>
+              ) : (
+                // Timeline data
+                timelineData.map((entry, index) => {
+                  const colors = getInteractionColor(entry.interaction_type);
+                  return (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                      className="relative mb-8"
+                    >
+                      {/* Date dot with icon */}
+                      <div className={`absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center`}>
+                        <div className={colors.iconColor}>
+                          {getInteractionIcon(entry.interaction_type)}
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <AnimatePresence>
+                        {timelineExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="ml-12"
+                          >
+                            <div 
+                              onClick={() => handleItemClick(entry)}
+                              className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="text-xs text-gray-400">
+                                  {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
+                                </p>
+                                {entry.severity && (
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    entry.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                                    entry.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    'bg-green-500/20 text-green-400'
+                                  }`}>
+                                    {entry.severity}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-white font-medium mb-1">{entry.title}</p>
+                              
+                              {/* Metadata badges */}
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {entry.metadata.body_part && (
+                                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {entry.metadata.body_part}
+                                  </span>
+                                )}
+                                {entry.metadata.photo_count > 0 && (
+                                  <span className="text-xs text-gray-400">
+                                    📷 {entry.metadata.photo_count} photos
+                                  </span>
+                                )}
+                                {entry.metadata.message_count > 0 && (
+                                  <span className="text-xs text-gray-400">
+                                    💬 {entry.metadata.message_count} messages
+                                  </span>
+                                )}
+                                {entry.metadata.confidence > 0 && (
+                                  <span className="text-xs text-gray-400">
+                                    {Math.round(entry.metadata.confidence)}% confidence
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
           </div>
         </motion.div>
