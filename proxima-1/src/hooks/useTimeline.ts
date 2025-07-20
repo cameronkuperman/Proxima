@@ -146,20 +146,16 @@ export function useTimeline(options: UseTimelineOptions = {}) {
       
       switch (interaction.interaction_type) {
         case 'quick_scan':
-          // Verify it exists with RLS protection
-          const { data: quickScan } = await supabase
-            .from('quick_scans')
-            .select('id')
-            .eq('id', interaction.id)
-            .single();
-          
-          if (quickScan) {
-            navigationPath = `/scan/results/${interaction.id}`;
-          }
+          // For now, just go to the scan page
+          // TODO: Implement a way to view historical scan results
+          navigationPath = `/scan?mode=quick&result=${interaction.id}`;
+          toast.info('Viewing historical scans coming soon!');
           break;
           
         case 'deep_dive':
-          navigationPath = `/scan/deep-dive/results/${interaction.id}`;
+          // For now, go to scan page in deep mode
+          navigationPath = `/scan?mode=deep&session=${interaction.id}`;
+          toast.info('Viewing historical deep dives coming soon!');
           break;
           
         case 'photo_analysis':
