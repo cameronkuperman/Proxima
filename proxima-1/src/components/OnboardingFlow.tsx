@@ -141,7 +141,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       
       if (result.success) {
         onComplete?.();
-        router.push('/dashboard');
+        router.push('/dashboard?showTutorial=true');
       } else {
         setError(result.error || 'Failed to complete onboarding');
       }

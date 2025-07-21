@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import HealthProfileModal from '@/components/HealthProfileModal';
 import OracleChat from '@/components/OracleChat';
@@ -10,6 +10,8 @@ import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import OnboardingGuard from '@/components/OnboardingGuard';
+import UnifiedFAB from '@/components/UnifiedFAB';
+import { useTutorial } from '@/contexts/TutorialContext';
 import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, Stethoscope, ClipboardList } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
@@ -101,7 +103,9 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
+  const { initializeTutorial, showWelcome } = useTutorial();
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineAnimating, setTimelineAnimating] = useState(false);
@@ -117,7 +121,7 @@ export default function DashboardPage() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
-  const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+  const [reportsMenuOpen, setReportsMenuOpen] = useState(false);
   const [healthScore] = useState(92);
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
@@ -164,6 +168,44 @@ export default function DashboardPage() {
     { id: 5, title: 'Anxiety Episode', time: '10 days ago', content: 'You reported elevated anxiety (6/10) with racing thoughts. Triggered by work presentation. Used breathing exercises.', tags: [{ icon: <BrainCircuit className="w-3 h-3" />, text: 'Meditation helped' }, { icon: <Star className="w-3 h-3" />, text: 'Work trigger' }] }
   ]);
   const [visibleReports, setVisibleReports] = useState([0, 1]);
+
+  // Initialize tutorial ONLY when coming from onboarding
+  useEffect(() => {
+    // ONLY show tutorial if explicitly requested via URL parameter
+    const shouldShowTutorial = searchParams.get('showTutorial') === 'true';
+    
+    if (shouldShowTutorial && user?.id && userProfile) {
+      console.log('Dashboard: showTutorial parameter detected, user and profile loaded, initializing tutorial');
+      
+      // Initialize and force show tutorial
+      initializeTutorial(true);
+      
+      // Clean up the URL parameter  
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('showTutorial');
+      router.replace(newUrl.pathname + newUrl.search);
+    }
+    // DO NOT initialize tutorial otherwise
+  }, [user?.id, userProfile, searchParams]); // Re-run when user AND profile are loaded
+
+  // Listen for events from FAB
+  useEffect(() => {
+    const handleOpenQuickReportChat = () => {
+      setShowQuickReportChat(true);
+    };
+    
+    const handleOpenOracleChat = () => {
+      setOracleChatOpen(true);
+    };
+
+    window.addEventListener('openQuickReportChat', handleOpenQuickReportChat);
+    window.addEventListener('openOracleChat', handleOpenOracleChat);
+    
+    return () => {
+      window.removeEventListener('openQuickReportChat', handleOpenQuickReportChat);
+      window.removeEventListener('openOracleChat', handleOpenOracleChat);
+    };
+  }, []);
 
   // Fetch user profile data from database
   useEffect(() => {
@@ -320,6 +362,7 @@ export default function DashboardPage() {
 
         {/* Timeline Sidebar */}
         <motion.div
+          data-tour="timeline-sidebar"
           className="fixed left-0 top-0 h-full z-30"
           initial={{ width: '60px' }}
           animate={{ width: timelineExpanded ? '320px' : '60px' }}
@@ -335,8 +378,8 @@ export default function DashboardPage() {
           onAnimationComplete={() => setTimelineAnimating(false)}
         >
           <div className={`h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative overflow-hidden flex flex-col ${timelineAnimating ? 'timeline-animating' : ''}`}>
-            {/* Timeline gradient line */}
-            <div className="absolute left-[29px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20" />
+            {/* Timeline gradient line - Fixed position */}
+            <div className="absolute top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20 pointer-events-none" style={{ left: '21px' }} />
             
             {/* Search bar (only visible when expanded) */}
             <AnimatePresence>
@@ -345,7 +388,8 @@ export default function DashboardPage() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="px-4 pt-4 pb-2 flex-shrink-0"
+                  className="pt-4 pb-2 px-4 flex-shrink-0"
+                  style={{ paddingLeft: '48px' }}
                 >
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -362,7 +406,7 @@ export default function DashboardPage() {
             </AnimatePresence>
             
             {/* Timeline entries */}
-            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 timeline-scrollbar">
+            <div className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar relative" style={{ paddingRight: '8px' }}>
               {timelineLoading && !hasLoaded ? (
                 // Loading state
                 <div className="space-y-8">
@@ -407,7 +451,7 @@ export default function DashboardPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="text-center py-8"
+                      className="text-center py-8 ml-8"
                     >
                       <div className="mb-4">
                         <div className="w-12 h-12 mx-auto bg-gray-800/50 rounded-full flex items-center justify-center">
@@ -439,7 +483,7 @@ export default function DashboardPage() {
                       className="relative mb-8"
                     >
                       {/* Date dot with icon */}
-                      <div className={`absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center`}>
+                      <div className={`absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center`} style={{ left: '9px' }}>
                         <div className={colors.iconColor}>
                           {getInteractionIcon(entry.interaction_type)}
                         </div>
@@ -563,6 +607,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               {/* Health Profile Card */}
               <motion.div
+                data-tour="profile-card"
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
                 onClick={() => router.push('/profile')}
@@ -643,6 +688,7 @@ export default function DashboardPage() {
 
               {/* Quick Scan Card */}
               <motion.div
+                data-tour="quick-scan-card"
                 whileHover={{ scale: quickScanLoading ? 1 : 1.02 }}
                 className={`backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden ${
                   quickScanLoading ? 'pointer-events-none' : ''
@@ -765,9 +811,10 @@ export default function DashboardPage() {
 
               {/* Reports Card */}
               <motion.div
+                data-tour="reports-card"
                 whileHover={{ scale: 1.02 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
-                onClick={() => router.push('/reports')}
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
+                onClick={() => setReportsMenuOpen(!reportsMenuOpen)}
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <FileText className="w-6 h-6 text-blue-400" />
@@ -779,6 +826,76 @@ export default function DashboardPage() {
                   <span className="text-gray-500">•</span>
                   <span className="text-gray-500">View all</span>
                 </div>
+
+                {/* Reports Floating Menu */}
+                <AnimatePresence>
+                  {reportsMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-full left-0 right-0 mb-2 bg-gray-900/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-3 space-y-2">
+                        <button
+                          onClick={() => {
+                            setShowQuickReportChat(true);
+                            setReportsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg">
+                              <FileText className="w-4 h-4 text-purple-400" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-white">Generate New Report</p>
+                              <p className="text-xs text-gray-400">Create a medical report from your data</p>
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            router.push('/reports');
+                            setReportsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-lg">
+                              <ClipboardList className="w-4 h-4 text-blue-400" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-white">View All Reports</p>
+                              <p className="text-xs text-gray-400">Browse your report history</p>
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            refetchTimeline();
+                            setReportsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-lg">
+                              <Activity className="w-4 h-4 text-green-400" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-white">Refresh Progress</p>
+                              <p className="text-xs text-gray-400">Update timeline & health data</p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
 
             </div>
@@ -1061,58 +1178,7 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Single Floating Action Button */}
-        <motion.div className="fixed bottom-8 right-8 z-40">
-          <AnimatePresence>
-            {floatingMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                className="absolute bottom-16 right-0 bg-gray-900 rounded-lg shadow-xl p-2 min-w-[200px]"
-              >
-                <button
-                  onClick={() => {
-                    setShowQuickReportChat(true);
-                    setFloatingMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
-                >
-                  <FileText className="w-5 h-5" />
-                  Generate Report
-                </button>
-                <button
-                  onClick={() => {
-                    setOracleChatOpen(true);
-                    setFloatingMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
-                >
-                  <Brain className="w-5 h-5" />
-                  Start New Chat
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setFloatingMenuOpen(!floatingMenuOpen)}
-            className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg flex items-center justify-center"
-          >
-            <svg 
-              className={`w-6 h-6 text-white transition-transform ${floatingMenuOpen ? 'rotate-45' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </motion.button>
-        </motion.div>
+        {/* Old floating menu removed - using UnifiedFAB instead */}
 
         {/* Health Profile Modal */}
         <HealthProfileModal 
@@ -1242,6 +1308,9 @@ export default function DashboardPage() {
             metadata={selectedHistoryItem.metadata}
           />
         )}
+
+        {/* Unified FAB */}
+        <UnifiedFAB />
       </div>
       </OnboardingGuard>
     </AuthGuard>
