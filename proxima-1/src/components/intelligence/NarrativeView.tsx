@@ -26,6 +26,7 @@ interface Episode {
   id: number;
   date: string;
   title: string;
+  subtitle?: string;
   preview: string;
   content: string;
   generatedDate?: string;
@@ -126,12 +127,15 @@ export default function NarrativeView() {
         new Date(story.created_at) > oneWeekAgo
       );
 
-      if (!recentStory) {
-        // Generate new story if no recent one exists
+      if (!recentStory && stories.length === 0) {
+        // Generate new story if no stories exist at all
         await generateNewStory();
-      } else {
+      } else if (stories.length > 0) {
         // Update episodes with backend data
         updateEpisodesFromStories(stories);
+      } else {
+        // No stories and no recent story - show default
+        setEpisodes(getDefaultEpisodes());
       }
     } catch (err) {
       console.error('Error loading health stories:', err);
@@ -174,23 +178,37 @@ export default function NarrativeView() {
           id: response.health_story.story_id,
           user_id: user.id,
           header: response.health_story.header,
+          subtitle: response.health_story.subtitle,
           story_text: response.health_story.story_text,
           generated_date: response.health_story.generated_date,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          data_sources: response.health_story.data_sources
         };
 
-        setHealthStories([newStory, ...healthStories]);
-        updateEpisodesFromStories([newStory, ...healthStories]);
+        // Save the story to Supabase
+        await healthStoryService.saveHealthStory(newStory);
+        
+        const updatedStories = [newStory, ...healthStories];
+        setHealthStories(updatedStories);
+        updateEpisodesFromStories(updatedStories);
+        setCurrentEpisode(0); // Show the newly generated story
       } else {
-        setError(response.error || 'Failed to generate health story');
+        const errorMessage = response.error || response.message || 'Failed to generate health story';
+        setError(errorMessage);
+        console.error('Health story generation failed:', errorMessage);
         // Show demo content when API fails
         if (episodes.length === 0) {
           setEpisodes(getDefaultEpisodes());
         }
       }
     } catch (err) {
-      setError('Failed to generate health story');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate health story';
+      setError(errorMessage);
       console.error('Error generating health story:', err);
+      // Show demo content when catch block is triggered
+      if (episodes.length === 0) {
+        setEpisodes(getDefaultEpisodes());
+      }
     } finally {
       setIsLoading(false);
     }
@@ -199,8 +217,9 @@ export default function NarrativeView() {
   const getDefaultEpisodes = (): Episode[] => [
     {
       id: 0,
-      date: 'December 15, 2024',
-      title: 'Current Analysis',
+      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      title: 'Your Health Patterns This Week',
+      subtitle: 'An analysis of your wellness trends',
       preview: 'Sleep improvements and headache patterns',
       content: `Your health journey continues to show positive momentum. This week has been marked by significant improvements in your sleep quality, with an average increase of 23% in deep sleep phases compared to last week. This improvement correlates strongly with the reduction in evening screen time you've implemented.
 
@@ -233,7 +252,8 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         year: 'numeric'
       }),
       title: story.header || 'Health Story',
-      preview: story.story_text.substring(0, 100) + '...',
+      subtitle: story.subtitle,
+      preview: story.subtitle || story.story_text.substring(0, 100) + '...',
       content: story.story_text,
       generatedDate: story.generated_date,
       dataSources: story.data_sources
@@ -316,6 +336,9 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
           <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-2xl font-semibold text-white mb-2">{story.title}</h2>
+              {story.subtitle && (
+                <p className="text-base text-gray-300 mb-2">{story.subtitle}</p>
+              )}
               <p className="text-sm text-gray-400">{story.date} • AI-generated analysis</p>
             </div>
             <div className="flex items-center gap-4">
@@ -376,12 +399,14 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
           ) : error ? (
             <div className="text-center py-12">
               <p className="text-red-400 mb-4">{error}</p>
-              <button
-                onClick={generateNewStory}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Try Again
-              </button>
+              {!error.includes('not available yet') && (
+                <button
+                  onClick={generateNewStory}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Try Again
+                </button>
+              )}
             </div>
           ) : (
             <div className="prose prose-invert max-w-none">
