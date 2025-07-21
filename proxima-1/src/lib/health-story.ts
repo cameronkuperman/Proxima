@@ -274,6 +274,11 @@ export const healthStoryService = {
 
   async getHealthStories(userId: string): Promise<HealthStoryData[]> {
     try {
+      // For now, return empty array since we're generating stories via API
+      // The API should be saving stories to a database, but it appears not to be
+      return [];
+      
+      /* Original Supabase code - disabled for now
       // Import supabase client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -294,9 +299,6 @@ export const healthStoryService = {
       }
       
       // Map the database records to our HealthStoryData type
-      return (data || []).map(story => ({
-        id: story.id,
-        user_id: story.user_id,
         header: story.header,
         story_text: story.story_text,
         generated_date: story.generated_date,
@@ -304,6 +306,7 @@ export const healthStoryService = {
         data_sources: story.data_sources,
         created_at: story.created_at
       }));
+      */
     } catch (error) {
       console.error('Error fetching health stories:', error);
       return [];
