@@ -183,6 +183,7 @@ html {
 .timeline-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-gutter: stable; /* Always reserve space for scrollbar */
 }
 
 .timeline-scrollbar::-webkit-scrollbar {
@@ -203,15 +204,27 @@ html {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Hide scrollbar during animation */
+/* Hide scrollbar during animation but reserve space */
 .timeline-animating {
   overflow: hidden !important;
 }
 
 .timeline-animating .timeline-scrollbar {
-  scrollbar-width: none;
+  scrollbar-width: thin; /* Keep the space reserved */
+  scrollbar-gutter: stable; /* Reserve space for scrollbar */
 }
 
 .timeline-animating .timeline-scrollbar::-webkit-scrollbar {
-  display: none;
+  width: 4px; /* Keep the width */
+  visibility: hidden; /* Hide visually but keep space */
+}
+
+.timeline-animating .timeline-scrollbar::-webkit-scrollbar-thumb {
+  visibility: hidden; /* Hide the thumb but keep space */
+}
+
+/* Ensure timeline icons stay aligned */
+.timeline-scrollbar > div {
+  transform: translateZ(0); /* Force GPU acceleration */
+  will-change: transform; /* Optimize for scrolling */
 }

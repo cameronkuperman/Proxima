@@ -370,17 +370,30 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
     onClose();
   };
 
-  if (!isOpen) return null;
+  // Disable body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   return (
+    <>
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={handleClose}
-      >
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={handleClose}
+        >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -743,13 +756,15 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
           )}
         </motion.div>
       </motion.div>
-
-      {/* Report Viewer Modal */}
-      <ReportViewerModal
-        isOpen={showReportViewer}
-        onClose={() => setShowReportViewer(false)}
-        report={viewingReport}
-      />
+      )}
     </AnimatePresence>
+
+    {/* Report Viewer Modal */}
+    <ReportViewerModal
+      isOpen={showReportViewer}
+      onClose={() => setShowReportViewer(false)}
+      report={viewingReport}
+    />
+  </>
   );
 };
