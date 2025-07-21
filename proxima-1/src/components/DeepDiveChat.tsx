@@ -437,31 +437,14 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     setMessages(prev => [...prev, thinkingMessage])
     
     try {
-      // For Deep Dive, use the Ultra Think endpoint with Grok 4
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app'
+      // Use the Deep Dive Think Harder endpoint with Grok 4
+      const result = await deepDiveClient.thinkHarder(
+        sessionId!,
+        finalAnalysis?.analysis,
+        user?.id,
+        'grok-4'  // Use Grok 4 for Deep Dive
+      )
       
-      // Try both scan_id and deep_dive_id in case backend expects different field
-      const requestBody = {
-        scan_id: scanId,
-        deep_dive_id: scanId,  // Include both in case backend expects this
-        user_id: user?.id
-      }
-      
-      console.log('Deep Dive Ultra Think request:', requestBody)
-      
-      const response = await fetch(`${API_URL}/api/quick-scan/ultra-think`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Deep Dive Think Harder API error:', response.status, errorText)
-        throw new Error('Failed to get enhanced analysis')
-      }
-      
-      const result = await response.json()
       console.log('Deep Dive Think Harder API response:', result)
       
       // Update with enhanced analysis
