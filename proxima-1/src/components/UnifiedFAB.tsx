@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, MessageSquare, FileText, HelpCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTutorial } from '@/contexts/TutorialContext';
+import HelpMenu from './HelpMenu';
 
 interface FABOption {
   id: string;
@@ -16,6 +17,8 @@ interface FABOption {
 
 export default function UnifiedFAB() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showHelpMenu, setShowHelpMenu] = useState(false);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const { showWelcome } = useTutorial();
 
@@ -45,7 +48,7 @@ export default function UnifiedFAB() {
       label: 'Help & Tutorials',
       icon: <HelpCircle className="w-5 h-5" />,
       onClick: () => {
-        showWelcome();
+        setShowHelpMenu(true);
         setIsOpen(false);
       },
       color: 'from-gray-600 to-gray-700'
@@ -153,6 +156,7 @@ export default function UnifiedFAB() {
 
                   {/* Button - same size as main FAB */}
                   <motion.button
+                    ref={option.id === 'help' ? helpButtonRef : undefined}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => {
@@ -171,6 +175,16 @@ export default function UnifiedFAB() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Help Menu */}
+      <HelpMenu 
+        isOpen={showHelpMenu} 
+        onClose={() => setShowHelpMenu(false)}
+        anchorPosition={helpButtonRef.current ? {
+          x: helpButtonRef.current.getBoundingClientRect().left,
+          y: helpButtonRef.current.getBoundingClientRect().top
+        } : undefined}
+      />
     </>
   );
 }
