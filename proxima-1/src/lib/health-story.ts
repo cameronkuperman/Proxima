@@ -33,6 +33,7 @@ interface HealthStoryData {
   id: string;
   user_id: string;
   header: string;
+  subtitle?: string;
   story_text: string;
   generated_date: string;
   date_range?: {
@@ -195,6 +196,11 @@ export const healthStoryService = {
         }
       };
 
+      console.log('Health Story Request:', {
+        url: `${API_URL}/api/health-story`,
+        body: requestBody
+      });
+
       const response = await fetch(`${API_URL}/api/health-story`, {
         method: 'POST',
         headers: {
@@ -208,21 +214,48 @@ export const healthStoryService = {
         throw new Error(errorData?.error || `Health story generation failed: ${response.statusText}`);
       }
 
-      const data: HealthStoryResponse = await response.json();
-      console.log('Health Story API response:', JSON.stringify(data, null, 2));
+      const data = await response.json();
+      console.log('Health Story API response:', data);
       
-      if (!data.success) {
-        console.error('API returned error status:', data.error);
-        throw new Error(data.error || 'Health story generation failed');
+      // Backend returns status: "success" and the story data directly
+      if (data.status === 'success' && data.story_id) {
+        // Transform backend response to expected frontend format
+        return {
+          success: true,
+          health_story: {
+            story_id: data.story_id,
+            header: data.title || data.header, // Use title if available, fallback to header
+            subtitle: data.subtitle, // New subtitle field
+            story_text: data.content, // Map content to story_text
+            generated_date: data.date,
+            data_sources: data.data_sources,
+            usage: data.usage,
+            model: data.model
+          }
+        };
       }
-
-      return data;
+      
+      // Handle error response
+      const errorMessage = data.error || data.message || 'Health story generation failed';
+      console.error('API returned error:', errorMessage);
+      throw new Error(errorMessage);
     } catch (error) {
       console.error('Health story generation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Check if it's a 404 error indicating the endpoint doesn't exist
+      if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        return {
+          success: false,
+          error: 'Health story generation is not available yet. The backend endpoint is not implemented.',
+          message: 'This feature is coming soon. Please check back later.'
+        };
+      }
+      
       return {
         success: false,
         error: 'Failed to generate health story',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: errorMessage
       };
     }
   },
