@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight, Download, Share2 } from 'lucide-react'
+import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight, Download, Share2, FileImage } from 'lucide-react'
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis'
 import { AnalysisResult } from '@/types/photo-analysis'
+import { useDropzone } from 'react-dropzone'
 
 interface PhotoAnalysisDemoProps {
   onComplete: () => void
@@ -96,7 +97,28 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
     }
   }, [charIndex, isTyping, exampleIndex, step, EXAMPLE_QUERIES])
 
-  const handlePhotoUpload = () => {
+  const handlePhotoUpload = useCallback((acceptedFiles: File[]) => {
+    const remainingSlots = 5 - uploadedPhotos.length
+    const filesToAdd = acceptedFiles.slice(0, remainingSlots)
+    
+    if (filesToAdd.length < acceptedFiles.length) {
+      alert(`Maximum 5 photos allowed. Only first ${filesToAdd.length} photos were added.`)
+    }
+    
+    filesToAdd.forEach(file => {
+      const newPhoto: UploadedPhoto = {
+        id: Date.now().toString() + Math.random(),
+        name: file.name,
+        url: URL.createObjectURL(file),
+        date: new Date().toLocaleDateString()
+      }
+      
+      setUploadedPhotos(prev => [...prev, newPhoto])
+      setUploadedFiles(prev => [...prev, file])
+    })
+  }, [uploadedPhotos.length])
+
+  const handleDemoPhotoUpload = () => {
     // Create a fake file for demo purposes
     const canvas = document.createElement('canvas')
     canvas.width = 200
@@ -121,19 +143,20 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], `demo_photo_${uploadedPhotos.length + 1}.jpg`, { type: 'image/jpeg' })
-        
-        const newPhoto: UploadedPhoto = {
-          id: Date.now().toString(),
-          name: file.name,
-          url: URL.createObjectURL(blob),
-          date: new Date().toLocaleDateString()
-        }
-        
-        setUploadedPhotos(prev => [...prev, newPhoto])
-        setUploadedFiles(prev => [...prev, file])
+        handlePhotoUpload([file])
       }
     }, 'image/jpeg')
   }
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handlePhotoUpload,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.heic', '.heif', '.webp']
+    },
+    maxSize: 10 * 1024 * 1024, // 10MB
+    multiple: true,
+    disabled: uploadedPhotos.length >= 5
+  })
 
   const startAnalysis = () => {
     setShowForm(true)
@@ -346,37 +369,77 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                       ))}
                       
                       {uploadedPhotos.length < 5 && (
-                        <motion.button
-                          onClick={handlePhotoUpload}
+                        <motion.div
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-colors flex items-center justify-center group"
+                          {...getRootProps()}
+                          className="aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-colors flex items-center justify-center group cursor-pointer"
                         >
+                          <input {...getInputProps()} />
                           <Plus className="w-8 h-8 text-gray-600 group-hover:text-orange-500" />
-                        </motion.button>
+                        </motion.div>
                       )}
                     </div>
+                    {uploadedPhotos.length > 0 && uploadedPhotos.length < 5 && (
+                      <motion.button
+                        onClick={handleDemoPhotoUpload}
+                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-orange-400 transition-colors mt-3 mx-auto"
+                      >
+                        <FileImage className="w-4 h-4" />
+                        Add demo photo
+                      </motion.button>
+                    )}
                   </div>
                 )}
 
-                {/* Initial Upload Button */}
+                {/* Initial Upload Area */}
                 {uploadedPhotos.length === 0 && (
-                  <motion.button
-                    onClick={handlePhotoUpload}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full"
-                  >
-                    <div className="border-2 border-dashed border-gray-600 rounded-2xl p-12 text-center hover:border-orange-500 hover:bg-gray-900/70 transition-all group">
-                      <Upload className="w-16 h-16 mx-auto mb-4 text-gray-500 group-hover:text-orange-500" />
-                      <p className="text-lg font-medium text-gray-300 mb-2">
-                        Click to upload photos
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        or drag and drop your images here
-                      </p>
+                  <div className="space-y-4">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      {...getRootProps()}
+                      className={`w-full cursor-pointer ${
+                        isDragActive ? 'scale-105' : ''
+                      }`}
+                    >
+                      <input {...getInputProps()} />
+                      <div className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all group ${
+                        isDragActive 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-gray-600 hover:border-orange-500 hover:bg-gray-900/70'
+                      }`}>
+                        <Upload className={`w-16 h-16 mx-auto mb-4 ${
+                          isDragActive ? 'text-orange-500' : 'text-gray-500 group-hover:text-orange-500'
+                        }`} />
+                        <p className="text-lg font-medium text-gray-300 mb-2">
+                          {isDragActive ? 'Drop your photos here' : 'Click or drag photos here'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          JPEG, PNG, HEIC up to 10MB each
+                        </p>
+                      </div>
+                    </motion.div>
+                    
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-700"></div>
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="px-3 bg-gray-900 text-gray-500">OR</span>
+                      </div>
                     </div>
-                  </motion.button>
+                    
+                    <motion.button
+                      onClick={handleDemoPhotoUpload}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-gray-300 flex items-center justify-center gap-2"
+                    >
+                      <FileImage className="w-5 h-5" />
+                      Use Demo Photo
+                    </motion.button>
+                  </div>
                 )}
 
                 {/* Analyze Button */}
@@ -443,8 +506,8 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                         <div className="space-y-3">
                           {uploadedPhotos.map((photo, index) => (
                             <div key={photo.id} className="flex gap-3 items-start">
-                              <div className="w-16 h-16 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
-                                <Image className="w-8 h-8 text-gray-600" />
+                              <div className="w-16 h-16 rounded-lg bg-gray-800 overflow-hidden flex-shrink-0">
+                                <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
                               </div>
                               <div className="flex-1">
                                 <p className="text-xs text-gray-500 mb-1">Photo {index + 1} - {photo.date}</p>
@@ -507,6 +570,7 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                     <li>• Include a ruler or coin for size reference</li>
                     <li>• Take photos from the same angle each time</li>
                     <li>• Ensure the area is in focus</li>
+                    <li>• For demo purposes, you can use our sample photos</li>
                   </ul>
                 </motion.div>
               )}
