@@ -335,8 +335,8 @@ export default function DashboardPage() {
           onAnimationComplete={() => setTimelineAnimating(false)}
         >
           <div className={`h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative overflow-hidden flex flex-col ${timelineAnimating ? 'timeline-animating' : ''}`}>
-            {/* Timeline gradient line */}
-            <div className="absolute left-[29px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20" />
+            {/* Timeline gradient line - Fixed position */}
+            <div className="absolute top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20 pointer-events-none" style={{ left: '21px' }} />
             
             {/* Search bar (only visible when expanded) */}
             <AnimatePresence>
@@ -436,10 +436,10 @@ export default function DashboardPage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: Math.min(index * 0.05, 0.3) }}
-                      className="relative mb-8"
+                      className="relative mb-8 flex items-start"
                     >
-                      {/* Date dot with icon */}
-                      <div className={`absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center`}>
+                      {/* Date dot with icon - Fixed positioning */}
+                      <div className={`absolute left-0 top-0 w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center flex-shrink-0`} style={{ left: '9px' }}>
                         <div className={colors.iconColor}>
                           {getInteractionIcon(entry.interaction_type)}
                         </div>
