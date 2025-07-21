@@ -1,4 +1,5 @@
 // Health Story Service for Next.js Frontend
+import { getSupabaseClient } from './supabase-client';
 
 const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
 console.log('Health Story API URL:', API_URL);
@@ -61,11 +62,7 @@ interface RefreshInfo {
 export const healthStoryService = {
   async getRefreshInfo(userId: string): Promise<RefreshInfo | null> {
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const supabase = getSupabaseClient();
       
       // Get current week start (Monday 9 AM UTC)
       const currentWeekStart = this.getCurrentWeekStart();
@@ -224,7 +221,7 @@ export const healthStoryService = {
           success: true,
           health_story: {
             story_id: data.story_id,
-            header: data.title || data.header, // Use title if available, fallback to header
+            header: data.title || data.header, // Backend now sends 'title'
             subtitle: data.subtitle, // New subtitle field
             story_text: data.content, // Map content to story_text
             generated_date: data.date,
@@ -262,15 +259,23 @@ export const healthStoryService = {
 
   async saveHealthStory(story: HealthStoryData): Promise<boolean> {
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const supabase = getSupabaseClient();
       
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      // Map to the actual database schema
+      const dbRecord = {
+        id: story.id,
+        user_id: story.user_id,
+        header: story.header, // Keep using header column for now
+        story_text: story.story_text,
+        generated_date: story.generated_date,
+        data_sources: story.data_sources,
+        created_at: story.created_at
+        // Don't include subtitle yet as it doesn't exist in the table
+      };
       
       const { error } = await supabase
         .from('health_stories')
-        .insert([story]);
+        .insert([dbRecord]);
       
       if (error) {
         console.error('Error saving health story to Supabase:', error);
@@ -298,12 +303,7 @@ export const healthStoryService = {
 
   async getHealthStories(userId: string): Promise<HealthStoryData[]> {
     try {
-      // Import supabase client
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const supabase = getSupabaseClient();
       
       const { data, error } = await supabase
         .from('health_stories')
