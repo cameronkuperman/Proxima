@@ -120,7 +120,13 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   }
 
   const handleThinkHarder = async () => {
-    if (!scanData.scan_id || isThinkingHarder) return
+    console.log('Think Harder clicked, scanData:', scanData)
+    if (!scanData.scan_id) {
+      console.error('No scan_id available:', scanData)
+      alert('Unable to enhance analysis - scan ID not found. Please try refreshing.')
+      return
+    }
+    if (isThinkingHarder) return
     
     setIsThinkingHarder(true)
     
@@ -137,16 +143,23 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scan_id: scanData.scan_id,
-          user_id: user?.id,
-          // For ultra-think endpoint, optionally specify model
-          ...(mode === 'deep' && endpoint === '/api/quick-scan/ultra-think' && {
-            model: 'grok-4' // Explicitly use Grok 4 for Deep Dive
-          })
+          user_id: user?.id
         })
       })
       
-      if (!response.ok) throw new Error('Failed to get enhanced analysis')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Think Harder API error:', response.status, errorText)
+        throw new Error('Failed to get enhanced analysis')
+      }
+      
       const result = await response.json()
+      console.log('Think Harder API response:', result)
+      
+      // Ensure we have a valid response
+      if (!result || (typeof result === 'object' && Object.keys(result).length === 0)) {
+        throw new Error('Empty response from API')
+      }
       
       if (mode === 'deep') {
         setUltraAnalysis(result)
@@ -158,7 +171,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
       
       // Show success notification
       setShowSuccessNotification(true)
-      setTimeout(() => setShowSuccessNotification(false), 3000)
+      setTimeout(() => setShowSuccessNotification(false), 4000)
       
     } catch (error) {
       console.error('Think Harder failed:', error)
@@ -207,7 +220,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                     {currentTier === 'ultra' ? 'Grok 4 Analysis Complete!' : 'o4-mini Analysis Complete!'}
                   </p>
                   <p className="text-sm text-white/80">
-                    Confidence increased to {currentTier === 'ultra' ? ultraAnalysis?.confidence_progression?.ultra : o4MiniAnalysis?.o4_mini_confidence}%
+                    Confidence increased to {currentTier === 'ultra' ? (ultraAnalysis?.ultra_confidence || ultraAnalysis?.confidence_progression?.ultra || ultraAnalysis?.confidence) : (o4MiniAnalysis?.o4_mini_confidence || o4MiniAnalysis?.confidence)}%
                   </p>
                 </div>
               </div>
