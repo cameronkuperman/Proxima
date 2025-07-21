@@ -70,7 +70,8 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   // Generate tracking suggestion when scan completes
   useEffect(() => {
     const generateTrackingSuggestion = async () => {
-      if (scanData.scan_id && !isGeneratingTracking) {
+      // Only generate tracking for Quick Scan, not Deep Dive
+      if (mode === 'quick' && scanData.scan_id && !isGeneratingTracking) {
         setIsGeneratingTracking(true)
         try {
           const { data: { user } } = await supabase.auth.getUser()
@@ -87,12 +88,31 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
           console.error('Error generating tracking suggestion:', error)
           setIsGeneratingTracking(false)
         }
+      } else if (mode === 'deep' && scanData.scan_id && !isGeneratingTracking) {
+        // For Deep Dive, try to generate tracking with deep_dive type
+        setIsGeneratingTracking(true)
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          
+          if (user) {
+            // Use deep_dive type for Deep Dive results
+            await generateSuggestion('deep_dive', scanData.scan_id, user.id)
+            setTimeout(() => {
+              setShowTrackingSuggestion(true)
+              setIsGeneratingTracking(false)
+            }, 500)
+          }
+        } catch (error) {
+          console.error('Error generating Deep Dive tracking suggestion:', error)
+          // Don't show error to user for Deep Dive tracking failures
+          setIsGeneratingTracking(false)
+        }
       }
     }
     
     generateTrackingSuggestion()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanData.scan_id]) // Intentionally omit generateSuggestion to avoid infinite loop
+  }, [scanData.scan_id, mode]) // Intentionally omit generateSuggestion to avoid infinite loop
 
   const handleGenerateReport = () => {
     console.log('Generating physician report...')

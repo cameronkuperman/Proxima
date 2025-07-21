@@ -1,15 +1,44 @@
 # Backend Fix Request for Think Harder & Ask Me More
 
-## Issue 1: Ultra Think API for Deep Dive
+## Critical Issue: Deep Dive IDs are not recognized by Ultra Think endpoint
 
-The `/api/quick-scan/ultra-think` endpoint needs to accept BOTH `scan_id` and `deep_dive_id` parameters.
+**Problem**: The `/api/quick-scan/ultra-think` endpoint returns "Quick scan not found" when receiving a Deep Dive ID because it only looks for Quick Scan records.
+
+**Solution Options**:
+
+### Option 1: Use the existing Deep Dive Think Harder endpoint (RECOMMENDED)
+The frontend found that `/api/deep-dive/think-harder` already exists! 
+
+**Frontend is now updated to use this endpoint for Deep Dive.**
+
+**IMPORTANT**: Please ensure this endpoint uses **Grok 4** model when called with:
+```json
+{
+  "session_id": "xxx-xxx-xxx",
+  "current_analysis": { ... },
+  "model": "grok-4",  // Frontend now sends this
+  "user_id": "user-123"
+}
+```
+
+### Option 2: Make the existing endpoint handle both types
+Update `/api/quick-scan/ultra-think` to check BOTH tables:
+```python
+# Pseudocode
+if scan_id:
+    result = find_quick_scan(scan_id)
+    if not result and deep_dive_id:
+        result = find_deep_dive(deep_dive_id)
+elif deep_dive_id:
+    result = find_deep_dive(deep_dive_id)
+```
 
 **Current frontend sends:**
 ```json
 {
-  "scan_id": "xxx-xxx-xxx",
-  "deep_dive_id": "xxx-xxx-xxx",  // Same value, included for compatibility
-  "user_id": "user-123"
+  "scan_id": "5ac2681c-c14f-4c89-8650-d1cf4c7edfde",  // This is actually a deep_dive_id
+  "deep_dive_id": "5ac2681c-c14f-4c89-8650-d1cf4c7edfde",
+  "user_id": "45b61b67-175d-48a0-aca6-d0be57609383"
 }
 ```
 
@@ -58,11 +87,20 @@ The deep dive needs an endpoint to continue asking questions after the initial a
 }
 ```
 
-## Issue 3: Ensure Consistent ID Handling
+## Issue 3: Tracking Service Also Fails for Deep Dive
 
-1. Quick Scan returns `scan_id`
-2. Deep Dive returns `deep_dive_id`
-3. Ultra Think endpoint should accept EITHER `scan_id` OR `deep_dive_id`
+The tracking suggestion endpoint also returns "Quick scan not found" when trying to generate suggestions for Deep Dive results.
+
+**Error**: `trackingService.ts:100 Tracking API Error: Error: Quick scan not found`
+
+The tracking service needs to handle both Quick Scan and Deep Dive IDs.
+
+## Issue 4: Ensure Consistent ID Handling
+
+1. Quick Scan returns `scan_id` from `/api/quick-scan`
+2. Deep Dive returns `deep_dive_id` from `/api/deep-dive/complete`
+3. Ultra Think endpoint should accept EITHER type of ID
+4. Tracking service should handle both types of IDs
 
 ## Testing Commands
 
