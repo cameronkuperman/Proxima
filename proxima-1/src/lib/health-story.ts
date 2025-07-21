@@ -1,4 +1,5 @@
 // Health Story Service for Next.js Frontend
+import { getSupabaseClient } from './supabase-client';
 
 const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
 console.log('Health Story API URL:', API_URL);
@@ -33,6 +34,7 @@ interface HealthStoryData {
   id: string;
   user_id: string;
   header: string;
+  subtitle?: string;
   story_text: string;
   generated_date: string;
   date_range?: {
@@ -60,11 +62,7 @@ interface RefreshInfo {
 export const healthStoryService = {
   async getRefreshInfo(userId: string): Promise<RefreshInfo | null> {
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const supabase = getSupabaseClient();
       
       // Get current week start (Monday 9 AM UTC)
       const currentWeekStart = this.getCurrentWeekStart();
@@ -195,6 +193,11 @@ export const healthStoryService = {
         }
       };
 
+      console.log('Health Story Request:', {
+        url: `${API_URL}/api/health-story`,
+        body: requestBody
+      });
+
       const response = await fetch(`${API_URL}/api/health-story`, {
         method: 'POST',
         headers: {
@@ -208,22 +211,81 @@ export const healthStoryService = {
         throw new Error(errorData?.error || `Health story generation failed: ${response.statusText}`);
       }
 
-      const data: HealthStoryResponse = await response.json();
-      console.log('Health Story API response:', JSON.stringify(data, null, 2));
+      const data = await response.json();
+      console.log('Health Story API response:', data);
       
-      if (!data.success) {
-        console.error('API returned error status:', data.error);
-        throw new Error(data.error || 'Health story generation failed');
+      // Backend returns status: "success" and the story data directly
+      if (data.status === 'success' && data.story_id) {
+        // Transform backend response to expected frontend format
+        return {
+          success: true,
+          health_story: {
+            story_id: data.story_id,
+            header: data.title || data.header, // Backend now sends 'title'
+            subtitle: data.subtitle, // New subtitle field
+            story_text: data.content, // Map content to story_text
+            generated_date: data.date,
+            data_sources: data.data_sources,
+            usage: data.usage,
+            model: data.model
+          }
+        };
       }
-
-      return data;
+      
+      // Handle error response
+      const errorMessage = data.error || data.message || 'Health story generation failed';
+      console.error('API returned error:', errorMessage);
+      throw new Error(errorMessage);
     } catch (error) {
       console.error('Health story generation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Check if it's a 404 error indicating the endpoint doesn't exist
+      if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        return {
+          success: false,
+          error: 'Health story generation is not available yet. The backend endpoint is not implemented.',
+          message: 'This feature is coming soon. Please check back later.'
+        };
+      }
+      
       return {
         success: false,
         error: 'Failed to generate health story',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: errorMessage
       };
+    }
+  },
+
+  async saveHealthStory(story: HealthStoryData): Promise<boolean> {
+    try {
+      const supabase = getSupabaseClient();
+      
+      // Map to the actual database schema
+      const dbRecord = {
+        id: story.id,
+        user_id: story.user_id,
+        header: story.header, // Keep using header column for now
+        story_text: story.story_text,
+        generated_date: story.generated_date,
+        data_sources: story.data_sources,
+        created_at: story.created_at
+        // Don't include subtitle yet as it doesn't exist in the table
+      };
+      
+      const { error } = await supabase
+        .from('health_stories')
+        .insert([dbRecord]);
+      
+      if (error) {
+        console.error('Error saving health story to Supabase:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving health story:', error);
+      return false;
     }
   },
 
@@ -241,12 +303,7 @@ export const healthStoryService = {
 
   async getHealthStories(userId: string): Promise<HealthStoryData[]> {
     try {
-      // Import supabase client
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const supabase = getSupabaseClient();
       
       const { data, error } = await supabase
         .from('health_stories')
@@ -265,6 +322,7 @@ export const healthStoryService = {
         id: story.id,
         user_id: story.user_id,
         header: story.header,
+        subtitle: story.subtitle,
         story_text: story.story_text,
         generated_date: story.generated_date,
         date_range: story.date_range,

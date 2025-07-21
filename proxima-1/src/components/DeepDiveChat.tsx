@@ -375,8 +375,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         analysis: result.analysis || {},
         confidence: result.confidence || 0,
         scan_id: result.deep_dive_id || null,
+        deep_dive_id: result.deep_dive_id || null,  // Add this for Think Harder
         questions_asked: result.questions_asked || 0,
-        reasoning_snippets: result.reasoning_snippets || []
+        reasoning_snippets: result.reasoning_snippets || [],
+        mode: 'deep'  // Ensure mode is set
       })
       setIsComplete(true)
       onComplete(result.analysis)
@@ -414,7 +416,14 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleThinkHarder = async () => {
-    if (!sessionId || isThinkingHarder) return
+    console.log('Deep Dive Think Harder clicked, finalAnalysis:', finalAnalysis)
+    const scanId = finalAnalysis?.scan_id || finalAnalysis?.deep_dive_id
+    if (!scanId) {
+      console.error('No scan/deep_dive ID available:', finalAnalysis)
+      alert('Unable to enhance analysis - ID not found. Please complete the analysis first.')
+      return
+    }
+    if (isThinkingHarder) return
     
     setIsThinkingHarder(true)
     setError(null)
@@ -422,32 +431,44 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     const thinkingMessage: Message = {
       id: `thinking-${Date.now()}`,
       role: 'assistant',
-      content: "Let me think harder about your case using advanced AI reasoning. This may take a moment...",
+      content: "Let me engage Grok 4's advanced reasoning capabilities for a deeper analysis. This may take a moment...",
       timestamp: new Date()
     }
     setMessages(prev => [...prev, thinkingMessage])
     
     try {
-      // Call backend API for "Think Harder" functionality
+      // Use the Deep Dive Think Harder endpoint with Grok 4
       const result = await deepDiveClient.thinkHarder(
-        sessionId,
+        sessionId!,
         finalAnalysis?.analysis,
         user?.id,
-        'o4-mini' // Use o4-mini (high) model for thinking harder
+        'grok-4'  // Use Grok 4 for Deep Dive
       )
+      
+      console.log('Deep Dive Think Harder API response:', result)
       
       // Update with enhanced analysis
       setFinalAnalysis((prev: any) => ({
         ...prev,
-        analysis: result.enhanced_analysis,
-        confidence: result.enhanced_confidence,
-        reasoning_snippets: result.reasoning_snippets || []
+        analysis: result.ultra_analysis || result.analysis || prev.analysis,
+        confidence: result.ultra_confidence || result.confidence || prev.confidence,
+        reasoning_snippets: result.reasoning_snippets || [],
+        ultra_insights: result.key_insights || [],
+        ultra_analysis: result // Store the full response
       }))
+      
+      // Extract key insight for message
+      let keyInsight = 'The ultra-analysis provides deeper insights into your condition.'
+      if (result.key_insights && result.key_insights.length > 0) {
+        keyInsight = result.key_insights[0]
+      } else if (result.ultra_analysis?.critical_insights && result.ultra_analysis.critical_insights.length > 0) {
+        keyInsight = result.ultra_analysis.critical_insights[0]
+      }
       
       const enhancedMessage: Message = {
         id: `enhanced-${Date.now()}`,
         role: 'assistant',
-        content: `**Enhanced Analysis Complete** 🧠\n\nAfter deeper reasoning, I have ${result.enhanced_confidence}% confidence. ${result.key_insights || 'The enhanced analysis provides additional insights into your condition.'}`,
+        content: `**Grok 4 Analysis Complete** 🧠\n\nAfter advanced reasoning, I have ${result.ultra_confidence || result.confidence || '95+'}% confidence.\n\n${keyInsight}`,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, enhancedMessage])
@@ -457,7 +478,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content: "I'm having trouble accessing the advanced reasoning model right now. The original analysis remains accurate.",
+        content: "I'm having trouble accessing Grok 4 right now. The original analysis remains accurate.",
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -467,7 +488,15 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleAskMeMore = async () => {
-    if (!sessionId || isAskingMore) return
+    console.log('handleAskMeMore called, sessionId:', sessionId, 'isComplete:', isComplete)
+    
+    if (!sessionId) {
+      console.error('No session ID available for Ask Me More')
+      alert('Session not found. Please complete the initial analysis first.')
+      return
+    }
+    
+    if (isAskingMore) return
     
     setIsAskingMore(true)
     setError(null)
@@ -530,7 +559,13 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
 
   if (showReport && finalAnalysis) {
     console.log('Rendering QuickScanResults with finalAnalysis:', finalAnalysis)
-    return <QuickScanResults scanData={finalAnalysis} onNewScan={() => window.location.reload()} mode="deep" />
+    // Ensure we pass the correct data structure
+    const resultsData = {
+      ...finalAnalysis,
+      scan_id: finalAnalysis.scan_id || finalAnalysis.deep_dive_id,
+      mode: 'deep'
+    }
+    return <QuickScanResults scanData={resultsData} onNewScan={() => window.location.reload()} mode="deep" />
   }
 
   // Show loading state during initialization
@@ -634,7 +669,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           <motion.button
                             whileHover={{ scale: 1.02, y: -2 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => handleThinkHarder()}
+                            onClick={() => {
+                              console.log('Think Harder button clicked in chat, finalAnalysis:', finalAnalysis)
+                              handleThinkHarder()
+                            }}
                             disabled={isThinkingHarder || isAskingMore}
                             className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 text-purple-300 hover:from-purple-600/30 hover:to-pink-600/30 hover:text-purple-200 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                           >
@@ -659,7 +697,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                                   animate={{ opacity: 1 }}
                                   className="font-medium"
                                 >
-                                  Engaging o4-mini...
+                                  Grokking your symptoms...
                                 </motion.div>
                               </>
                             ) : (
@@ -673,7 +711,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           <motion.button
                             whileHover={{ scale: 1.02, y: -2 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => handleAskMeMore()}
+                            onClick={() => {
+                              console.log('Ask Me More button clicked in chat, sessionId:', sessionId)
+                              handleAskMeMore()
+                            }}
                             disabled={isThinkingHarder || isAskingMore}
                             className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                           >
