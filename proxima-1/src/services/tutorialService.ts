@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 export interface UserTutorial {
   id: string;
@@ -12,8 +12,6 @@ export interface UserTutorial {
 
 export const tutorialService = {
   async getUserTutorialProgress(userId: string): Promise<UserTutorial | null> {
-    const supabase = createClient();
-    
     // Check if we have an authenticated session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -53,8 +51,6 @@ export const tutorialService = {
   },
 
   async initializeUserTutorial(userId: string): Promise<UserTutorial | null> {
-    const supabase = createClient();
-    
     // Check auth session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || session.user.id !== userId) {
@@ -109,8 +105,6 @@ export const tutorialService = {
   },
 
   async updateHasSeenWelcome(userId: string): Promise<boolean> {
-    const supabase = createClient();
-    
     // Check auth session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -140,8 +134,6 @@ export const tutorialService = {
   },
 
   async addCompletedTour(userId: string, tourName: string): Promise<boolean> {
-    const supabase = createClient();
-    
     // Check auth session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -191,8 +183,6 @@ export const tutorialService = {
   },
 
   async resetTutorialProgress(userId: string): Promise<boolean> {
-    const supabase = createClient();
-    
     // Check auth session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {

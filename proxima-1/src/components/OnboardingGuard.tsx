@@ -1,81 +1,48 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile, isOnboardingComplete } from '@/utils/onboarding';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 interface OnboardingGuardProps {
   children: React.ReactNode;
 }
 
 export default function OnboardingGuard({ children }: OnboardingGuardProps) {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { isComplete, isChecking } = useOnboarding();
   const router = useRouter();
   const pathname = usePathname();
-  const [checking, setChecking] = useState(true);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   useEffect(() => {
-    async function checkOnboardingStatus() {
-      if (!user || loading) {
-        setChecking(false);
-        return;
-      }
-
-      if (!user.email) {
-        console.error('OnboardingGuard: User email not found');
-        router.push('/onboarding');
-        return;
-      }
-
-      console.log('OnboardingGuard: Checking onboarding status for user:', user.id);
-      
-      try {
-        // Get user's name from metadata or user_metadata
-        const userName = user.user_metadata?.name || 
-                        user.user_metadata?.full_name || 
-                        user.user_metadata?.preferred_name ||
-                        null;
-
-        const profile = await getUserProfile(user.id, user.email, userName);
-        const complete = isOnboardingComplete(profile);
-        
-        console.log('OnboardingGuard: Profile:', profile);
-        console.log('OnboardingGuard: Onboarding complete:', complete);
-        
-        // If onboarding is complete and we're on the onboarding page, redirect to dashboard
-        if (complete && pathname === '/onboarding') {
-          console.log('OnboardingGuard: Onboarding already complete, redirecting to dashboard');
-          router.push('/dashboard');
-          return;
-        }
-        
-        // If onboarding is not complete and we're not on the onboarding page, redirect to onboarding
-        if (!complete && pathname !== '/onboarding') {
-          console.log('OnboardingGuard: Redirecting to onboarding');
-          router.push('/onboarding');
-          return;
-        }
-        
-        setOnboardingComplete(complete);
-      } catch (error) {
-        console.error('OnboardingGuard: Error checking onboarding:', error);
-        // On error, redirect to onboarding to be safe
-        if (pathname !== '/onboarding') {
-          router.push('/onboarding');
-        }
-        return;
-      } finally {
-        setChecking(false);
-      }
+    // Check for OAuth redirect parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const isOAuthRedirect = urlParams.get('oauth_redirect') === 'true';
+    
+    if (isOAuthRedirect) {
+      console.log('OnboardingGuard: OAuth redirect detected, skipping redirect logic');
+      return;
     }
 
-    checkOnboardingStatus();
-  }, [user, loading, router, pathname]);
+    // Skip if still loading or checking
+    if (authLoading || isChecking || isComplete === null) return;
 
-  // Show loading while checking auth or onboarding status
-  if (loading || checking) {
+    // No user, no guard needed
+    if (!user) return;
+
+    // Handle redirects based on onboarding status
+    if (isComplete && pathname === '/onboarding') {
+      console.log('OnboardingGuard: Already complete, redirecting to dashboard');
+      router.push('/dashboard');
+    } else if (!isComplete && pathname !== '/onboarding') {
+      console.log('OnboardingGuard: Not complete, redirecting to onboarding');
+      router.push('/onboarding');
+    }
+  }, [user, authLoading, isComplete, isChecking, pathname, router]);
+
+  // Show loading while checking
+  if (authLoading || isChecking || (user && isComplete === null)) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
@@ -86,20 +53,17 @@ export default function OnboardingGuard({ children }: OnboardingGuardProps) {
     );
   }
 
-  // Only render children if user is authenticated and onboarding status is appropriate for the current page
+  // If no user, don't render children
   if (!user) {
     return null;
   }
 
-  // On onboarding page, only show if onboarding is not complete
-  if (pathname === '/onboarding' && onboardingComplete) {
-    return null;
+  // Always render children on the onboarding page if user is logged in
+  // This prevents race conditions where new users get redirected away
+  if (pathname === '/onboarding') {
+    return <>{children}</>;
   }
 
-  // On other pages, only show if onboarding is complete
-  if (pathname !== '/onboarding' && !onboardingComplete) {
-    return null;
-  }
-
-  return <>{children}</>;
+  // For other pages, only render if onboarding is complete
+  return isComplete ? <>{children}</> : null;
 } 

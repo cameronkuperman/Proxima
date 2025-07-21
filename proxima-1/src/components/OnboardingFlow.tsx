@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { completeOnboarding, validateOnboardingData, OnboardingData, convertHeightToMetric, convertWeightToMetric, MedicationEntry, FamilyHistoryEntry } from '@/utils/onboarding';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 interface OnboardingFlowProps {
   onComplete?: () => void;
@@ -28,6 +29,7 @@ const steps = [
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { recheckOnboarding } = useOnboarding();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +142,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       const result = await completeOnboarding(user.id, dataToSubmit);
       
       if (result.success) {
+        // Recheck onboarding status to update the global state
+        await recheckOnboarding();
         onComplete?.();
         router.push('/dashboard?showTutorial=true');
       } else {
