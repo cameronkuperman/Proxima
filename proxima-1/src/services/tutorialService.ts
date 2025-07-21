@@ -17,7 +17,13 @@ export const tutorialService = {
     // Check if we have an authenticated session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      console.log('No auth session, skipping tutorial fetch');
+      console.log('Tutorial Service: No auth session, skipping tutorial fetch');
+      return null;
+    }
+    
+    // Verify the session user matches the requested userId
+    if (session.user.id !== userId) {
+      console.error('Tutorial Service: User ID mismatch', { sessionUserId: session.user.id, requestedUserId: userId });
       return null;
     }
     
@@ -26,20 +32,22 @@ export const tutorialService = {
         .from('user_tutorials')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no row exists
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No record found, create one
-          return await this.initializeUserTutorial(userId);
-        }
-        console.error('Error fetching tutorial progress:', error);
+        console.error('Tutorial Service: Error fetching tutorial progress:', error);
         return null;
+      }
+
+      // If no data found, initialize a new record
+      if (!data) {
+        console.log('Tutorial Service: No tutorial record found, initializing...');
+        return await this.initializeUserTutorial(userId);
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getUserTutorialProgress:', error);
+      console.error('Tutorial Service: Unexpected error in getUserTutorialProgress:', error);
       return null;
     }
   },
@@ -49,30 +57,53 @@ export const tutorialService = {
     
     // Check auth session
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.log('No auth session, cannot initialize tutorial');
+    if (!session || session.user.id !== userId) {
+      console.log('Tutorial Service: No auth session or user mismatch, cannot initialize tutorial');
       return null;
     }
     
     try {
+      // Use Supabase's upsert with onConflict to handle the unique constraint
       const { data, error } = await supabase
         .from('user_tutorials')
-        .insert({
-          user_id: userId,
-          has_seen_welcome: false,
-          completed_tours: []
-        })
+        .upsert(
+          {
+            user_id: userId,
+            has_seen_welcome: false,
+            completed_tours: [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          { 
+            onConflict: 'user_id',
+            ignoreDuplicates: false // This will return the existing row if it exists
+          }
+        )
         .select()
         .single();
 
       if (error) {
-        console.error('Error initializing tutorial:', error);
-        return null;
+        console.error('Tutorial Service: Error during upsert:', error);
+        
+        // As a fallback, try to fetch the existing record
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('user_tutorials')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (fallbackError) {
+          console.error('Tutorial Service: Fallback fetch also failed:', fallbackError);
+          return null;
+        }
+        
+        return fallbackData;
       }
 
+      console.log('Tutorial Service: Successfully initialized/fetched tutorial record');
       return data;
     } catch (error) {
-      console.error('Error in initializeUserTutorial:', error);
+      console.error('Tutorial Service: Unexpected error in initializeUserTutorial:', error);
       return null;
     }
   },

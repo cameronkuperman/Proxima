@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import HealthProfileModal from '@/components/HealthProfileModal';
 import OracleChat from '@/components/OracleChat';
@@ -103,8 +103,9 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
-  const { initializeTutorial } = useTutorial();
+  const { initializeTutorial, showWelcome } = useTutorial();
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineAnimating, setTimelineAnimating] = useState(false);
@@ -168,10 +169,29 @@ export default function DashboardPage() {
   ]);
   const [visibleReports, setVisibleReports] = useState([0, 1]);
 
-  // Initialize tutorial on dashboard load
+  // Initialize tutorial ONLY when coming from onboarding
   useEffect(() => {
-    initializeTutorial();
-  }, [initializeTutorial]);
+    // ONLY show tutorial if explicitly requested via URL parameter
+    const shouldShowTutorial = searchParams.get('showTutorial') === 'true';
+    
+    if (shouldShowTutorial && user?.id) {
+      console.log('Dashboard: showTutorial parameter detected, user exists, initializing tutorial');
+      
+      // Small delay to ensure everything is loaded
+      const timer = setTimeout(() => {
+        // Initialize and force show tutorial
+        initializeTutorial(true);
+        
+        // Clean up the URL parameter
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('showTutorial');
+        router.replace(newUrl.pathname + newUrl.search);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+    // DO NOT initialize tutorial otherwise
+  }, [user?.id, searchParams]); // Re-run when user is loaded
 
   // Listen for events from FAB
   useEffect(() => {
