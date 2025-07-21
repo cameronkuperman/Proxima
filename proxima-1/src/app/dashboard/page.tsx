@@ -435,7 +435,7 @@ export default function DashboardPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="text-center py-8"
+                      className="text-center py-8 ml-8"
                     >
                       <div className="mb-4">
                         <div className="w-12 h-12 mx-auto bg-gray-800/50 rounded-full flex items-center justify-center">
