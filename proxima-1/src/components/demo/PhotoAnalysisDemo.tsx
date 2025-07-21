@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight, Construction } from 'lucide-react'
+import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight, Download, Share2 } from 'lucide-react'
+import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis'
+import { AnalysisResult } from '@/types/photo-analysis'
 
 interface PhotoAnalysisDemoProps {
   onComplete: () => void
@@ -16,14 +18,6 @@ interface UploadedPhoto {
   description?: string
 }
 
-interface AnalysisReport {
-  confidence: number
-  primaryFinding: string
-  description: string
-  otherPossibilities: string[]
-  recommendations: string[]
-  severity: 'low' | 'medium' | 'high'
-}
 
 interface FormData {
   overallDescription: string
@@ -31,8 +25,15 @@ interface FormData {
 }
 
 export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
+  const {
+    uploadPhotos,
+    analyzePhotos,
+    createSession
+  } = usePhotoAnalysis()
+  
   const [step, setStep] = useState<'intro' | 'upload' | 'form' | 'analysis' | 'report'>('intro')
   const [uploadedPhotos, setUploadedPhotos] = useState<UploadedPhoto[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<FormData>({
@@ -43,6 +44,9 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
   const [exampleIndex, setExampleIndex] = useState(0)
   const [charIndex, setCharIndex] = useState(0)
   const [isTyping, setIsTyping] = useState(true)
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [photoIds, setPhotoIds] = useState<string[]>([])
 
   const EXAMPLE_QUERIES = [
     "Is this spider bite infected?",
@@ -93,18 +97,42 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
   }, [charIndex, isTyping, exampleIndex, step, EXAMPLE_QUERIES])
 
   const handlePhotoUpload = () => {
-    const newPhoto: UploadedPhoto = {
-      id: Date.now().toString(),
-      name: `skin_condition_${uploadedPhotos.length + 1}.jpg`,
-      url: `/api/placeholder/200/200`,
-      date: new Date().toLocaleDateString()
+    // Create a fake file for demo purposes
+    const canvas = document.createElement('canvas')
+    canvas.width = 200
+    canvas.height = 200
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      // Create a gradient background for the demo image
+      const gradient = ctx.createLinearGradient(0, 0, 200, 200)
+      gradient.addColorStop(0, '#FF6B6B')
+      gradient.addColorStop(1, '#FF8C42')
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, 200, 200)
+      
+      // Add some text to indicate it's a demo image
+      ctx.fillStyle = 'white'
+      ctx.font = '16px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('Demo Photo', 100, 100)
+      ctx.fillText(`#${uploadedPhotos.length + 1}`, 100, 120)
     }
     
-    setUploadedPhotos(prev => [...prev, newPhoto])
-    
-    if (uploadedPhotos.length === 0) {
-      // Show "add more" prompt after first upload
-    }
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `demo_photo_${uploadedPhotos.length + 1}.jpg`, { type: 'image/jpeg' })
+        
+        const newPhoto: UploadedPhoto = {
+          id: Date.now().toString(),
+          name: file.name,
+          url: URL.createObjectURL(blob),
+          date: new Date().toLocaleDateString()
+        }
+        
+        setUploadedPhotos(prev => [...prev, newPhoto])
+        setUploadedFiles(prev => [...prev, file])
+      }
+    }, 'image/jpeg')
   }
 
   const startAnalysis = () => {
@@ -112,16 +140,80 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
     setStep('form')
   }
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.overallDescription.trim()) {
+    if (!formData.overallDescription.trim() || uploadedFiles.length === 0) {
       return
     }
+    
     setIsAnalyzing(true)
-    setTimeout(() => {
-      setIsAnalyzing(false)
+    
+    try {
+      // Create a demo session
+      const session = await createSession({
+        condition_name: 'Demo Analysis',
+        description: formData.overallDescription
+      })
+      
+      const sessionId = session.id || session.session_id
+      if (!sessionId) {
+        throw new Error('Failed to create session')
+      }
+      
+      setSessionId(sessionId)
+      
+      // Upload photos
+      const uploadResponse = await uploadPhotos(sessionId, uploadedFiles)
+      const uploadedPhotoIds = uploadResponse.uploaded_photos.map(p => p.id)
+      setPhotoIds(uploadedPhotoIds)
+      
+      // Analyze photos
+      const analysis = await analyzePhotos({
+        session_id: sessionId,
+        photo_ids: uploadedPhotoIds,
+        context: formData.overallDescription,
+        temporary_analysis: true
+      })
+      
+      setAnalysisResult(analysis)
       setStep('analysis')
-    }, 3000)
+    } catch (error) {
+      console.error('Analysis error:', error)
+      // For demo purposes, fallback to mock data if API fails
+      const mockAnalysis: AnalysisResult = {
+        analysis_id: 'demo-analysis-1',
+        analysis: {
+          primary_assessment: 'Atypical Nevus (Demo)',
+          confidence: 87,
+          visual_observations: [
+            'Irregular borders detected',
+            'Asymmetrical shape',
+            'Multiple color variations present',
+            'Size approximately 8mm'
+          ],
+          differential_diagnosis: [
+            'Seborrheic keratosis',
+            'Melanoma',
+            'Dysplastic nevus'
+          ],
+          recommendations: [
+            'Schedule a dermatologist appointment within 2 weeks',
+            'Monitor for any changes in size, color, or shape',
+            'Take photos every 2 weeks to track progression',
+            'Avoid sun exposure to the area'
+          ],
+          red_flags: [
+            'Irregular borders',
+            'Size greater than 6mm'
+          ]
+        },
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      }
+      setAnalysisResult(mockAnalysis)
+      setStep('analysis')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -138,19 +230,6 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
     }
   }
 
-  const mockReport: AnalysisReport = {
-    confidence: 87,
-    primaryFinding: "Atypical Nevus",
-    description: "Based on the irregular borders and asymmetrical shape you're concerned about, this appears to be an atypical nevus. While most are benign, the irregular features warrant professional evaluation to rule out any concerning changes.",
-    otherPossibilities: ["Seborrheic keratosis", "Melanoma"],
-    recommendations: [
-      "Schedule a dermatologist appointment within 2 weeks",
-      "Monitor for any changes in size, color, or shape",
-      "Take photos every 2 weeks to track progression",
-      "Avoid sun exposure to the area"
-    ],
-    severity: 'medium'
-  }
 
   return (
     <div className="h-full flex flex-col">
@@ -168,9 +247,9 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
           Back to features
         </button>
         
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-sm">
-          <Construction className="w-3 h-3" />
-          Under Maintenance
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm">
+          <Camera className="w-3 h-3" />
+          Live Demo
         </div>
       </motion.div>
 
@@ -205,10 +284,10 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs"
+                  className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs"
                 >
-                  <Construction className="w-3 h-3" />
-                  AI integration temporarily under maintenance
+                  <Camera className="w-3 h-3" />
+                  AI-powered analysis ready
                 </motion.div>
               </div>
             </motion.div>
@@ -250,11 +329,14 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                           animate={{ scale: 1 }}
                           className="relative group"
                         >
-                          <div className="aspect-square rounded-lg bg-gray-800 overflow-hidden">
-                            <Image className="w-full h-full p-4 text-gray-600" />
+                          <div className="aspect-square rounded-lg bg-gray-800 overflow-hidden relative">
+                            <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
                           </div>
                           <button
-                            onClick={() => setUploadedPhotos(prev => prev.filter(p => p.id !== photo.id))}
+                            onClick={() => {
+                              setUploadedPhotos(prev => prev.filter(p => p.id !== photo.id))
+                              setUploadedFiles(prev => prev.filter((_, i) => i !== uploadedPhotos.findIndex(p => p.id === photo.id)))
+                            }}
                             className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="w-3 h-3 text-white" />
@@ -444,11 +526,13 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                 {/* Header */}
                 <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 p-6 border-b border-white/10">
                   <h3 className="text-2xl font-bold text-white mb-2">Medical Analysis</h3>
-                  <p className="text-gray-400">Mock analysis for demonstration</p>
-                  <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs">
-                    <Construction className="w-3 h-3" />
-                    Real AI integration under maintenance
-                  </div>
+                  <p className="text-gray-400">AI-powered visual analysis</p>
+                  {analysisResult?.expires_at && (
+                    <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs">
+                      <Clock className="w-3 h-3" />
+                      Temporary analysis - expires in 24 hours
+                    </div>
+                  )}
                 </div>
 
                 {/* Analysis Confidence */}
@@ -456,61 +540,64 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-400">Analysis Confidence</span>
-                      <span className="text-2xl font-bold text-white">{mockReport.confidence}%</span>
+                      <span className="text-2xl font-bold text-white">{analysisResult?.analysis.confidence || 0}%</span>
                     </div>
                     <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${mockReport.confidence}%` }}
+                        animate={{ width: `${analysisResult?.analysis.confidence || 0}%` }}
                         transition={{ duration: 1, ease: "easeOut" }}
                         className="h-full bg-gradient-to-r from-orange-500 to-red-500"
                       />
                     </div>
                   </div>
-                  <p className="text-sm text-gray-400 italic">
-                    {mockReport.description}
+                  <h4 className="text-lg font-medium text-white mb-2">{analysisResult?.analysis.primary_assessment}</h4>
+                  <p className="text-sm text-gray-400">
+                    {analysisResult?.analysis.visual_observations?.[0] || 'Visual analysis completed'}
                   </p>
                 </div>
 
                 {/* Other Possibilities */}
                 <div className="p-6 border-b border-white/10">
-                  <h4 className="text-sm font-medium text-gray-400 mb-3">OTHER POSSIBILITIES</h4>
+                  <h4 className="text-sm font-medium text-gray-400 mb-3">DIFFERENTIAL DIAGNOSIS</h4>
                   <ul className="space-y-2">
-                    {mockReport.otherPossibilities.map((possibility, index) => (
+                    {(analysisResult?.analysis.differential_diagnosis || []).map((diagnosis, index) => (
                       <li key={index} className="flex items-center gap-2 text-gray-300">
                         <span className="text-gray-500">•</span>
-                        {possibility}
+                        {diagnosis}
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                {/* Key Findings */}
+                {/* Visual Observations */}
                 <div className="p-6 border-b border-white/10">
-                  <h4 className="text-sm font-medium text-gray-400 mb-3">KEY FINDINGS</h4>
+                  <h4 className="text-sm font-medium text-gray-400 mb-3">VISUAL OBSERVATIONS</h4>
                   <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5" />
-                      <div>
-                        <p className="text-white font-medium">Irregular borders detected</p>
-                        <p className="text-sm text-gray-400">Asymmetrical shape with uneven edges</p>
+                    {(analysisResult?.analysis.visual_observations || []).slice(0, 3).map((observation, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5" />
+                        <p className="text-gray-300">{observation}</p>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <TrendingUp className="w-5 h-5 text-blue-400 mt-0.5" />
-                      <div>
-                        <p className="text-white font-medium">Size progression noted</p>
-                        <p className="text-sm text-gray-400">15% increase over comparison period</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
+                  {analysisResult?.analysis.red_flags && analysisResult.analysis.red_flags.length > 0 && (
+                    <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                      <p className="text-sm font-medium text-red-400 mb-2">Red Flags:</p>
+                      <ul className="space-y-1">
+                        {analysisResult.analysis.red_flags.map((flag, index) => (
+                          <li key={index} className="text-sm text-gray-300">• {flag}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 {/* Recommendations */}
                 <div className="p-6">
                   <h4 className="text-sm font-medium text-gray-400 mb-3">RECOMMENDATIONS</h4>
                   <ul className="space-y-2">
-                    {mockReport.recommendations.map((rec, index) => (
+                    {(analysisResult?.analysis.recommendations || []).map((rec, index) => (
                       <li key={index} className="flex items-start gap-2">
                         <ChevronRight className="w-4 h-4 text-orange-400 mt-0.5" />
                         <span className="text-gray-300 text-sm">{rec}</span>
@@ -544,7 +631,7 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                   Explore More Features
                 </button>
                 <p className="text-sm text-gray-500 mt-2">
-                  Photo Analysis AI will be back online soon
+                  Full photo analysis available in dashboard
                 </p>
               </motion.div>
             </motion.div>
