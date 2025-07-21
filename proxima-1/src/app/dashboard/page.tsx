@@ -10,6 +10,8 @@ import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import OnboardingGuard from '@/components/OnboardingGuard';
+import UnifiedFAB from '@/components/UnifiedFAB';
+import { useTutorial } from '@/contexts/TutorialContext';
 import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, Stethoscope, ClipboardList } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
@@ -102,6 +104,7 @@ import { formatDistanceToNow } from 'date-fns';
 export default function DashboardPage() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { initializeTutorial } = useTutorial();
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineAnimating, setTimelineAnimating] = useState(false);
@@ -117,7 +120,6 @@ export default function DashboardPage() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
-  const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
   const [healthScore] = useState(92);
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
@@ -164,6 +166,30 @@ export default function DashboardPage() {
     { id: 5, title: 'Anxiety Episode', time: '10 days ago', content: 'You reported elevated anxiety (6/10) with racing thoughts. Triggered by work presentation. Used breathing exercises.', tags: [{ icon: <BrainCircuit className="w-3 h-3" />, text: 'Meditation helped' }, { icon: <Star className="w-3 h-3" />, text: 'Work trigger' }] }
   ]);
   const [visibleReports, setVisibleReports] = useState([0, 1]);
+
+  // Initialize tutorial on dashboard load
+  useEffect(() => {
+    initializeTutorial();
+  }, [initializeTutorial]);
+
+  // Listen for events from FAB
+  useEffect(() => {
+    const handleOpenQuickReportChat = () => {
+      setShowQuickReportChat(true);
+    };
+    
+    const handleOpenOracleChat = () => {
+      setOracleChatOpen(true);
+    };
+
+    window.addEventListener('openQuickReportChat', handleOpenQuickReportChat);
+    window.addEventListener('openOracleChat', handleOpenOracleChat);
+    
+    return () => {
+      window.removeEventListener('openQuickReportChat', handleOpenQuickReportChat);
+      window.removeEventListener('openOracleChat', handleOpenOracleChat);
+    };
+  }, []);
 
   // Fetch user profile data from database
   useEffect(() => {
@@ -320,6 +346,7 @@ export default function DashboardPage() {
 
         {/* Timeline Sidebar */}
         <motion.div
+          data-tour="timeline-sidebar"
           className="fixed left-0 top-0 h-full z-30"
           initial={{ width: '60px' }}
           animate={{ width: timelineExpanded ? '320px' : '60px' }}
@@ -564,6 +591,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               {/* Health Profile Card */}
               <motion.div
+                data-tour="profile-card"
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
                 onClick={() => router.push('/profile')}
@@ -644,6 +672,7 @@ export default function DashboardPage() {
 
               {/* Quick Scan Card */}
               <motion.div
+                data-tour="quick-scan-card"
                 whileHover={{ scale: quickScanLoading ? 1 : 1.02 }}
                 className={`backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden ${
                   quickScanLoading ? 'pointer-events-none' : ''
@@ -766,6 +795,7 @@ export default function DashboardPage() {
 
               {/* Reports Card */}
               <motion.div
+                data-tour="reports-card"
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
                 onClick={() => router.push('/reports')}
@@ -1062,58 +1092,7 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Single Floating Action Button */}
-        <motion.div className="fixed bottom-8 right-8 z-40">
-          <AnimatePresence>
-            {floatingMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                className="absolute bottom-16 right-0 bg-gray-900 rounded-lg shadow-xl p-2 min-w-[200px]"
-              >
-                <button
-                  onClick={() => {
-                    setShowQuickReportChat(true);
-                    setFloatingMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
-                >
-                  <FileText className="w-5 h-5" />
-                  Generate Report
-                </button>
-                <button
-                  onClick={() => {
-                    setOracleChatOpen(true);
-                    setFloatingMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-3 text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
-                >
-                  <Brain className="w-5 h-5" />
-                  Start New Chat
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setFloatingMenuOpen(!floatingMenuOpen)}
-            className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg flex items-center justify-center"
-          >
-            <svg 
-              className={`w-6 h-6 text-white transition-transform ${floatingMenuOpen ? 'rotate-45' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </motion.button>
-        </motion.div>
+        {/* Old floating menu removed - using UnifiedFAB instead */}
 
         {/* Health Profile Modal */}
         <HealthProfileModal 
@@ -1243,6 +1222,9 @@ export default function DashboardPage() {
             metadata={selectedHistoryItem.metadata}
           />
         )}
+
+        {/* Unified FAB */}
+        <UnifiedFAB />
       </div>
       </OnboardingGuard>
     </AuthGuard>
