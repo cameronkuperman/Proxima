@@ -104,6 +104,7 @@ export default function DashboardPage() {
   const { user, signOut } = useAuth();
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
+  const [timelineAnimating, setTimelineAnimating] = useState(false);
   const { 
     interactions: timelineData, 
     isLoading: timelineLoading,
@@ -323,10 +324,17 @@ export default function DashboardPage() {
           initial={{ width: '60px' }}
           animate={{ width: timelineExpanded ? '320px' : '60px' }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          onMouseEnter={() => setTimelineExpanded(true)}
-          onMouseLeave={() => setTimelineExpanded(false)}
+          onMouseEnter={() => {
+            setTimelineExpanded(true);
+            setTimelineAnimating(true);
+          }}
+          onMouseLeave={() => {
+            setTimelineExpanded(false);
+            setTimelineAnimating(true);
+          }}
+          onAnimationComplete={() => setTimelineAnimating(false)}
         >
-          <div className="h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative overflow-hidden">
+          <div className={`h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative overflow-hidden flex flex-col ${timelineAnimating ? 'timeline-animating' : ''}`}>
             {/* Timeline gradient line */}
             <div className="absolute left-[29px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20" />
             
@@ -337,7 +345,7 @@ export default function DashboardPage() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="px-4 pt-4 pb-2"
+                  className="px-4 pt-4 pb-2 flex-shrink-0"
                 >
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -354,7 +362,7 @@ export default function DashboardPage() {
             </AnimatePresence>
             
             {/* Timeline entries */}
-            <div className="pt-4 px-4 pb-20 overflow-y-auto h-full scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 timeline-scrollbar">
               {timelineLoading && !hasLoaded ? (
                 // Loading state
                 <div className="space-y-8">

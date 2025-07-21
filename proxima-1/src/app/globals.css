@@ -178,3 +178,40 @@ html {
 .scrollbar-thumb-white\/10::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
+
+/* Custom timeline scrollbar with fade effect */
+.timeline-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.timeline-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Hide scrollbar during animation */
+.timeline-animating {
+  overflow: hidden !important;
+}
+
+.timeline-animating .timeline-scrollbar {
+  scrollbar-width: none;
+}
+
+.timeline-animating .timeline-scrollbar::-webkit-scrollbar {
+  display: none;
+}
