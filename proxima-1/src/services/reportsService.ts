@@ -320,8 +320,17 @@ export const reportsService = {
     const result = await response.json();
     console.log('🔗 reportsService - Raw API response:', result);
     
-    // Backend now returns properly structured array
-    return result as GeneratedReport[];
+    // Ensure we always return an array
+    if (Array.isArray(result)) {
+      return result as GeneratedReport[];
+    } else if (result && typeof result === 'object' && Array.isArray(result.reports)) {
+      // Handle case where backend returns { reports: [...] }
+      console.log('🔗 reportsService - Extracting reports array from wrapper object');
+      return result.reports as GeneratedReport[];
+    } else {
+      console.warn('🔗 reportsService - Unexpected response format, returning empty array:', result);
+      return [];
+    }
   },
 
   // Group reports by month for timeline view

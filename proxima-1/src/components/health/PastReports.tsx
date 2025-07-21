@@ -76,8 +76,10 @@ export const PastReports: React.FC<PastReportsProps> = ({ onSelectReport }) => {
         );
       }
 
-      setReports(fetchedReports);
-      const grouped = reportsService.groupReportsByMonth(fetchedReports);
+      // Ensure fetchedReports is an array
+      const reportsArray = Array.isArray(fetchedReports) ? fetchedReports : [];
+      setReports(reportsArray);
+      const grouped = reportsService.groupReportsByMonth(reportsArray);
       setGroupedReports(grouped);
 
       // Auto-expand first month
@@ -232,7 +234,7 @@ export const PastReports: React.FC<PastReportsProps> = ({ onSelectReport }) => {
         {/* Quick Stats */}
         <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
           {reportTypes.map(type => {
-            const count = reports.filter(r => r.report_type === type.value).length;
+            const count = Array.isArray(reports) ? reports.filter(r => r.report_type === type.value).length : 0;
             const gradients = {
               'comprehensive': 'from-purple-600/20 to-blue-600/20',
               'urgent_triage': 'from-red-600/20 to-orange-600/20',
