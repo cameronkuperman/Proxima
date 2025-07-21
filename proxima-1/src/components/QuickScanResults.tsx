@@ -36,6 +36,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   const [o4MiniAnalysis, setO4MiniAnalysis] = useState<any>(null)
   const [ultraAnalysis, setUltraAnalysis] = useState<any>(null)
   const [currentTier, setCurrentTier] = useState<'basic' | 'enhanced' | 'ultra'>('basic')
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false)
   
   const { generateSuggestion, currentSuggestion, suggestionId, loading: trackingStoreLoading } = useTrackingStore()
 
@@ -136,7 +137,11 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scan_id: scanData.scan_id,
-          user_id: user?.id
+          user_id: user?.id,
+          // For ultra-think endpoint, optionally specify model
+          ...(mode === 'deep' && endpoint === '/api/quick-scan/ultra-think' && {
+            model: 'grok-4' // Explicitly use Grok 4 for Deep Dive
+          })
         })
       })
       
@@ -150,6 +155,10 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
         setO4MiniAnalysis(result)
         setCurrentTier('enhanced')
       }
+      
+      // Show success notification
+      setShowSuccessNotification(true)
+      setTimeout(() => setShowSuccessNotification(false), 3000)
       
     } catch (error) {
       console.error('Think Harder failed:', error)
@@ -180,6 +189,31 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   return (
     <>
       <div className="space-y-6">
+        {/* Success Notification */}
+        <AnimatePresence>
+          {showSuccessNotification && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-4 right-4 z-50"
+            >
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-medium">
+                    {currentTier === 'ultra' ? 'Grok 4 Analysis Complete!' : 'o4-mini Analysis Complete!'}
+                  </p>
+                  <p className="text-sm text-white/80">
+                    Confidence increased to {currentTier === 'ultra' ? ultraAnalysis?.confidence_progression?.ultra : o4MiniAnalysis?.o4_mini_confidence}%
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* Main Analysis Card with Tabbed Interface */}
         <div className="bg-gray-900/50 rounded-3xl border border-white/10 overflow-hidden">
           {/* Header with dynamic confidence coloring */}
@@ -272,8 +306,50 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                 {/* Primary diagnosis */}
                 <div className="mb-6">
                   <h4 className="text-lg font-semibold text-gray-400 mb-3">Most Likely Condition</h4>
-                  <h3 className="text-3xl font-bold text-white mb-3">{analysisResult.primaryCondition}</h3>
-                  <p className="text-gray-300 mb-3">{analysisResult.likelihood}</p>
+                  <h3 className="text-3xl font-bold text-white mb-3">
+                    {currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.ultra_diagnosis?.primary ||
+                     currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.enhanced_diagnosis?.primary ||
+                     analysisResult.primaryCondition}
+                  </h3>
+                  <p className="text-gray-300 mb-3">
+                    {currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.ultra_diagnosis?.description ||
+                     currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.enhanced_diagnosis?.description ||
+                     analysisResult.likelihood}
+                  </p>
+                  
+                  {/* Enhanced insights */}
+                  {currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.overlooked_considerations && (
+                    <div className="mt-4 p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                      <h5 className="text-sm font-medium text-purple-400 mb-2">o4-mini Insights</h5>
+                      <div className="space-y-2">
+                        {o4MiniAnalysis.o4_mini_analysis.overlooked_considerations.map((item: any, i: number) => (
+                          <div key={i} className="text-sm">
+                            <span className="text-purple-300 font-medium">{item.factor}:</span>
+                            <span className="text-gray-400 ml-2">{item.significance}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Ultra insights */}
+                  {currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.critical_insights && (
+                    <div className="mt-4 p-4 bg-pink-500/10 rounded-lg border border-pink-500/30">
+                      <h5 className="text-sm font-medium text-pink-400 mb-2">Grok 4 Critical Insights</h5>
+                      <div className="space-y-1">
+                        {ultraAnalysis.ultra_analysis.critical_insights.map((insight: string, i: number) => (
+                          <p key={i} className="text-sm text-gray-300">• {insight}</p>
+                        ))}
+                      </div>
+                      {ultraAnalysis.ultra_analysis.complexity_score && (
+                        <div className="mt-3 pt-3 border-t border-pink-500/20">
+                          <span className="text-xs text-pink-400">
+                            Case Complexity: {ultraAnalysis.ultra_analysis.complexity_score}/10
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   {/* Why this diagnosis - collapsible */}
                   <button
@@ -305,7 +381,9 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                 <div>
                   <h4 className="text-lg font-semibold text-gray-400 mb-3">Other Possibilities</h4>
                   <div className="space-y-3">
-                    {analysisResult.differentials.map((diff: any, index: number) => (
+                    {(currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.differential_refinement ||
+                      currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.differential_refinement ||
+                      analysisResult.differentials)?.map((diff: any, index: number) => (
                       <div key={index} className="bg-gray-800/30 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-white">{diff.condition}</span>
@@ -343,27 +421,6 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                     </div>
                   </div>
                   
-                  {/* Dive deeper button - shows always but more prominent when confidence < 85 */}
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    onClick={() => {
-                      // Encode the form data to pass to Deep Dive
-                      const formDataEncoded = encodeURIComponent(JSON.stringify(scanData.formData))
-                      router.push(`/scan?mode=deep&bodyPart=${scanData.bodyPart}&formData=${formDataEncoded}&fromScan=${scanData.scan_id}`)
-                    }}
-                    className={`
-                      w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2
-                      ${confidence < 85
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg'
-                        : 'bg-gray-800/50 hover:bg-gray-700/50 text-purple-400 hover:text-purple-300'
-                      }
-                    `}
-                  >
-                    <Brain className="w-5 h-5" />
-                    Dive deeper
-                  </motion.button>
                 </div>
               </motion.div>
             )}
@@ -380,7 +437,9 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-400 mb-4">Immediate Actions</h4>
                   <div className="space-y-3">
-                    {analysisResult.recommendations.slice(0, 3).map((rec: any, index: number) => (
+                    {(currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.diagnostic_strategy?.immediate_actions ||
+                      currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.specific_recommendations ||
+                      analysisResult.recommendations)?.slice(0, 3).map((rec: any, index: number) => (
                       <div key={index} className="flex items-start gap-4 p-4 bg-gray-800/30 rounded-lg">
                         <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                           <span className="text-green-400 font-bold">{index + 1}</span>
@@ -407,7 +466,23 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                 {/* Timeline */}
                 <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
                   <h4 className="text-sm font-medium text-blue-400 mb-2">Expected Timeline</h4>
-                  <p className="text-gray-300">{analysisResult.timeline}</p>
+                  <p className="text-gray-300">
+                    {currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.timeline_expectations?.recovery_estimate ||
+                     currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.diagnostic_strategy?.timeline ||
+                     analysisResult.timeline}
+                  </p>
+                  {currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.timeline_expectations?.milestones && (
+                    <div className="mt-2 pt-2 border-t border-blue-500/20">
+                      <p className="text-xs text-blue-400 mb-1">Key Milestones:</p>
+                      <ul className="space-y-1">
+                        {o4MiniAnalysis.o4_mini_analysis.timeline_expectations.milestones.map((milestone: any, i: number) => (
+                          <li key={i} className="text-xs text-gray-400">
+                            • {milestone.timeframe}: {milestone.expectation}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
