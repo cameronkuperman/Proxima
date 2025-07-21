@@ -24,14 +24,33 @@ export default function LiquidGlassLogin() {
   const [, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Check for OAuth errors in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const errorParam = urlParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   // Check for existing session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session check:', session ? 'User is logged in' : 'No session');
       setSession(session);
       if (session) {
-        console.log('User already logged in, redirecting to dashboard...');
-        router.push('/');
+        // Check if we're coming from OAuth callback
+        const isOAuthCallback = window.location.search.includes('code=') || 
+                               window.location.search.includes('error=');
+        
+        if (!isOAuthCallback) {
+          console.log('User already logged in (not OAuth), redirecting to dashboard...');
+          router.push('/dashboard');
+        } else {
+          console.log('OAuth callback in progress, not redirecting');
+        }
       }
     });
 
@@ -42,8 +61,9 @@ export default function LiquidGlassLogin() {
       setSession(session);
       // Let the middleware handle redirects instead of automatically redirecting here
       // This prevents conflicts with onboarding flow
-      if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        console.log('Auth state changed, middleware will handle redirect...');
+      if (session && event === 'SIGNED_IN') {
+        console.log('User just signed in, event:', event);
+        // Don't redirect here - let the OAuth callback handle it
       }
     });
 
@@ -95,36 +115,13 @@ export default function LiquidGlassLogin() {
           if (data.user.identities?.length === 0) {
             setError('Please check your email to confirm your account before signing in');
           } else {
-            // Create user record in database
-            try {
-              const { error: insertError } = await supabase
-                .from('medical')
-                .insert([{
-                  id: data.user.id,
-                  email: data.user.email,
-                  name: name,
-                  age: null,
-                  height: null,
-                  weight: null,
-                  medications: null,
-                  personal_health_context: null,
-                  family_history: null,
-                  allergies: null
-                }]);
-              
-              if (insertError) {
-                console.error('Error creating user record:', insertError);
-                // Don't fail the signup if user record creation fails
-              }
-            } catch (err) {
-              console.error('Error creating user record:', err);
-              // Don't fail the signup if user record creation fails
-            }
+            // Don't create medical record here - let onboarding handle it
+            console.log('User signed up successfully');
             
             // If no email confirmation required, let middleware handle the redirect
-            console.log('Sign up successful, middleware will handle redirect...');
-            // Redirect to dashboard, middleware will intercept and redirect to onboarding if needed
-            router.push('/dashboard');
+            console.log('Sign up successful, redirecting to onboarding...');
+            // For new sign-ups, go directly to onboarding
+            router.push('/onboarding');
           }
         }
       } else {
@@ -155,19 +152,36 @@ export default function LiquidGlassLogin() {
     setError(null);
     
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      console.log(`Attempting ${provider} OAuth login...`);
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log('Redirect URL:', redirectUrl);
+      console.log('Window origin:', window.location.origin);
+      console.log('Full URL:', window.location.href);
+      
+      // Use redirectTo only in production, let Supabase handle it in dev
+      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: isDevelopment ? undefined : redirectUrl,
+          queryParams: provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : undefined,
         }
       });
       
       if (error) {
+        console.error(`${provider} OAuth error:`, error);
         setError(error.message);
+      } else {
+        console.log(`${provider} OAuth initiated successfully:`, data);
+        console.log('OAuth URL:', data?.url);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
-      console.error(err);
+      console.error(`${provider} OAuth exception:`, err);
+      setError('An unexpected error occurred during sign in');
     } finally {
       setIsLoading(false);
     }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Nunito_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { TutorialProvider } from "@/contexts/TutorialContext";
 
 const bodyFont = Nunito_Sans({
@@ -30,9 +31,11 @@ export default function RootLayout({
         className={`${bodyFont.variable} ${headingFont.variable} antialiased bg-[#0a0a0a] text-white`}
       >
         <AuthProvider>
-          <TutorialProvider>
-            {children}
-          </TutorialProvider>
+          <OnboardingProvider>
+            <TutorialProvider>
+              {children}
+            </TutorialProvider>
+          </OnboardingProvider>
         </AuthProvider>
       </body>
     </html>

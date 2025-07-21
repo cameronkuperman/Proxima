@@ -41,9 +41,19 @@ export async function getUserProfile(
   email: string,
   name: string | null
 ): Promise<OnboardingData | null> {
+  // Create a fresh client instance for this request
+  const supabaseClient = supabase;
+  
   try {
+    // Verify session matches
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      console.error('getUserProfile: No session found');
+      throw new Error('No authenticated session');
+    }
+    
     // First try to get existing profile
-    let { data, error } = await supabase
+    let { data, error } = await supabaseClient
       .from('medical')
       .select('*')
       .eq('id', userId)
@@ -90,45 +100,10 @@ export async function getUserProfile(
         : [];
     }
 
-    // If no profile exists, create one
+    // If no profile exists, return null - DO NOT CREATE ONE
     if (error && error.code === 'PGRST116') {
-      const { data: newData, error: insertError } = await supabase
-        .from('medical')
-        .insert([
-          { 
-            id: userId,
-            email: email,
-            name: name || '',  // Use provided name or empty string if null
-            age: '',
-            height: '',
-            weight: '',
-            race: null,
-            is_male: null,
-            medications: [],
-            personal_health_context: '',
-            family_history: [],
-            allergies: [],
-            lifestyle_smoking_status: '',
-            lifestyle_alcohol_consumption: '',
-            lifestyle_exercise_frequency: '',
-            lifestyle_sleep_hours: '',
-            lifestyle_stress_level: '',
-            lifestyle_diet_type: '',
-            emergency_contact_name: '',
-            emergency_contact_relation: '',
-            emergency_contact_phone: '',
-            emergency_contact_email: ''
-          }
-        ])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Error creating medical profile:', insertError);
-        throw insertError;
-      }
-
-      data = newData;
+      console.log('No medical profile exists for user, returning null');
+      return null;
     } else if (error) {
       console.error('Error fetching medical profile:', error);
       throw error;
@@ -145,8 +120,15 @@ export async function getUserProfile(
 export function isOnboardingComplete(profile: OnboardingData | null): boolean {
   if (!profile) return false;
 
-  // Check if required fields are filled
-  return Boolean(profile.personal_health_context?.trim());
+  // For OAuth users, we need to check more than just personal_health_context
+  // Check if essential fields are filled with actual data
+  const hasAge = profile.age && profile.age.trim() !== '';
+  const hasHeight = profile.height && profile.height.trim() !== '';
+  const hasWeight = profile.weight && profile.weight.trim() !== '';
+  const hasHealthContext = profile.personal_health_context && profile.personal_health_context.trim() !== '';
+
+  // All these fields must be filled for onboarding to be complete
+  return Boolean(hasAge && hasHeight && hasWeight && hasHealthContext);
 }
 
 // Conversion functions
@@ -218,10 +200,19 @@ export async function completeOnboarding(
     
 
     
-    // Update user's medical data
+    // Get user email and name from auth
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    // Insert or update user's medical data (upsert)
     const { error: medicalError } = await supabase
       .from('medical')
-      .update({
+      .upsert({
+        id: userId,
+        email: authUser.email || '',
+        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
         age: data.age,
         height: data.height,
         weight: data.weight,
@@ -242,7 +233,8 @@ export async function completeOnboarding(
         emergency_contact_phone: data.emergency_contact_phone || '',
         emergency_contact_email: data.emergency_contact_email || ''
       })
-      .eq('id', userId);
+      .select()
+      .single();
 
     if (medicalError) {
       console.error('Error updating medical data:', medicalError);
