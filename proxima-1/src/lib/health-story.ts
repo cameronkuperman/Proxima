@@ -79,8 +79,8 @@ export const healthStoryService = {
         // Return default info if table doesn't exist yet
         return {
           used: 0,
-          remaining: 3,
-          limit: 3,
+          remaining: 10,
+          limit: 10,
           week_start: currentWeekStart.toISOString(),
           next_reset: new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           can_refresh: true
@@ -88,12 +88,12 @@ export const healthStoryService = {
       }
       
       const used = count || 0;
-      const remaining = Math.max(0, 3 - used);
+      const remaining = Math.max(0, 10 - used);
       
       return {
         used,
         remaining,
-        limit: 3,
+        limit: 10,
         week_start: currentWeekStart.toISOString(),
         next_reset: new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         can_refresh: remaining > 0
@@ -216,6 +216,11 @@ export const healthStoryService = {
       
       // Backend returns status: "success" and the story data directly
       if (data.status === 'success' && data.story_id) {
+        // Check if it's a rate limit fallback response
+        if (data.content && data.content.includes('API issue: 429')) {
+          throw new Error('Rate limit reached. Please try again in a few moments.');
+        }
+        
         // Transform backend response to expected frontend format
         return {
           success: true,
