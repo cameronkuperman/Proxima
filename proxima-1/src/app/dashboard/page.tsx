@@ -345,7 +345,8 @@ export default function DashboardPage() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="px-4 pt-4 pb-2 flex-shrink-0"
+                  className="pt-4 pb-2 px-4 flex-shrink-0"
+                  style={{ paddingLeft: '48px' }}
                 >
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -362,7 +363,7 @@ export default function DashboardPage() {
             </AnimatePresence>
             
             {/* Timeline entries */}
-            <div className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar" style={{ paddingRight: '8px' }}>
+            <div className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar relative" style={{ paddingRight: '8px' }}>
               {timelineLoading && !hasLoaded ? (
                 // Loading state
                 <div className="space-y-8">
@@ -436,10 +437,10 @@ export default function DashboardPage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: Math.min(index * 0.05, 0.3) }}
-                      className="relative mb-8 flex items-start"
+                      className="relative mb-8"
                     >
-                      {/* Date dot with icon - Fixed positioning */}
-                      <div className={`absolute left-0 top-0 w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center flex-shrink-0`} style={{ left: '9px' }}>
+                      {/* Date dot with icon */}
+                      <div className={`absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center`} style={{ left: '9px' }}>
                         <div className={colors.iconColor}>
                           {getInteractionIcon(entry.interaction_type)}
                         </div>
