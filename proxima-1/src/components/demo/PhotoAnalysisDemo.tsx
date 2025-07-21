@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight, Download, Share2 } from 'lucide-react'
+import { ArrowLeft, Camera, Upload, Clock, TrendingUp, Lock, Image, Plus, X, AlertCircle, ChevronRight, Download, Share2, FileImage } from 'lucide-react'
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis'
 import { AnalysisResult } from '@/types/photo-analysis'
+import { useDropzone } from 'react-dropzone'
 
 interface PhotoAnalysisDemoProps {
   onComplete: () => void
@@ -96,44 +97,54 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
     }
   }, [charIndex, isTyping, exampleIndex, step, EXAMPLE_QUERIES])
 
-  const handlePhotoUpload = () => {
-    // Create a fake file for demo purposes
-    const canvas = document.createElement('canvas')
-    canvas.width = 200
-    canvas.height = 200
-    const ctx = canvas.getContext('2d')
-    if (ctx) {
-      // Create a gradient background for the demo image
-      const gradient = ctx.createLinearGradient(0, 0, 200, 200)
-      gradient.addColorStop(0, '#FF6B6B')
-      gradient.addColorStop(1, '#FF8C42')
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, 200, 200)
-      
-      // Add some text to indicate it's a demo image
-      ctx.fillStyle = 'white'
-      ctx.font = '16px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('Demo Photo', 100, 100)
-      ctx.fillText(`#${uploadedPhotos.length + 1}`, 100, 120)
+  const handlePhotoUpload = useCallback((acceptedFiles: File[]) => {
+    const remainingSlots = 5 - uploadedPhotos.length
+    const filesToAdd = acceptedFiles.slice(0, remainingSlots)
+    
+    if (filesToAdd.length < acceptedFiles.length) {
+      alert(`Maximum 5 photos allowed. Only first ${filesToAdd.length} photos were added.`)
     }
     
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], `demo_photo_${uploadedPhotos.length + 1}.jpg`, { type: 'image/jpeg' })
-        
-        const newPhoto: UploadedPhoto = {
-          id: Date.now().toString(),
-          name: file.name,
-          url: URL.createObjectURL(blob),
-          date: new Date().toLocaleDateString()
-        }
-        
-        setUploadedPhotos(prev => [...prev, newPhoto])
-        setUploadedFiles(prev => [...prev, file])
+    filesToAdd.forEach(file => {
+      const newPhoto: UploadedPhoto = {
+        id: Date.now().toString() + Math.random(),
+        name: file.name,
+        url: URL.createObjectURL(file),
+        date: new Date().toLocaleDateString()
       }
-    }, 'image/jpeg')
+      
+      setUploadedPhotos(prev => [...prev, newPhoto])
+      setUploadedFiles(prev => [...prev, file])
+    })
+  }, [uploadedPhotos.length])
+
+  const handleDemoPhotoUpload = async () => {
+    try {
+      // Load the melanoma stock image
+      const response = await fetch('/melaonastck.jpg')
+      
+      if (!response.ok) {
+        throw new Error('Demo image not found')
+      }
+      
+      const blob = await response.blob()
+      const file = new File([blob], 'melanoma_sample.jpg', { type: 'image/jpeg' })
+      handlePhotoUpload([file])
+    } catch (error) {
+      console.error('Demo image not available:', error)
+      alert('Demo image not found. Please check that melaonastck.jpg is in the public folder.')
+    }
   }
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handlePhotoUpload,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.heic', '.heif', '.webp']
+    },
+    maxSize: 10 * 1024 * 1024, // 10MB
+    multiple: true,
+    disabled: uploadedPhotos.length >= 5
+  })
 
   const startAnalysis = () => {
     setShowForm(true)
@@ -183,28 +194,33 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
       const mockAnalysis: AnalysisResult = {
         analysis_id: 'demo-analysis-1',
         analysis: {
-          primary_assessment: 'Atypical Nevus (Demo)',
-          confidence: 87,
+          primary_assessment: 'Suspicious Pigmented Lesion - Possible Melanoma',
+          confidence: 92,
           visual_observations: [
-            'Irregular borders detected',
-            'Asymmetrical shape',
-            'Multiple color variations present',
-            'Size approximately 8mm'
+            'Asymmetry: Lesion shows irregular, asymmetric shape',
+            'Border irregularity: Edges appear notched and uneven',
+            'Color variation: Multiple shades of brown and black observed',
+            'Diameter: Approximately 8-10mm (larger than 6mm threshold)',
+            'Evolution: Unable to assess without prior images'
           ],
           differential_diagnosis: [
+            'Melanoma (malignant)',
+            'Atypical/Dysplastic nevus',
             'Seborrheic keratosis',
-            'Melanoma',
-            'Dysplastic nevus'
+            'Blue nevus'
           ],
           recommendations: [
-            'Schedule a dermatologist appointment within 2 weeks',
-            'Monitor for any changes in size, color, or shape',
-            'Take photos every 2 weeks to track progression',
-            'Avoid sun exposure to the area'
+            'URGENT: Schedule dermatologist appointment within 1 week',
+            'Request dermoscopy examination',
+            'Consider biopsy for definitive diagnosis',
+            'Document with photography for comparison',
+            'Avoid trauma to the area',
+            'Use sun protection on all exposed skin'
           ],
           red_flags: [
-            'Irregular borders',
-            'Size greater than 6mm'
+            'ABCDE criteria positive: Asymmetry, Border, Color, Diameter',
+            'High-risk features for melanoma present',
+            'Requires immediate professional evaluation'
           ]
         },
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
@@ -346,37 +362,68 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                       ))}
                       
                       {uploadedPhotos.length < 5 && (
-                        <motion.button
-                          onClick={handlePhotoUpload}
+                        <motion.div
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-colors flex items-center justify-center group"
+                          {...getRootProps()}
+                          className="aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-colors flex items-center justify-center group cursor-pointer"
                         >
+                          <input {...getInputProps()} />
                           <Plus className="w-8 h-8 text-gray-600 group-hover:text-orange-500" />
-                        </motion.button>
+                        </motion.div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Initial Upload Button */}
+                {/* Initial Upload Area */}
                 {uploadedPhotos.length === 0 && (
-                  <motion.button
-                    onClick={handlePhotoUpload}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full"
-                  >
-                    <div className="border-2 border-dashed border-gray-600 rounded-2xl p-12 text-center hover:border-orange-500 hover:bg-gray-900/70 transition-all group">
-                      <Upload className="w-16 h-16 mx-auto mb-4 text-gray-500 group-hover:text-orange-500" />
-                      <p className="text-lg font-medium text-gray-300 mb-2">
-                        Click to upload photos
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        or drag and drop your images here
-                      </p>
+                  <div className="space-y-4">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      {...getRootProps()}
+                      className={`w-full cursor-pointer ${
+                        isDragActive ? 'scale-105' : ''
+                      }`}
+                    >
+                      <input {...getInputProps()} />
+                      <div className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all group ${
+                        isDragActive 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-gray-600 hover:border-orange-500 hover:bg-gray-900/70'
+                      }`}>
+                        <Upload className={`w-16 h-16 mx-auto mb-4 ${
+                          isDragActive ? 'text-orange-500' : 'text-gray-500 group-hover:text-orange-500'
+                        }`} />
+                        <p className="text-lg font-medium text-gray-300 mb-2">
+                          {isDragActive ? 'Drop your photos here' : 'Click or drag photos here'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          JPEG, PNG, HEIC up to 10MB each
+                        </p>
+                      </div>
+                    </motion.div>
+                    
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-700"></div>
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="px-3 bg-gray-900 text-gray-500">OR</span>
+                      </div>
                     </div>
-                  </motion.button>
+                    
+                    <motion.button
+                      onClick={handleDemoPhotoUpload}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-gray-300 flex items-center justify-center gap-2"
+                    >
+                      <FileImage className="w-5 h-5" />
+                      Use Sample Melanoma Photo
+                    </motion.button>
+                  </div>
                 )}
 
                 {/* Analyze Button */}
@@ -443,8 +490,8 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                         <div className="space-y-3">
                           {uploadedPhotos.map((photo, index) => (
                             <div key={photo.id} className="flex gap-3 items-start">
-                              <div className="w-16 h-16 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
-                                <Image className="w-8 h-8 text-gray-600" />
+                              <div className="w-16 h-16 rounded-lg bg-gray-800 overflow-hidden flex-shrink-0">
+                                <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
                               </div>
                               <div className="flex-1">
                                 <p className="text-xs text-gray-500 mb-1">Photo {index + 1} - {photo.date}</p>
@@ -507,6 +554,7 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                     <li>• Include a ruler or coin for size reference</li>
                     <li>• Take photos from the same angle each time</li>
                     <li>• Ensure the area is in focus</li>
+                    <li>• Try our sample melanoma photo for testing</li>
                   </ul>
                 </motion.div>
               )}
