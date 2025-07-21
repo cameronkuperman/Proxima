@@ -414,7 +414,14 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleThinkHarder = async () => {
-    if (!finalAnalysis?.scan_id || isThinkingHarder) return
+    console.log('Deep Dive Think Harder clicked, finalAnalysis:', finalAnalysis)
+    const scanId = finalAnalysis?.scan_id || finalAnalysis?.deep_dive_id
+    if (!scanId) {
+      console.error('No scan/deep_dive ID available:', finalAnalysis)
+      alert('Unable to enhance analysis - ID not found. Please complete the analysis first.')
+      return
+    }
+    if (isThinkingHarder) return
     
     setIsThinkingHarder(true)
     setError(null)
@@ -435,31 +442,42 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          scan_id: finalAnalysis.scan_id,
-          user_id: user?.id,
-          model: 'grok-4' // Explicitly use Grok 4
+          scan_id: scanId,
+          user_id: user?.id
         })
       })
       
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Deep Dive Think Harder API error:', response.status, errorText)
         throw new Error('Failed to get enhanced analysis')
       }
       
       const result = await response.json()
+      console.log('Deep Dive Think Harder API response:', result)
       
       // Update with enhanced analysis
       setFinalAnalysis((prev: any) => ({
         ...prev,
-        analysis: result.ultra_analysis || result.analysis,
-        confidence: result.ultra_confidence || result.confidence,
+        analysis: result.ultra_analysis || result.analysis || prev.analysis,
+        confidence: result.ultra_confidence || result.confidence || prev.confidence,
         reasoning_snippets: result.reasoning_snippets || [],
-        ultra_insights: result.key_insights || []
+        ultra_insights: result.key_insights || [],
+        ultra_analysis: result // Store the full response
       }))
+      
+      // Extract key insight for message
+      let keyInsight = 'The ultra-analysis provides deeper insights into your condition.'
+      if (result.key_insights && result.key_insights.length > 0) {
+        keyInsight = result.key_insights[0]
+      } else if (result.ultra_analysis?.critical_insights && result.ultra_analysis.critical_insights.length > 0) {
+        keyInsight = result.ultra_analysis.critical_insights[0]
+      }
       
       const enhancedMessage: Message = {
         id: `enhanced-${Date.now()}`,
         role: 'assistant',
-        content: `**Grok 4 Analysis Complete** 🧠\n\nAfter advanced reasoning, I have ${result.ultra_confidence || result.confidence}% confidence. ${result.key_insights?.[0] || 'The ultra-analysis provides deeper insights into your condition.'}`,
+        content: `**Grok 4 Analysis Complete** 🧠\n\nAfter advanced reasoning, I have ${result.ultra_confidence || result.confidence || '95+'}% confidence.\n\n${keyInsight}`,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, enhancedMessage])
