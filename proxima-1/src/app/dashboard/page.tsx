@@ -174,24 +174,19 @@ export default function DashboardPage() {
     // ONLY show tutorial if explicitly requested via URL parameter
     const shouldShowTutorial = searchParams.get('showTutorial') === 'true';
     
-    if (shouldShowTutorial && user?.id) {
-      console.log('Dashboard: showTutorial parameter detected, user exists, initializing tutorial');
+    if (shouldShowTutorial && user?.id && userProfile) {
+      console.log('Dashboard: showTutorial parameter detected, user and profile loaded, initializing tutorial');
       
-      // Small delay to ensure everything is loaded
-      const timer = setTimeout(() => {
-        // Initialize and force show tutorial
-        initializeTutorial(true);
-        
-        // Clean up the URL parameter
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('showTutorial');
-        router.replace(newUrl.pathname + newUrl.search);
-      }, 1000);
+      // Initialize and force show tutorial
+      initializeTutorial(true);
       
-      return () => clearTimeout(timer);
+      // Clean up the URL parameter  
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('showTutorial');
+      router.replace(newUrl.pathname + newUrl.search);
     }
     // DO NOT initialize tutorial otherwise
-  }, [user?.id, searchParams]); // Re-run when user is loaded
+  }, [user?.id, userProfile, searchParams]); // Re-run when user AND profile are loaded
 
   // Listen for events from FAB
   useEffect(() => {

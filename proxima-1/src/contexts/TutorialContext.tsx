@@ -153,20 +153,9 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Check if user has completed onboarding
-    try {
-      const { getUserProfile, isOnboardingComplete } = await import('@/utils/onboarding');
-      const profile = await getUserProfile(user.id, user.email || '', user.user_metadata?.name || '');
-      
-      if (!isOnboardingComplete(profile)) {
-        console.log('Tutorial: Onboarding not complete, blocking tutorial');
-        return;
-      }
-      console.log('Tutorial: Onboarding is complete');
-    } catch (error) {
-      console.error('Tutorial: Error checking onboarding status:', error);
-      return;
-    }
+    // If we're on the dashboard, we can assume onboarding is complete
+    // (OnboardingGuard would have redirected us otherwise)
+    console.log('Tutorial: On dashboard, assuming onboarding is complete');
     
     console.log('Tutorial: All checks passed, fetching tutorial data for user', user.id);
     setIsLoading(true);
@@ -202,29 +191,13 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     setActiveTour(tourName);
   };
 
-  const showWelcome = async () => {
+  const showWelcome = () => {
     console.log('Tutorial: showWelcome called');
     
     // Only show on dashboard
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/dashboard')) {
       console.log('Tutorial: Not on dashboard, cannot show welcome');
       return;
-    }
-    
-    // Check onboarding status first
-    if (user?.id) {
-      try {
-        const { getUserProfile, isOnboardingComplete } = await import('@/utils/onboarding');
-        const profile = await getUserProfile(user.id, user.email || '', user.user_metadata?.name || '');
-        
-        if (!isOnboardingComplete(profile)) {
-          console.log('Tutorial: Onboarding not complete, cannot show welcome');
-          return;
-        }
-      } catch (error) {
-        console.error('Tutorial: Error checking onboarding:', error);
-        return;
-      }
     }
     
     setShowWelcomeModal(true);
