@@ -189,6 +189,14 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   }
 
   const handleAskMeMore = async () => {
+    console.log('Ask Me More clicked, mode:', mode, 'scanData:', scanData)
+    
+    // For Deep Dive mode, this should not happen (Ask Me More is in the chat interface)
+    if (mode === 'deep') {
+      console.error('Ask Me More should not be called from QuickScanResults in Deep Dive mode')
+      return
+    }
+    
     if (!scanData.scan_id || isAskingMore) return
     
     setIsAskingMore(true)

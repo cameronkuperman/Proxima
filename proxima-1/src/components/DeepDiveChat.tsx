@@ -375,8 +375,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         analysis: result.analysis || {},
         confidence: result.confidence || 0,
         scan_id: result.deep_dive_id || null,
+        deep_dive_id: result.deep_dive_id || null,  // Add this for Think Harder
         questions_asked: result.questions_asked || 0,
-        reasoning_snippets: result.reasoning_snippets || []
+        reasoning_snippets: result.reasoning_snippets || [],
+        mode: 'deep'  // Ensure mode is set
       })
       setIsComplete(true)
       onComplete(result.analysis)
@@ -438,13 +440,19 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       // For Deep Dive, use the Ultra Think endpoint with Grok 4
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app'
       
+      // Try both scan_id and deep_dive_id in case backend expects different field
+      const requestBody = {
+        scan_id: scanId,
+        deep_dive_id: scanId,  // Include both in case backend expects this
+        user_id: user?.id
+      }
+      
+      console.log('Deep Dive Ultra Think request:', requestBody)
+      
       const response = await fetch(`${API_URL}/api/quick-scan/ultra-think`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scan_id: scanId,
-          user_id: user?.id
-        })
+        body: JSON.stringify(requestBody)
       })
       
       if (!response.ok) {
@@ -497,7 +505,15 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleAskMeMore = async () => {
-    if (!sessionId || isAskingMore) return
+    console.log('handleAskMeMore called, sessionId:', sessionId, 'isComplete:', isComplete)
+    
+    if (!sessionId) {
+      console.error('No session ID available for Ask Me More')
+      alert('Session not found. Please complete the initial analysis first.')
+      return
+    }
+    
+    if (isAskingMore) return
     
     setIsAskingMore(true)
     setError(null)
@@ -560,7 +576,13 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
 
   if (showReport && finalAnalysis) {
     console.log('Rendering QuickScanResults with finalAnalysis:', finalAnalysis)
-    return <QuickScanResults scanData={finalAnalysis} onNewScan={() => window.location.reload()} mode="deep" />
+    // Ensure we pass the correct data structure
+    const resultsData = {
+      ...finalAnalysis,
+      scan_id: finalAnalysis.scan_id || finalAnalysis.deep_dive_id,
+      mode: 'deep'
+    }
+    return <QuickScanResults scanData={resultsData} onNewScan={() => window.location.reload()} mode="deep" />
   }
 
   // Show loading state during initialization
@@ -664,7 +686,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           <motion.button
                             whileHover={{ scale: 1.02, y: -2 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => handleThinkHarder()}
+                            onClick={() => {
+                              console.log('Think Harder button clicked in chat, finalAnalysis:', finalAnalysis)
+                              handleThinkHarder()
+                            }}
                             disabled={isThinkingHarder || isAskingMore}
                             className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 text-purple-300 hover:from-purple-600/30 hover:to-pink-600/30 hover:text-purple-200 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                           >
@@ -703,7 +728,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           <motion.button
                             whileHover={{ scale: 1.02, y: -2 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => handleAskMeMore()}
+                            onClick={() => {
+                              console.log('Ask Me More button clicked in chat, sessionId:', sessionId)
+                              handleAskMeMore()
+                            }}
                             disabled={isThinkingHarder || isAskingMore}
                             className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                           >
