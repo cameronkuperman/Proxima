@@ -50,14 +50,21 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
     primaryCondition: analysis.primaryCondition || 'Health Analysis',
     likelihood: analysis.likelihood || 'Based on your symptoms, further evaluation may be helpful',
     symptoms: Array.isArray(analysis.symptoms) ? analysis.symptoms : [],
-    recommendations: Array.isArray(analysis.recommendations) ? analysis.recommendations : ['Consult with a healthcare professional', 'Monitor your symptoms', 'Rest and stay hydrated'],
+    recommendations: Array.isArray(analysis.recommendations) ? analysis.recommendations.map((rec: any) => 
+      typeof rec === 'string' ? rec : (rec.action || rec.text || 'See recommendation')) : 
+      ['Consult with a healthcare professional', 'Monitor your symptoms', 'Rest and stay hydrated'],
     urgency: analysis.urgency || 'medium',
     differentials: Array.isArray(analysis.differentials) ? analysis.differentials : [],
-    redFlags: Array.isArray(analysis.redFlags) ? analysis.redFlags : ['Severe or worsening symptoms', 'Difficulty breathing', 'Chest pain', 'High fever'],
-    selfCare: Array.isArray(analysis.selfCare) ? analysis.selfCare : ['Get adequate rest', 'Stay hydrated', 'Monitor symptoms'],
+    redFlags: Array.isArray(analysis.redFlags) ? analysis.redFlags.map((flag: any) => 
+      typeof flag === 'string' ? flag : (flag.condition || flag.symptom || flag.text || 'See warning')) : 
+      ['Severe or worsening symptoms', 'Difficulty breathing', 'Chest pain', 'High fever'],
+    selfCare: Array.isArray(analysis.selfCare) ? analysis.selfCare.map((care: any) => 
+      typeof care === 'string' ? care : (care.action || care.text || 'See care instruction')) : 
+      ['Get adequate rest', 'Stay hydrated', 'Monitor symptoms'],
     timeline: analysis.timeline || 'Recovery time varies by condition',
     followUp: analysis.followUp || 'Follow up if symptoms persist or worsen',
-    relatedSymptoms: Array.isArray(analysis.relatedSymptoms) ? analysis.relatedSymptoms : []
+    relatedSymptoms: Array.isArray(analysis.relatedSymptoms) ? analysis.relatedSymptoms.map((symptom: any) => 
+      typeof symptom === 'string' ? symptom : (symptom.name || symptom.text || 'See symptom')) : []
   }
 
   // Generate tracking suggestion when scan completes
@@ -457,7 +464,9 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                         <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                           <span className="text-green-400 font-bold">{index + 1}</span>
                         </div>
-                        <p className="text-gray-300">{rec}</p>
+                        <p className="text-gray-300">
+                          {typeof rec === 'string' ? rec : (rec.action || rec.text || JSON.stringify(rec))}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -530,7 +539,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                     {analysisResult.relatedSymptoms.map((symptom: any, index: number) => (
                       <div key={index} className="flex items-start gap-3 p-3 bg-gray-800/30 rounded-lg">
                         <Eye className="w-5 h-5 text-amber-400 mt-0.5" />
-                        <span className="text-gray-300">{symptom}</span>
+                        <span className="text-gray-300">{typeof symptom === 'string' ? symptom : (symptom.name || symptom.text || JSON.stringify(symptom))}</span>
                       </div>
                     ))}
                   </div>
