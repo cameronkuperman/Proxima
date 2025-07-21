@@ -215,3 +215,9 @@ html {
 .timeline-animating .timeline-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Ensure timeline icons stay aligned */
+.timeline-scrollbar > div {
+  transform: translateZ(0); /* Force GPU acceleration */
+  will-change: transform; /* Optimize for scrolling */
+}
