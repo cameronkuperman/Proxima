@@ -8,20 +8,23 @@ import HealthcarePros from "@/components/HealthcarePros";
 import About from "@/components/About";
 import Testimonials from "@/components/Testimonials";
 import Contact from "@/components/Contact";
+import UnifiedAuthGuard from "@/components/UnifiedAuthGuard";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-stretch">
-      <NavBar />
-      <Hero />
-      <HowItWorks />
-      <Features />
-      <PhotoAnalysis />
-      <AIPartners />
-      <HealthcarePros />
-      <About />
-      <Testimonials />
-      <Contact />
-    </main>
+    <UnifiedAuthGuard requireAuth={false}>
+      <main className="min-h-screen flex flex-col items-stretch">
+        <NavBar />
+        <Hero />
+        <HowItWorks />
+        <Features />
+        <PhotoAnalysis />
+        <AIPartners />
+        <HealthcarePros />
+        <About />
+        <Testimonials />
+        <Contact />
+      </main>
+    </UnifiedAuthGuard>
   );
 }

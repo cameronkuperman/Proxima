@@ -41,16 +41,8 @@ export default function LiquidGlassLogin() {
       console.log('Initial session check:', session ? 'User is logged in' : 'No session');
       setSession(session);
       if (session) {
-        // Check if we're coming from OAuth callback
-        const isOAuthCallback = window.location.search.includes('code=') || 
-                               window.location.search.includes('error=');
-        
-        if (!isOAuthCallback) {
-          console.log('User already logged in (not OAuth), redirecting to dashboard...');
-          router.push('/dashboard');
-        } else {
-          console.log('OAuth callback in progress, not redirecting');
-        }
+        console.log('User already logged in, redirecting to dashboard...');
+        router.push('/dashboard');
       }
     });
 
@@ -59,12 +51,7 @@ export default function LiquidGlassLogin() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session ? 'User logged in' : 'User logged out');
       setSession(session);
-      // Let the middleware handle redirects instead of automatically redirecting here
-      // This prevents conflicts with onboarding flow
-      if (session && event === 'SIGNED_IN') {
-        console.log('User just signed in, event:', event);
-        // Don't redirect here - let the OAuth callback handle it
-      }
+      // Let the global redirect handler manage redirects to prevent conflicts
     });
 
     return () => subscription.unsubscribe();

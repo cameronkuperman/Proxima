@@ -8,8 +8,7 @@ import HealthProfileModal from '@/components/HealthProfileModal';
 import OracleChat from '@/components/OracleChat';
 import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { useAuth } from '@/contexts/AuthContext';
-import AuthGuard from '@/components/AuthGuard';
-import OnboardingGuard from '@/components/OnboardingGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 import UnifiedFAB from '@/components/UnifiedFAB';
 import { useTutorial } from '@/contexts/TutorialContext';
 import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, Stethoscope, ClipboardList } from 'lucide-react';
@@ -340,8 +339,7 @@ export default function DashboardPage() {
   // const minValue = Math.min(...currentGraph.data.map(d => d.value));
 
   return (
-    <AuthGuard requireAuth={true}>
-      <OnboardingGuard>
+    <UnifiedAuthGuard requireAuth={true}>
       <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden transition-all duration-1000">
         {/* Ambient Health Background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${getAmbientGradient()} transition-all duration-3000`} />
@@ -1312,7 +1310,6 @@ export default function DashboardPage() {
         {/* Unified FAB */}
         <UnifiedFAB />
       </div>
-      </OnboardingGuard>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

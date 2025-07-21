@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
-import AuthGuard from '@/components/AuthGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function HistoryPage() {
@@ -318,20 +318,20 @@ export default function HistoryPage() {
 
   if (loading) {
     return (
-      <AuthGuard requireAuth={true}>
+      <UnifiedAuthGuard requireAuth={true}>
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
           <div className="space-y-4">
             <div className="w-12 h-12 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-gray-400">Loading interaction details...</p>
           </div>
         </div>
-      </AuthGuard>
+      </UnifiedAuthGuard>
     );
   }
 
   if (error || !interaction) {
     return (
-      <AuthGuard requireAuth={true}>
+      <UnifiedAuthGuard requireAuth={true}>
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
           <div className="text-center space-y-4">
             <p className="text-red-400">{error || 'Interaction not found'}</p>
@@ -343,12 +343,12 @@ export default function HistoryPage() {
             </button>
           </div>
         </div>
-      </AuthGuard>
+      </UnifiedAuthGuard>
     );
   }
 
   return (
-    <AuthGuard requireAuth={true}>
+    <UnifiedAuthGuard requireAuth={true}>
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* Background Effects */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -468,6 +468,6 @@ export default function HistoryPage() {
           </motion.div>
         </div>
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

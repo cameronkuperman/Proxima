@@ -8,7 +8,7 @@ import SubscriptionCard from '@/components/profile/SubscriptionCard';
 import AccountSettings from '@/components/profile/AccountSettings';
 import HealthDataSummary from '@/components/profile/HealthDataSummary';
 import HealthProfileModal from '@/components/HealthProfileModal';
-import OnboardingGuard from '@/components/OnboardingGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <OnboardingGuard>
+    <UnifiedAuthGuard requireAuth={true}>
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header */}
       <div className="border-b border-white/[0.08] bg-[#0a0a0a]/80 backdrop-blur-sm sticky top-0 z-40">
@@ -109,6 +109,6 @@ export default function ProfilePage() {
         onSave={handleProfileSave}
       />
     </div>
-    </OnboardingGuard>
+    </UnifiedAuthGuard>
   );
 }

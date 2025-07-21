@@ -9,7 +9,7 @@ import { ReportViewerModal } from '@/components/health/ReportViewerModal';
 import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { GeneratedReport } from '@/services/reportsService';
 import { useAuth } from '@/contexts/AuthContext';
-import AuthGuard from '@/components/AuthGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function ReportsPage() {
 
 
   return (
-    <AuthGuard requireAuth={true}>
+    <UnifiedAuthGuard requireAuth={true}>
       <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden">
         {/* Ambient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-blue-600/5 transition-all duration-3000" />
@@ -126,6 +126,6 @@ export default function ReportsPage() {
           onClose={() => setShowQuickChat(false)}
         />
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

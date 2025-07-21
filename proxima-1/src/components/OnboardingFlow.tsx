@@ -142,8 +142,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       const result = await completeOnboarding(user.id, dataToSubmit);
       
       if (result.success) {
-        // Recheck onboarding status to update the global state
-        await recheckOnboarding();
+        // Immediately recheck onboarding status to update the global state
+        console.log('OnboardingFlow: Completed successfully, invalidating cache...');
+        await recheckOnboarding(); // This forces a fresh DB call
         onComplete?.();
         router.push('/dashboard?showTutorial=true');
       } else {
