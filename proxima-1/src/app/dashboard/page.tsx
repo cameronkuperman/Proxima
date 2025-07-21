@@ -19,6 +19,7 @@ import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal
 import LogDataModal from '@/components/tracking/LogDataModal';
 import TrackingChart from '@/components/tracking/TrackingChart';
 import { DashboardItem } from '@/services/trackingService';
+import HistoryModal from '@/components/HistoryModal';
 import { useTimeline } from '@/hooks/useTimeline';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -148,6 +149,10 @@ export default function DashboardPage() {
   const [trackingPage, setTrackingPage] = useState(0);
   const [selectedTrackingItem, setSelectedTrackingItem] = useState<DashboardItem | null>(null);
   const itemsPerPage = 4;
+  
+  // History modal state
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
   
   // Past reports queue
   const [reportQueue] = useState([
@@ -442,7 +447,10 @@ export default function DashboardPage() {
                             className="ml-12"
                           >
                             <div 
-                              onClick={() => handleItemClick(entry)}
+                              onClick={() => {
+                                setSelectedHistoryItem(entry);
+                                setHistoryModalOpen(true);
+                              }}
                               className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all`}
                             >
                               <div className="flex items-center justify-between mb-1">
@@ -1210,6 +1218,20 @@ export default function DashboardPage() {
               setShowChartModal(false);
               setChartConfigId(null);
             }}
+          />
+        )}
+        
+        {/* History Modal */}
+        {historyModalOpen && selectedHistoryItem && (
+          <HistoryModal
+            isOpen={historyModalOpen}
+            onClose={() => {
+              setHistoryModalOpen(false);
+              setSelectedHistoryItem(null);
+            }}
+            interactionId={selectedHistoryItem.id}
+            interactionType={selectedHistoryItem.interaction_type}
+            metadata={selectedHistoryItem.metadata}
           />
         )}
       </div>

@@ -132,56 +132,12 @@ export function useTimeline(options: UseTimelineOptions = {}) {
     }
   }, [fetchTimeline, isLoadingMore, pagination]);
   
-  // Handle timeline item click with validation
+  // Handle timeline item click - removed since we're using modal in dashboard
   const handleItemClick = useCallback(async (interaction: TimelineInteraction) => {
-    try {
-      // For tracking logs, open the chart modal instead of navigating
-      if (interaction.interaction_type === 'tracking_log') {
-        // This will be handled by the dashboard component
-        return { type: 'modal', configId: interaction.metadata.config_id };
-      }
-      
-      // Navigate based on interaction type
-      let navigationPath = '';
-      
-      switch (interaction.interaction_type) {
-        case 'quick_scan':
-          // For now, just go to the scan page
-          // TODO: Implement a way to view historical scan results
-          navigationPath = `/scan?mode=quick&result=${interaction.id}`;
-          toast.info('Viewing historical scans coming soon!');
-          break;
-          
-        case 'deep_dive':
-          // For now, go to scan page in deep mode
-          navigationPath = `/scan?mode=deep&session=${interaction.id}`;
-          toast.info('Viewing historical deep dives coming soon!');
-          break;
-          
-        case 'photo_analysis':
-          navigationPath = `/photo-analysis?session=${interaction.metadata.session_id || interaction.id}`;
-          break;
-          
-        case 'report':
-          navigationPath = `/reports/${interaction.id}`;
-          break;
-          
-        case 'oracle_chat':
-          navigationPath = `/oracle?conversation=${interaction.id}`;
-          break;
-      }
-      
-      if (navigationPath) {
-        router.push(navigationPath);
-      } else {
-        toast.error('This item is no longer available');
-      }
-      
-    } catch (err) {
-      console.error('Navigation error:', err);
-      toast.error('Unable to open this item');
-    }
-  }, [router]);
+    // This is now handled by the dashboard with the modal
+    // Keeping this for backwards compatibility
+    console.log('Timeline item clicked:', interaction);
+  }, []);
   
   // Get color gradients for interaction types
   const getInteractionColor = useCallback((type: string) => {
