@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ReportViewer } from '@/components/ReportViewer';
 import { reportService } from '@/services/reportService';
-import AuthGuard from '@/components/AuthGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function ReportViewPage() {
   const params = useParams();
@@ -35,17 +35,17 @@ export default function ReportViewPage() {
 
   if (loading) {
     return (
-      <AuthGuard requireAuth={true}>
+      <UnifiedAuthGuard requireAuth={true}>
         <div className="flex justify-center items-center h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </AuthGuard>
+      </UnifiedAuthGuard>
     );
   }
 
   if (error || !report) {
     return (
-      <AuthGuard requireAuth={true}>
+      <UnifiedAuthGuard requireAuth={true}>
         <div className="container mx-auto p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
@@ -58,18 +58,18 @@ export default function ReportViewPage() {
             </button>
           </div>
         </div>
-      </AuthGuard>
+      </UnifiedAuthGuard>
     );
   }
 
   return (
-    <AuthGuard requireAuth={true}>
+    <UnifiedAuthGuard requireAuth={true}>
       <div className="container mx-auto p-6">
         <ReportViewer 
           report={report} 
           onBack={() => router.push('/reports')}
         />
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

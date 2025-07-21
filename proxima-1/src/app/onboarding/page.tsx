@@ -1,13 +1,10 @@
 import OnboardingFlow from '@/components/OnboardingFlow';
-import AuthGuard from '@/components/AuthGuard';
-import OnboardingGuard from '@/components/OnboardingGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function OnboardingPage() {
   return (
-    <AuthGuard requireAuth={true}>
-      <OnboardingGuard>
-        <OnboardingFlow />
-      </OnboardingGuard>
-    </AuthGuard>
+    <UnifiedAuthGuard requireAuth={true} allowIncompleteOnboarding={true}>
+      <OnboardingFlow />
+    </UnifiedAuthGuard>
   );
 } 

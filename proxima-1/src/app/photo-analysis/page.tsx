@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Camera, Upload, Clock, TrendingUp, ArrowLeft, Plus, X, AlertCircle, Check, Download, Share2, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import AuthGuard from '@/components/AuthGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 import PhotoUploadZone from '@/components/photo-analysis/PhotoUploadZone';
 import PhotoAnalysisResults from '@/components/photo-analysis/PhotoAnalysisResults';
 import PhotoSessionHistory from '@/components/photo-analysis/PhotoSessionHistory';
@@ -176,7 +176,7 @@ export default function PhotoAnalysisPage() {
   };
 
   return (
-    <AuthGuard requireAuth={true}>
+    <UnifiedAuthGuard requireAuth={true}>
       <div className="min-h-screen bg-[#0a0a0a] relative">
         {/* Background */}
         <div className="absolute inset-0 overflow-hidden">
@@ -384,6 +384,6 @@ export default function PhotoAnalysisPage() {
           }}
         />
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import UnifiedScanForm from '@/components/UnifiedScanForm'
 import QuickScanResults from '@/components/QuickScanResults'
 import DeepDiveChat from '@/components/DeepDiveChat'
-import AuthGuard from '@/components/AuthGuard'
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard'
 import { useQuickScan } from '@/hooks/useQuickScan'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserProfile } from '@/utils/onboarding'
@@ -103,7 +103,7 @@ function ScanPageContent() {
   }
 
   return (
-    <AuthGuard>
+    <UnifiedAuthGuard requireAuth={true}>
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
         {/* Header */}
         <div className="sticky top-0 z-50 backdrop-blur-lg bg-gray-900/50 border-b border-white/10">
@@ -241,7 +241,7 @@ function ScanPageContent() {
           </AnimatePresence>
         </div>
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }
 

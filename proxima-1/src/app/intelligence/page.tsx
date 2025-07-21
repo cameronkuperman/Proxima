@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import NarrativeView from '@/components/intelligence/NarrativeView';
 import DataView from '@/components/intelligence/DataView';
-import OnboardingGuard from '@/components/OnboardingGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function IntelligencePage() {
   const router = useRouter();
   const [activeView, setActiveView] = useState<'narrative' | 'data'>('narrative');
 
   return (
-    <OnboardingGuard>
+    <UnifiedAuthGuard requireAuth={true}>
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header */}
       <div className="border-b border-white/[0.08] bg-[#0a0a0a]/80 backdrop-blur-sm sticky top-0 z-40">
@@ -68,6 +68,6 @@ export default function IntelligencePage() {
         </AnimatePresence>
       </div>
     </div>
-    </OnboardingGuard>
+    </UnifiedAuthGuard>
   );
 }

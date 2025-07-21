@@ -1,12 +1,12 @@
 'use client';
 
 import OracleFullScreen from '@/components/OracleFullScreen';
-import OnboardingGuard from '@/components/OnboardingGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function OraclePage() {
   return (
-    <OnboardingGuard>
+    <UnifiedAuthGuard requireAuth={true}>
       <OracleFullScreen />
-    </OnboardingGuard>
+    </UnifiedAuthGuard>
   );
 }

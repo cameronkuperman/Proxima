@@ -59,28 +59,18 @@ export async function GET(request: NextRequest) {
       
       // Create medical record for OAuth users if it doesn't exist
       if (data.session?.user) {
-        console.log('OAuth callback: Processing user:', data.session.user.id, data.session.user.email);
-        
         // Check if medical record already exists
-        const { data: existingProfile, error: fetchError } = await supabase
+        const { data: existingProfile } = await supabase
           .from('medical')
           .select('id, age, height, weight, personal_health_context')
           .eq('id', data.session.user.id)
           .single()
         
-        console.log('OAuth callback: Existing profile check:', {
-          hasProfile: !!existingProfile,
-          fetchError: fetchError?.message,
-          profileData: existingProfile
-        });
-        
         let isNewUser = false;
         
         // Only create if it doesn't exist
-        if (!existingProfile || fetchError?.code === 'PGRST116') {
+        if (!existingProfile) {
           isNewUser = true;
-          console.log('OAuth callback: Creating new medical record for user');
-          
           const { error: profileError } = await supabase
             .from('medical')
             .insert({
@@ -111,14 +101,6 @@ export async function GET(request: NextRequest) {
                                        existingProfile.weight && 
                                        existingProfile.personal_health_context;
           
-          console.log('OAuth callback: Checking onboarding status:', {
-            age: existingProfile.age,
-            height: existingProfile.height,
-            weight: existingProfile.weight,
-            personal_health_context: existingProfile.personal_health_context,
-            isComplete: isOnboardingComplete
-          });
-          
           if (!isOnboardingComplete) {
             isNewUser = true; // Treat as new user if onboarding not complete
           }
@@ -126,47 +108,13 @@ export async function GET(request: NextRequest) {
           console.log('Medical record already exists for OAuth user, onboarding complete:', !isNewUser)
         }
         
-        // Longer delay to ensure database writes complete
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Small delay to ensure database writes complete
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Redirect based on user status
         if (isNewUser) {
           console.log('OAuth callback: New user or incomplete onboarding, redirecting to onboarding');
-          
-          // Verify the profile was created/exists
-          const { data: verifyProfile } = await supabase
-            .from('medical')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .single();
-          
-          console.log('OAuth callback: Verified profile state:', {
-            exists: !!verifyProfile,
-            hasAge: verifyProfile?.age,
-            hasHeight: verifyProfile?.height,
-            hasWeight: verifyProfile?.weight,
-            hasHealthContext: verifyProfile?.personal_health_context
-          });
-          
-          // Create clean redirect URL
-          const onboardingUrl = new URL('/onboarding', request.url);
-          onboardingUrl.searchParams.set('oauth_redirect', 'true');
-          onboardingUrl.searchParams.set('new_user', 'true');
-          
-          console.log('OAuth callback: Redirecting new user to:', onboardingUrl.toString());
-          
-          // Create response with cookie
-          const response = NextResponse.redirect(onboardingUrl);
-          
-          // Set cookie for middleware to bypass checks
-          response.cookies.set('oauth_onboarding_redirect', 'true', {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 // 1 minute
-          });
-          
-          return response;
+          return NextResponse.redirect(new URL('/onboarding', request.url))
         }
       }
     } catch (error) {
@@ -185,13 +133,5 @@ export async function GET(request: NextRequest) {
   // URL to redirect to after sign in process completes
   // If we get here, user has completed onboarding
   console.log('OAuth callback: Existing user with complete onboarding, redirecting to dashboard');
-  
-  // Use the request URL to construct redirect
-  const dashboardUrl = new URL('/dashboard', request.url);
-  
-  console.log('OAuth callback: About to redirect to:', dashboardUrl.toString());
-  
-  return NextResponse.redirect(dashboardUrl, {
-    status: 302  // Use 302 for temporary redirect
-  })
+  return NextResponse.redirect(new URL('/dashboard', request.url))
 }

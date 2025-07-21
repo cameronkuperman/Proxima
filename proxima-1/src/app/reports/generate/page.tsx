@@ -4,17 +4,17 @@ import { useState } from 'react';
 import { ReportGenerator } from '@/components/ReportGenerator';
 import { ReportList } from '@/components/ReportList';
 import { useAuth } from '@/contexts/AuthContext';
-import AuthGuard from '@/components/AuthGuard';
+import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function ReportsGeneratePage() {
   const { user } = useAuth();
   const [showGenerator, setShowGenerator] = useState(false);
   const [refreshList, setRefreshList] = useState(0);
 
-  if (!user) return <AuthGuard requireAuth={true}><div>Please login to view reports</div></AuthGuard>;
+  if (!user) return <UnifiedAuthGuard requireAuth={true}><div>Please login to view reports</div></UnifiedAuthGuard>;
 
   return (
-    <AuthGuard requireAuth={true}>
+    <UnifiedAuthGuard requireAuth={true}>
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Medical Reports</h1>
@@ -38,6 +38,6 @@ export default function ReportsGeneratePage() {
           <ReportList key={refreshList} userId={user.id} />
         )}
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }
