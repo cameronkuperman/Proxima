@@ -182,8 +182,10 @@ export default function NarrativeView() {
           data_sources: response.health_story.data_sources
         };
 
-        setHealthStories([newStory, ...healthStories]);
-        updateEpisodesFromStories([newStory, ...healthStories]);
+        const updatedStories = [newStory, ...healthStories];
+        setHealthStories(updatedStories);
+        updateEpisodesFromStories(updatedStories);
+        setCurrentEpisode(0); // Show the newly generated story
       } else {
         const errorMessage = response.error || response.message || 'Failed to generate health story';
         setError(errorMessage);
