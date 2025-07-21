@@ -100,29 +100,100 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [completedTours, setCompletedTours] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDashboardPage, setIsDashboardPage] = useState(false);
+  
+  // Track current page - update on pathname changes
+  useEffect(() => {
+    const checkPage = () => {
+      if (typeof window !== 'undefined') {
+        const onDashboard = window.location.pathname.includes('/dashboard');
+        const onOnboarding = window.location.pathname.includes('/onboarding');
+        
+        // Never show tutorial during onboarding
+        if (onOnboarding) {
+          setShowWelcomeModal(false);
+          setActiveTour(null);
+        }
+        
+        setIsDashboardPage(onDashboard);
+      }
+    };
+    
+    checkPage();
+    
+    // Listen for navigation changes
+    window.addEventListener('popstate', checkPage);
+    return () => window.removeEventListener('popstate', checkPage);
+  }, []);
+  
+  // Reset initialization when user changes
+  useEffect(() => {
+    setIsInitialized(false);
+    setShowWelcomeModal(false);
+  }, [user?.id]);
 
   // Initialize function to be called from dashboard
-  const initializeTutorial = async () => {
-    if (isInitialized || !user?.id) return; // Prevent multiple initializations
+  const initializeTutorial = async (forceShow: boolean = false) => {
+    console.log('Tutorial: initializeTutorial called with forceShow:', forceShow);
     
+    // Don't initialize if no user
+    if (!user?.id) {
+      console.log('Tutorial: No user ID, skipping initialization');
+      return;
+    }
+    
+    // Only initialize on dashboard page
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/dashboard')) {
+      console.log('Tutorial: Not on dashboard, skipping initialization');
+      return;
+    }
+    
+    if (isLoading) {
+      console.log('Tutorial: Already loading, skipping');
+      return;
+    }
+    
+    // Check if user has completed onboarding
+    try {
+      const { getUserProfile, isOnboardingComplete } = await import('@/utils/onboarding');
+      const profile = await getUserProfile(user.id, user.email || '', user.user_metadata?.name || '');
+      
+      if (!isOnboardingComplete(profile)) {
+        console.log('Tutorial: Onboarding not complete, blocking tutorial');
+        return;
+      }
+      console.log('Tutorial: Onboarding is complete');
+    } catch (error) {
+      console.error('Tutorial: Error checking onboarding status:', error);
+      return;
+    }
+    
+    console.log('Tutorial: All checks passed, fetching tutorial data for user', user.id);
     setIsLoading(true);
+    
     try {
       // Fetch user's tutorial progress from Supabase
       const tutorialData = await tutorialService.getUserTutorialProgress(user.id);
+      console.log('Tutorial: Fetched tutorial data:', tutorialData);
       
       if (tutorialData) {
         setCompletedTours(tutorialData.completed_tours || []);
+        setIsInitialized(true);
         
-        if (!tutorialData.has_seen_welcome) {
-          // Small delay to ensure dashboard is loaded
-          setTimeout(() => setShowWelcomeModal(true), 1000);
+        // Show if forceShow is true AND user hasn't seen welcome
+        if (forceShow && !tutorialData.has_seen_welcome) {
+          console.log('Tutorial: Showing welcome modal after onboarding');
+          setShowWelcomeModal(true);
+        } else if (forceShow) {
+          console.log('Tutorial: User has already seen welcome');
         }
+      } else {
+        console.log('Tutorial: No tutorial data returned');
       }
     } catch (error) {
-      console.error('Error initializing tutorial:', error);
+      console.error('Tutorial: Error initializing:', error);
     } finally {
       setIsLoading(false);
-      setIsInitialized(true);
     }
   };
 
@@ -131,7 +202,31 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     setActiveTour(tourName);
   };
 
-  const showWelcome = () => {
+  const showWelcome = async () => {
+    console.log('Tutorial: showWelcome called');
+    
+    // Only show on dashboard
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/dashboard')) {
+      console.log('Tutorial: Not on dashboard, cannot show welcome');
+      return;
+    }
+    
+    // Check onboarding status first
+    if (user?.id) {
+      try {
+        const { getUserProfile, isOnboardingComplete } = await import('@/utils/onboarding');
+        const profile = await getUserProfile(user.id, user.email || '', user.user_metadata?.name || '');
+        
+        if (!isOnboardingComplete(profile)) {
+          console.log('Tutorial: Onboarding not complete, cannot show welcome');
+          return;
+        }
+      } catch (error) {
+        console.error('Tutorial: Error checking onboarding:', error);
+        return;
+      }
+    }
+    
     setShowWelcomeModal(true);
   };
 
@@ -170,19 +265,24 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
       
-      <TutorialWelcome
-        isOpen={showWelcomeModal}
-        onClose={handleWelcomeClose}
-        onStartTour={startTour}
-      />
-      
-      {activeTour && (
-        <TutorialTour
-          isActive={true}
-          onComplete={handleTourComplete}
-          steps={tours[activeTour]}
-          tourName={activeTour}
-        />
+      {/* Only show tutorial modals on dashboard AND not on onboarding */}
+      {isDashboardPage && typeof window !== 'undefined' && !window.location.pathname.includes('/onboarding') && (
+        <>
+          <TutorialWelcome
+            isOpen={showWelcomeModal}
+            onClose={handleWelcomeClose}
+            onStartTour={startTour}
+          />
+          
+          {activeTour && (
+            <TutorialTour
+              isActive={true}
+              onComplete={handleTourComplete}
+              steps={tours[activeTour]}
+              tourName={activeTour}
+            />
+          )}
+        </>
       )}
     </TutorialContext.Provider>
   );
