@@ -414,7 +414,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleThinkHarder = async () => {
-    if (!sessionId || isThinkingHarder) return
+    if (!finalAnalysis?.scan_id || isThinkingHarder) return
     
     setIsThinkingHarder(true)
     setError(null)
@@ -422,32 +422,44 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     const thinkingMessage: Message = {
       id: `thinking-${Date.now()}`,
       role: 'assistant',
-      content: "Let me think harder about your case using advanced AI reasoning. This may take a moment...",
+      content: "Let me engage Grok 4's advanced reasoning capabilities for a deeper analysis. This may take a moment...",
       timestamp: new Date()
     }
     setMessages(prev => [...prev, thinkingMessage])
     
     try {
-      // Call backend API for "Think Harder" functionality
-      const result = await deepDiveClient.thinkHarder(
-        sessionId,
-        finalAnalysis?.analysis,
-        user?.id,
-        'o4-mini' // Use o4-mini (high) model for thinking harder
-      )
+      // For Deep Dive, use the Ultra Think endpoint with Grok 4
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app'
+      
+      const response = await fetch(`${API_URL}/api/quick-scan/ultra-think`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scan_id: finalAnalysis.scan_id,
+          user_id: user?.id,
+          model: 'grok-4' // Explicitly use Grok 4
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to get enhanced analysis')
+      }
+      
+      const result = await response.json()
       
       // Update with enhanced analysis
       setFinalAnalysis((prev: any) => ({
         ...prev,
-        analysis: result.enhanced_analysis,
-        confidence: result.enhanced_confidence,
-        reasoning_snippets: result.reasoning_snippets || []
+        analysis: result.ultra_analysis || result.analysis,
+        confidence: result.ultra_confidence || result.confidence,
+        reasoning_snippets: result.reasoning_snippets || [],
+        ultra_insights: result.key_insights || []
       }))
       
       const enhancedMessage: Message = {
         id: `enhanced-${Date.now()}`,
         role: 'assistant',
-        content: `**Enhanced Analysis Complete** 🧠\n\nAfter deeper reasoning, I have ${result.enhanced_confidence}% confidence. ${result.key_insights || 'The enhanced analysis provides additional insights into your condition.'}`,
+        content: `**Grok 4 Analysis Complete** 🧠\n\nAfter advanced reasoning, I have ${result.ultra_confidence || result.confidence}% confidence. ${result.key_insights?.[0] || 'The ultra-analysis provides deeper insights into your condition.'}`,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, enhancedMessage])
@@ -457,7 +469,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content: "I'm having trouble accessing the advanced reasoning model right now. The original analysis remains accurate.",
+        content: "I'm having trouble accessing Grok 4 right now. The original analysis remains accurate.",
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -659,7 +671,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                                   animate={{ opacity: 1 }}
                                   className="font-medium"
                                 >
-                                  Engaging o4-mini...
+                                  Grokking your symptoms...
                                 </motion.div>
                               </>
                             ) : (
