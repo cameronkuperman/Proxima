@@ -119,33 +119,95 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
   }, [uploadedPhotos.length])
 
   const handleDemoPhotoUpload = () => {
-    // Create a fake file for demo purposes
+    // Create a realistic-looking medical demo image
     const canvas = document.createElement('canvas')
-    canvas.width = 200
-    canvas.height = 200
+    canvas.width = 400
+    canvas.height = 400
     const ctx = canvas.getContext('2d')
     if (ctx) {
-      // Create a gradient background for the demo image
-      const gradient = ctx.createLinearGradient(0, 0, 200, 200)
-      gradient.addColorStop(0, '#FF6B6B')
-      gradient.addColorStop(1, '#FF8C42')
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, 200, 200)
+      // Background - skin tone
+      ctx.fillStyle = '#F5DEB3'
+      ctx.fillRect(0, 0, 400, 400)
       
-      // Add some text to indicate it's a demo image
-      ctx.fillStyle = 'white'
-      ctx.font = '16px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('Demo Photo', 100, 100)
-      ctx.fillText(`#${uploadedPhotos.length + 1}`, 100, 120)
+      // Add texture to simulate skin
+      for (let i = 0; i < 100; i++) {
+        ctx.fillStyle = `rgba(${220 + Math.random() * 20}, ${180 + Math.random() * 20}, ${140 + Math.random() * 20}, 0.1)`
+        ctx.beginPath()
+        ctx.arc(Math.random() * 400, Math.random() * 400, Math.random() * 2, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      
+      // Create a suspicious mole/lesion in the center
+      const centerX = 200
+      const centerY = 200
+      
+      // Asymmetric shape
+      ctx.beginPath()
+      ctx.moveTo(centerX - 30, centerY)
+      ctx.quadraticCurveTo(centerX - 40, centerY - 20, centerX - 20, centerY - 35)
+      ctx.quadraticCurveTo(centerX, centerY - 40, centerX + 25, centerY - 30)
+      ctx.quadraticCurveTo(centerX + 35, centerY - 10, centerX + 30, centerY + 10)
+      ctx.quadraticCurveTo(centerX + 25, centerY + 30, centerX + 5, centerY + 35)
+      ctx.quadraticCurveTo(centerX - 10, centerY + 30, centerX - 30, centerY)
+      ctx.closePath()
+      
+      // Fill with varied colors (characteristic of melanoma)
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40)
+      gradient.addColorStop(0, '#2C1810')
+      gradient.addColorStop(0.3, '#4A2C2A')
+      gradient.addColorStop(0.6, '#6B4423')
+      gradient.addColorStop(0.8, '#8B6B47')
+      gradient.addColorStop(1, '#A0826D')
+      ctx.fillStyle = gradient
+      ctx.fill()
+      
+      // Add irregular border
+      ctx.strokeStyle = '#1A0E0A'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      
+      // Add some darker spots within
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = `rgba(${10 + Math.random() * 20}, ${5 + Math.random() * 10}, ${5 + Math.random() * 10}, 0.7)`
+        ctx.beginPath()
+        ctx.arc(
+          centerX + (Math.random() - 0.5) * 30,
+          centerY + (Math.random() - 0.5) * 30,
+          Math.random() * 4 + 2,
+          0,
+          Math.PI * 2
+        )
+        ctx.fill()
+      }
+      
+      // Add ruler reference (for scale)
+      ctx.strokeStyle = '#333'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(50, 350)
+      ctx.lineTo(150, 350)
+      ctx.stroke()
+      
+      // Ruler markings
+      for (let i = 0; i <= 10; i++) {
+        ctx.beginPath()
+        ctx.moveTo(50 + i * 10, 350)
+        ctx.lineTo(50 + i * 10, i % 5 === 0 ? 340 : 345)
+        ctx.stroke()
+      }
+      
+      // Add text
+      ctx.fillStyle = '#333'
+      ctx.font = '12px Arial'
+      ctx.fillText('1 cm', 95, 365)
     }
     
     canvas.toBlob((blob) => {
       if (blob) {
-        const file = new File([blob], `demo_photo_${uploadedPhotos.length + 1}.jpg`, { type: 'image/jpeg' })
+        const file = new File([blob], 'suspicious_mole_demo.jpg', { type: 'image/jpeg' })
         handlePhotoUpload([file])
       }
-    }, 'image/jpeg')
+    }, 'image/jpeg', 0.9)
   }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -206,28 +268,33 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
       const mockAnalysis: AnalysisResult = {
         analysis_id: 'demo-analysis-1',
         analysis: {
-          primary_assessment: 'Atypical Nevus (Demo)',
-          confidence: 87,
+          primary_assessment: 'Suspicious Pigmented Lesion - Possible Melanoma',
+          confidence: 92,
           visual_observations: [
-            'Irregular borders detected',
-            'Asymmetrical shape',
-            'Multiple color variations present',
-            'Size approximately 8mm'
+            'Asymmetry: Lesion shows irregular, asymmetric shape',
+            'Border irregularity: Edges appear notched and uneven',
+            'Color variation: Multiple shades of brown and black observed',
+            'Diameter: Approximately 8-10mm (larger than 6mm threshold)',
+            'Evolution: Unable to assess without prior images'
           ],
           differential_diagnosis: [
+            'Melanoma (malignant)',
+            'Atypical/Dysplastic nevus',
             'Seborrheic keratosis',
-            'Melanoma',
-            'Dysplastic nevus'
+            'Blue nevus'
           ],
           recommendations: [
-            'Schedule a dermatologist appointment within 2 weeks',
-            'Monitor for any changes in size, color, or shape',
-            'Take photos every 2 weeks to track progression',
-            'Avoid sun exposure to the area'
+            'URGENT: Schedule dermatologist appointment within 1 week',
+            'Request dermoscopy examination',
+            'Consider biopsy for definitive diagnosis',
+            'Document with photography for comparison',
+            'Avoid trauma to the area',
+            'Use sun protection on all exposed skin'
           ],
           red_flags: [
-            'Irregular borders',
-            'Size greater than 6mm'
+            'ABCDE criteria positive: Asymmetry, Border, Color, Diameter',
+            'High-risk features for melanoma present',
+            'Requires immediate professional evaluation'
           ]
         },
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
@@ -380,15 +447,6 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                         </motion.div>
                       )}
                     </div>
-                    {uploadedPhotos.length > 0 && uploadedPhotos.length < 5 && (
-                      <motion.button
-                        onClick={handleDemoPhotoUpload}
-                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-orange-400 transition-colors mt-3 mx-auto"
-                      >
-                        <FileImage className="w-4 h-4" />
-                        Add demo photo
-                      </motion.button>
-                    )}
                   </div>
                 )}
 
@@ -437,7 +495,7 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                       className="w-full py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-gray-300 flex items-center justify-center gap-2"
                     >
                       <FileImage className="w-5 h-5" />
-                      Use Demo Photo
+                      Use Sample Melanoma Photo
                     </motion.button>
                   </div>
                 )}
@@ -570,7 +628,7 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                     <li>• Include a ruler or coin for size reference</li>
                     <li>• Take photos from the same angle each time</li>
                     <li>• Ensure the area is in focus</li>
-                    <li>• For demo purposes, you can use our sample photos</li>
+                    <li>• Try our sample melanoma photo for testing</li>
                   </ul>
                 </motion.div>
               )}
