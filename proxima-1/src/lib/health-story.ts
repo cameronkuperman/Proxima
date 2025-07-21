@@ -260,6 +260,30 @@ export const healthStoryService = {
     }
   },
 
+  async saveHealthStory(story: HealthStoryData): Promise<boolean> {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      
+      const { error } = await supabase
+        .from('health_stories')
+        .insert([story]);
+      
+      if (error) {
+        console.error('Error saving health story to Supabase:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving health story:', error);
+      return false;
+    }
+  },
+
   async generateWeeklyHealthStory(userId: string): Promise<HealthStoryResponse> {
     // Helper method to generate story for the past week
     const endDate = new Date();
@@ -274,11 +298,6 @@ export const healthStoryService = {
 
   async getHealthStories(userId: string): Promise<HealthStoryData[]> {
     try {
-      // For now, return empty array since we're generating stories via API
-      // The API should be saving stories to a database, but it appears not to be
-      return [];
-      
-      /* Original Supabase code - disabled for now
       // Import supabase client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -299,14 +318,17 @@ export const healthStoryService = {
       }
       
       // Map the database records to our HealthStoryData type
+      return (data || []).map(story => ({
+        id: story.id,
+        user_id: story.user_id,
         header: story.header,
+        subtitle: story.subtitle,
         story_text: story.story_text,
         generated_date: story.generated_date,
         date_range: story.date_range,
         data_sources: story.data_sources,
         created_at: story.created_at
       }));
-      */
     } catch (error) {
       console.error('Error fetching health stories:', error);
       return [];

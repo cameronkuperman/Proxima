@@ -127,12 +127,15 @@ export default function NarrativeView() {
         new Date(story.created_at) > oneWeekAgo
       );
 
-      if (!recentStory) {
-        // Generate new story if no recent one exists
+      if (!recentStory && stories.length === 0) {
+        // Generate new story if no stories exist at all
         await generateNewStory();
-      } else {
+      } else if (stories.length > 0) {
         // Update episodes with backend data
         updateEpisodesFromStories(stories);
+      } else {
+        // No stories and no recent story - show default
+        setEpisodes(getDefaultEpisodes());
       }
     } catch (err) {
       console.error('Error loading health stories:', err);
@@ -182,6 +185,9 @@ export default function NarrativeView() {
           data_sources: response.health_story.data_sources
         };
 
+        // Save the story to Supabase
+        await healthStoryService.saveHealthStory(newStory);
+        
         const updatedStories = [newStory, ...healthStories];
         setHealthStories(updatedStories);
         updateEpisodesFromStories(updatedStories);
@@ -211,8 +217,9 @@ export default function NarrativeView() {
   const getDefaultEpisodes = (): Episode[] => [
     {
       id: 0,
-      date: 'December 15, 2024',
-      title: 'Current Analysis',
+      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      title: 'Your Health Patterns This Week',
+      subtitle: 'An analysis of your wellness trends',
       preview: 'Sleep improvements and headache patterns',
       content: `Your health journey continues to show positive momentum. This week has been marked by significant improvements in your sleep quality, with an average increase of 23% in deep sleep phases compared to last week. This improvement correlates strongly with the reduction in evening screen time you've implemented.
 
