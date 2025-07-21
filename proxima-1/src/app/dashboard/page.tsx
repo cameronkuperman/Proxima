@@ -362,7 +362,7 @@ export default function DashboardPage() {
             </AnimatePresence>
             
             {/* Timeline entries */}
-            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 timeline-scrollbar">
+            <div className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar" style={{ paddingRight: '8px' }}>
               {timelineLoading && !hasLoaded ? (
                 // Loading state
                 <div className="space-y-8">
