@@ -120,6 +120,7 @@ export default function DashboardPage() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
+  const [reportsMenuOpen, setReportsMenuOpen] = useState(false);
   const [healthScore] = useState(92);
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
@@ -797,8 +798,8 @@ export default function DashboardPage() {
               <motion.div
                 data-tour="reports-card"
                 whileHover={{ scale: 1.02 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
-                onClick={() => router.push('/reports')}
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
+                onClick={() => setReportsMenuOpen(!reportsMenuOpen)}
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <FileText className="w-6 h-6 text-blue-400" />
@@ -810,6 +811,76 @@ export default function DashboardPage() {
                   <span className="text-gray-500">•</span>
                   <span className="text-gray-500">View all</span>
                 </div>
+
+                {/* Reports Floating Menu */}
+                <AnimatePresence>
+                  {reportsMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-full left-0 right-0 mb-2 bg-gray-900/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-3 space-y-2">
+                        <button
+                          onClick={() => {
+                            setShowQuickReportChat(true);
+                            setReportsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg">
+                              <FileText className="w-4 h-4 text-purple-400" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-white">Generate New Report</p>
+                              <p className="text-xs text-gray-400">Create a medical report from your data</p>
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            router.push('/reports');
+                            setReportsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-lg">
+                              <ClipboardList className="w-4 h-4 text-blue-400" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-white">View All Reports</p>
+                              <p className="text-xs text-gray-400">Browse your report history</p>
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            refetchTimeline();
+                            setReportsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-lg">
+                              <Activity className="w-4 h-4 text-green-400" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-white">Refresh Progress</p>
+                              <p className="text-xs text-gray-400">Update timeline & health data</p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
 
             </div>
