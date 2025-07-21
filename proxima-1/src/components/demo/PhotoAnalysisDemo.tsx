@@ -118,96 +118,22 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
     })
   }, [uploadedPhotos.length])
 
-  const handleDemoPhotoUpload = () => {
-    // Create a realistic-looking medical demo image
-    const canvas = document.createElement('canvas')
-    canvas.width = 400
-    canvas.height = 400
-    const ctx = canvas.getContext('2d')
-    if (ctx) {
-      // Background - skin tone
-      ctx.fillStyle = '#F5DEB3'
-      ctx.fillRect(0, 0, 400, 400)
+  const handleDemoPhotoUpload = async () => {
+    try {
+      // Load the melanoma stock image
+      const response = await fetch('/melaonastck.jpg')
       
-      // Add texture to simulate skin
-      for (let i = 0; i < 100; i++) {
-        ctx.fillStyle = `rgba(${220 + Math.random() * 20}, ${180 + Math.random() * 20}, ${140 + Math.random() * 20}, 0.1)`
-        ctx.beginPath()
-        ctx.arc(Math.random() * 400, Math.random() * 400, Math.random() * 2, 0, Math.PI * 2)
-        ctx.fill()
+      if (!response.ok) {
+        throw new Error('Demo image not found')
       }
       
-      // Create a suspicious mole/lesion in the center
-      const centerX = 200
-      const centerY = 200
-      
-      // Asymmetric shape
-      ctx.beginPath()
-      ctx.moveTo(centerX - 30, centerY)
-      ctx.quadraticCurveTo(centerX - 40, centerY - 20, centerX - 20, centerY - 35)
-      ctx.quadraticCurveTo(centerX, centerY - 40, centerX + 25, centerY - 30)
-      ctx.quadraticCurveTo(centerX + 35, centerY - 10, centerX + 30, centerY + 10)
-      ctx.quadraticCurveTo(centerX + 25, centerY + 30, centerX + 5, centerY + 35)
-      ctx.quadraticCurveTo(centerX - 10, centerY + 30, centerX - 30, centerY)
-      ctx.closePath()
-      
-      // Fill with varied colors (characteristic of melanoma)
-      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40)
-      gradient.addColorStop(0, '#2C1810')
-      gradient.addColorStop(0.3, '#4A2C2A')
-      gradient.addColorStop(0.6, '#6B4423')
-      gradient.addColorStop(0.8, '#8B6B47')
-      gradient.addColorStop(1, '#A0826D')
-      ctx.fillStyle = gradient
-      ctx.fill()
-      
-      // Add irregular border
-      ctx.strokeStyle = '#1A0E0A'
-      ctx.lineWidth = 2
-      ctx.stroke()
-      
-      // Add some darker spots within
-      for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = `rgba(${10 + Math.random() * 20}, ${5 + Math.random() * 10}, ${5 + Math.random() * 10}, 0.7)`
-        ctx.beginPath()
-        ctx.arc(
-          centerX + (Math.random() - 0.5) * 30,
-          centerY + (Math.random() - 0.5) * 30,
-          Math.random() * 4 + 2,
-          0,
-          Math.PI * 2
-        )
-        ctx.fill()
-      }
-      
-      // Add ruler reference (for scale)
-      ctx.strokeStyle = '#333'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(50, 350)
-      ctx.lineTo(150, 350)
-      ctx.stroke()
-      
-      // Ruler markings
-      for (let i = 0; i <= 10; i++) {
-        ctx.beginPath()
-        ctx.moveTo(50 + i * 10, 350)
-        ctx.lineTo(50 + i * 10, i % 5 === 0 ? 340 : 345)
-        ctx.stroke()
-      }
-      
-      // Add text
-      ctx.fillStyle = '#333'
-      ctx.font = '12px Arial'
-      ctx.fillText('1 cm', 95, 365)
+      const blob = await response.blob()
+      const file = new File([blob], 'melanoma_sample.jpg', { type: 'image/jpeg' })
+      handlePhotoUpload([file])
+    } catch (error) {
+      console.error('Demo image not available:', error)
+      alert('Demo image not found. Please check that melaonastck.jpg is in the public folder.')
     }
-    
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], 'suspicious_mole_demo.jpg', { type: 'image/jpeg' })
-        handlePhotoUpload([file])
-      }
-    }, 'image/jpeg', 0.9)
   }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
