@@ -12,11 +12,35 @@ export interface UserTutorial {
 
 export const tutorialService = {
   async getUserTutorialProgress(userId: string): Promise<UserTutorial | null> {
-    // Check if we have an authenticated session
-    const { data: { session } } = await supabase.auth.getSession();
+    console.log('Tutorial Service: getUserTutorialProgress called for user:', userId);
+    
+    // Retry mechanism for auth session
+    let session = null;
+    let retries = 3;
+    
+    while (retries > 0 && !session) {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession) {
+        session = currentSession;
+        break;
+      }
+      console.log(`Tutorial Service: No session, retrying... (${retries} left)`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      retries--;
+    }
+    
     if (!session) {
-      console.log('Tutorial Service: No auth session, skipping tutorial fetch');
-      return null;
+      console.log('Tutorial Service: No auth session after retries');
+      // Return a default object for new users coming from onboarding
+      return {
+        id: 'temp-' + userId,
+        user_id: userId,
+        has_seen_welcome: false,
+        completed_tours: [],
+        last_tour_completed_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
     }
     
     // Verify the session user matches the requested userId
@@ -34,7 +58,16 @@ export const tutorialService = {
 
       if (error) {
         console.error('Tutorial Service: Error fetching tutorial progress:', error);
-        return null;
+        // Return default for new users
+        return {
+          id: 'temp-' + userId,
+          user_id: userId,
+          has_seen_welcome: false,
+          completed_tours: [],
+          last_tour_completed_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
       }
 
       // If no data found, initialize a new record
@@ -43,10 +76,20 @@ export const tutorialService = {
         return await this.initializeUserTutorial(userId);
       }
 
+      console.log('Tutorial Service: Found existing tutorial data:', data);
       return data;
     } catch (error) {
       console.error('Tutorial Service: Unexpected error in getUserTutorialProgress:', error);
-      return null;
+      // Return default for error cases
+      return {
+        id: 'temp-' + userId,
+        user_id: userId,
+        has_seen_welcome: false,
+        completed_tours: [],
+        last_tour_completed_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
     }
   },
 

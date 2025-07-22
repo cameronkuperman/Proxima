@@ -105,6 +105,14 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
   const { initializeTutorial, showWelcome } = useTutorial();
+  
+  // Debug logging for tutorial
+  useEffect(() => {
+    console.log('Dashboard: Current URL:', window.location.href);
+    console.log('Dashboard: Search params:', searchParams.toString());
+    console.log('Dashboard: showTutorial param:', searchParams.get('showTutorial'));
+  }, [searchParams]);
+  
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineAnimating, setTimelineAnimating] = useState(false);
@@ -173,19 +181,35 @@ export default function DashboardPage() {
     // ONLY show tutorial if explicitly requested via URL parameter
     const shouldShowTutorial = searchParams.get('showTutorial') === 'true';
     
-    if (shouldShowTutorial && user?.id && userProfile) {
-      console.log('Dashboard: showTutorial parameter detected, user and profile loaded, initializing tutorial');
+    if (shouldShowTutorial && user?.id) {
+      console.log('Dashboard: showTutorial parameter detected, user loaded');
+      console.log('Dashboard: userProfile status:', profileLoading ? 'loading' : 'loaded', userProfile ? 'exists' : 'null');
       
-      // Initialize and force show tutorial
-      initializeTutorial(true);
+      // Initialize tutorial with retry mechanism
+      const initWithRetry = async (attempts = 0) => {
+        console.log(`Dashboard: Tutorial init attempt ${attempts + 1}`);
+        
+        // Wait a bit if profile is still loading
+        if (profileLoading && attempts < 5) {
+          console.log('Dashboard: Profile still loading, waiting 500ms...');
+          setTimeout(() => initWithRetry(attempts + 1), 500);
+          return;
+        }
+        
+        console.log('Dashboard: Initializing tutorial now');
+        await initializeTutorial(true);
+        
+        // Clean up the URL parameter after successful init
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('showTutorial');
+        router.replace(newUrl.pathname + newUrl.search);
+      };
       
-      // Clean up the URL parameter  
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('showTutorial');
-      router.replace(newUrl.pathname + newUrl.search);
+      // Start initialization
+      initWithRetry();
     }
     // DO NOT initialize tutorial otherwise
-  }, [user?.id, userProfile, searchParams]); // Re-run when user AND profile are loaded
+  }, [user?.id, profileLoading, searchParams]); // Re-run when user loads or profile loading changes
 
   // Listen for events from FAB
   useEffect(() => {

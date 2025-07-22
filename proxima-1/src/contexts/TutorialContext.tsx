@@ -157,6 +157,25 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     // (OnboardingGuard would have redirected us otherwise)
     console.log('Tutorial: On dashboard, assuming onboarding is complete');
     
+    // If forceShow is true (coming from onboarding), show immediately
+    if (forceShow) {
+      console.log('Tutorial: Force showing welcome modal immediately (from onboarding)');
+      setShowWelcomeModal(true);
+      setIsInitialized(true);
+      
+      // Also try to update database in background (don't wait for it)
+      tutorialService.getUserTutorialProgress(user.id).then(data => {
+        console.log('Tutorial: Background fetch completed:', data);
+        if (data) {
+          setCompletedTours(data.completed_tours || []);
+        }
+      }).catch(err => {
+        console.error('Tutorial: Background fetch error:', err);
+      });
+      
+      return;
+    }
+    
     console.log('Tutorial: All checks passed, fetching tutorial data for user', user.id);
     setIsLoading(true);
     
@@ -169,18 +188,20 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
         setCompletedTours(tutorialData.completed_tours || []);
         setIsInitialized(true);
         
-        // Show if forceShow is true AND user hasn't seen welcome
-        if (forceShow && !tutorialData.has_seen_welcome) {
-          console.log('Tutorial: Showing welcome modal after onboarding');
+        // Show if user hasn't seen welcome
+        if (!tutorialData.has_seen_welcome) {
+          console.log('Tutorial: Showing welcome modal');
           setShowWelcomeModal(true);
-        } else if (forceShow) {
-          console.log('Tutorial: User has already seen welcome');
         }
       } else {
         console.log('Tutorial: No tutorial data returned');
+        // If no data and not forcing, still initialize
+        setIsInitialized(true);
       }
     } catch (error) {
       console.error('Tutorial: Error initializing:', error);
+      // Even on error, mark as initialized
+      setIsInitialized(true);
     } finally {
       setIsLoading(false);
     }
