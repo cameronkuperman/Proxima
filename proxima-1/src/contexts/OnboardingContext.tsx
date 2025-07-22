@@ -8,6 +8,7 @@ interface OnboardingContextType {
   isComplete: boolean | null;
   isChecking: boolean;
   recheckOnboarding: () => Promise<void>;
+  markOnboardingComplete: () => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
@@ -106,8 +107,20 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     await checkOnboarding(true); // Force refresh cache
   };
 
+  const markOnboardingComplete = () => {
+    if (user?.id) {
+      // Update cache directly
+      onboardingCache.set(user.id, {
+        isComplete: true,
+        timestamp: Date.now()
+      });
+      setIsComplete(true);
+      console.log('OnboardingContext: Marked onboarding as complete without DB call');
+    }
+  };
+
   return (
-    <OnboardingContext.Provider value={{ isComplete, isChecking, recheckOnboarding }}>
+    <OnboardingContext.Provider value={{ isComplete, isChecking, recheckOnboarding, markOnboardingComplete }}>
       {children}
     </OnboardingContext.Provider>
   );
