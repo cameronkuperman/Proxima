@@ -664,6 +664,15 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       
       if (result.question) {
         // We got a new question!
+        console.log('Ask Me More Success - New Question:', {
+          question_number: result.question_number,
+          category: result.question_category,
+          expected_gain: result.expected_confidence_gain,
+          current_confidence: result.current_confidence,
+          target_confidence: result.target_confidence,
+          questions_remaining: result.max_questions_remaining
+        })
+        
         const newQuestion: Message = {
           id: `additional-q-${Date.now()}`,
           role: 'assistant',
@@ -675,35 +684,6 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setQuestionCount(result.question_number || questionCount + 1)
         setAskMoreQuestionCount(prev => prev + 1)
         setCurrentConfidence(result.current_confidence || currentConfidenceLevel)
-        
-        // Add detailed progress info from the response
-        const progressInfo: string[] = []
-        
-        if (result.question_category) {
-          progressInfo.push(`Category: ${result.question_category}`)
-        }
-        
-        if (result.expected_confidence_gain) {
-          progressInfo.push(`Expected confidence gain: +${result.expected_confidence_gain}%`)
-        }
-        
-        if (result.confidence_gap) {
-          progressInfo.push(`Gap to target: ${result.confidence_gap}%`)
-        }
-        
-        if (result.max_questions_remaining !== undefined) {
-          progressInfo.push(`Questions remaining: ${result.max_questions_remaining}`)
-        }
-        
-        if (progressInfo.length > 0) {
-          const progressMessage: Message = {
-            id: `progress-${Date.now()}`,
-            role: 'assistant',
-            content: `📊 ${progressInfo.join(' • ')}`,
-            timestamp: new Date()
-          }
-          setMessages(prev => [...prev, progressMessage])
-        }
         
         // Re-enable the chat for answering
         setAnalysisReady(false)

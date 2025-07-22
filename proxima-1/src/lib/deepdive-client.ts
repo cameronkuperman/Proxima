@@ -245,6 +245,8 @@ export const deepDiveClient = {
       max_questions: maxQuestions
     }
     
+    console.log('Ask Me More Request:', requestBody)
+    
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/ask-more`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -253,10 +255,12 @@ export const deepDiveClient = {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to get additional questions' }))
+      console.error('Ask Me More Error:', error)
       throw new Error(error.error || 'Failed to get additional questions')
     }
     
     const result = await response.json()
+    console.log('Ask Me More Response:', result)
     return result
   }
 }
