@@ -164,12 +164,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         const askMoreResponse = await deepDiveClient.askMeMore(
           scanData.continueSession,
           85, // current confidence
-          scanData.targetConfidence || 90,
+          scanData.targetConfidence || 95,
           user?.id,
           5 // max questions
         )
-        
-        console.log('Ask Me More response:', askMoreResponse)
         
         if (askMoreResponse.status === 'completed' || !askMoreResponse.question) {
           // Session already at target confidence
@@ -609,7 +607,6 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleAskMeMore = async () => {
-    console.log('handleAskMeMore called, sessionId:', sessionId, 'isComplete:', isComplete, 'finalAnalysis:', !!finalAnalysis)
     
     if (!sessionId) {
       console.error('No session ID available for Ask Me More')
@@ -622,6 +619,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       setMessages(prev => [...prev, errorMsg])
       return
     }
+    
     
     if (isAskingMore) return
     
@@ -655,22 +653,14 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       // Get current confidence from the last response or use default
       const currentConfidenceLevel = currentConfidence || finalAnalysis?.confidence || 85
       
-      console.log('Calling askMeMore with:', {
-        sessionId,
-        currentConfidence: currentConfidenceLevel,
-        targetConfidence: 95,
-        userId: user?.id
-      })
-      
       // Call backend API for "Ask Me More" functionality
       const result = await deepDiveClient.askMeMore(
         sessionId,
         currentConfidenceLevel,
-        90,  // Target 90% confidence to match backend default
-        user?.id
+        95,  // Target 95% confidence as per backend guide default
+        user?.id,
+        5    // Max 5 additional questions
       )
-      
-      console.log('Ask Me More result:', result)
       
       if (result.question) {
         // We got a new question!
@@ -684,14 +674,32 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setCurrentQuestion(result.question)
         setQuestionCount(result.question_number || questionCount + 1)
         setAskMoreQuestionCount(prev => prev + 1)
-        setCurrentConfidence(result.current_confidence || 85)
+        setCurrentConfidence(result.current_confidence || currentConfidenceLevel)
         
-        // Add progress info if available
-        if (result.estimated_questions_remaining) {
+        // Add detailed progress info from the response
+        const progressInfo: string[] = []
+        
+        if (result.question_category) {
+          progressInfo.push(`Category: ${result.question_category}`)
+        }
+        
+        if (result.expected_confidence_gain) {
+          progressInfo.push(`Expected confidence gain: +${result.expected_confidence_gain}%`)
+        }
+        
+        if (result.confidence_gap) {
+          progressInfo.push(`Gap to target: ${result.confidence_gap}%`)
+        }
+        
+        if (result.max_questions_remaining !== undefined) {
+          progressInfo.push(`Questions remaining: ${result.max_questions_remaining}`)
+        }
+        
+        if (progressInfo.length > 0) {
           const progressMessage: Message = {
             id: `progress-${Date.now()}`,
             role: 'assistant',
-            content: `📊 Progress: ${result.current_confidence}% → ${result.target_confidence}% (${result.estimated_questions_remaining} questions to go)`,
+            content: `📊 ${progressInfo.join(' • ')}`,
             timestamp: new Date()
           }
           setMessages(prev => [...prev, progressMessage])
@@ -726,20 +734,29 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         // Don't auto-complete - let user decide when they're done
         setAnalysisReady(true)
         
-      } else if (result.message && result.message.includes('Target confidence') && result.message.includes('achieved')) {
-        // Target confidence reached!
+      } else if (result.message && result.message.includes('already achieved')) {
+        // Target confidence already reached!
         const targetReachedMessage: Message = {
           id: `target-reached-${Date.now()}`,
           role: 'assistant',
-          content: `🎯 Excellent! We've reached ${result.current_confidence}% confidence. Let me generate your comprehensive report with this high-confidence diagnosis.`,
+          content: `🎯 Excellent! We've already reached ${result.current_confidence}% confidence. Let me generate your comprehensive report with this high-confidence diagnosis.`,
           timestamp: new Date()
         }
         setMessages(prev => [...prev, targetReachedMessage])
         setAnalysisReady(true)
         setIsComplete(false)
         setCurrentConfidence(result.current_confidence || 90)
-        // Don't auto-complete - show success and let user complete when ready
-        setAnalysisReady(true)
+        
+        // Show questions needed info if available
+        if (result.questions_needed === 0) {
+          const noQuestionsMessage: Message = {
+            id: `no-questions-${Date.now()}`,
+            role: 'assistant',
+            content: `No additional questions needed - we have sufficient confidence for an accurate diagnosis.`,
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, noQuestionsMessage])
+        }
         
       } else {
         // Generic completion or already at target
@@ -758,47 +775,48 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     } catch (error) {
       console.error('Ask Me More failed:', error)
       
-      let errorContent = "I'm having trouble generating additional questions right now."
-      let showAlternatives = true
+      let errorType = 'general'
+      let errorMessage = "I'm having trouble generating additional questions right now."
       
       if (error instanceof Error) {
-        console.error('Ask Me More error details:', error.message)
-        
-        // If it's a backend session error, provide more specific guidance
-        if (error.message.includes('NoneType') || error.message.includes("'NoneType' object")) {
-          errorContent = "The session appears to have ended. You have a few options:"
-          
-          // Provide clear alternatives
-          const alternativesMessage: Message = {
-            id: `alternatives-${Date.now()}`,
-            role: 'assistant',
-            content: `${errorContent}
-
-1. **Complete Current Analysis** - Generate your report with ${currentConfidence || 85}% confidence
-2. **Use Ultra Think** - Get enhanced analysis with advanced AI reasoning (available on results page)
-3. **Start Fresh Deep Dive** - Begin a new session with your current insights
-
-Which would you prefer?`,
-            timestamp: new Date()
-          }
-          setMessages(prev => [...prev, alternativesMessage])
-          showAlternatives = false
+        // Handle specific error types as per the guide
+        if (error.message.includes('reached maximum')) {
+          errorType = 'question_limit'
+          errorMessage = 'Maximum questions reached. Please complete your analysis.'
+        } else if (error.message.includes('not found') || error.message.includes('NoneType')) {
+          errorType = 'session_not_found'
+          errorMessage = 'Session expired or not found. Please complete the analysis or start a new Deep Dive.'
+        } else if (error.message.includes('Session must be in analysis_ready')) {
+          errorType = 'session_state'
+          errorMessage = 'The session is not ready for additional questions. Please complete the initial analysis first.'
         }
       }
       
-      if (showAlternatives) {
-        const errorMessage: Message = {
-          id: `error-${Date.now()}`,
+      const errorMsg: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: errorMessage,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMsg])
+      
+      // If session not found, provide alternatives
+      if (errorType === 'session_not_found' || errorType === 'session_state') {
+        const alternativesMessage: Message = {
+          id: `alternatives-${Date.now()}`,
           role: 'assistant',
-          content: errorContent + " You can complete the current analysis or try again later.",
+          content: `You have a few options:
+
+1. **Complete Current Analysis** - Generate your report with ${currentConfidence || 85}% confidence
+2. **Use Ultra Think** - Get enhanced analysis with advanced AI reasoning (available on results page)
+3. **Start Fresh Deep Dive** - Begin a new session with your current insights`,
           timestamp: new Date()
         }
-        setMessages(prev => [...prev, errorMessage])
+        setMessages(prev => [...prev, alternativesMessage])
       }
       
       // Allow completing the analysis with current confidence
       setAnalysisReady(true)
-      // Don't auto-complete on error - let user decide
     } finally {
       setIsAskingMore(false)
     }
@@ -962,10 +980,7 @@ Which would you prefer?`,
                           <motion.button
                             whileHover={{ scale: 1.02, y: -2 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                              console.log('Ask Me More button clicked in chat, sessionId:', sessionId)
-                              handleAskMeMore()
-                            }}
+                            onClick={() => handleAskMeMore()}
                             disabled={isThinkingHarder || isAskingMore}
                             className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                           >
@@ -1104,33 +1119,35 @@ Which would you prefer?`,
                 Generate Analysis Report
               </motion.button>
               
-              {/* Ask Me More button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  console.log('Ask Me More clicked from analysis ready state')
-                  handleAskMeMore()
-                }}
-                disabled={isAskingMore}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isAskingMore ? (
-                  <>
-                    <Loader2 className="w-4 h-4 inline-block mr-2 animate-spin" />
-                    Preparing Questions...
-                  </>
-                ) : (
-                  <>
-                    <MessageSquare className="w-4 h-4 inline-block mr-2" />
-                    Ask Me More (90%+ confidence)
-                  </>
-                )}
-              </motion.button>
+              {/* Ask Me More button - only show if under 11 total questions */}
+              {questionCount < 11 && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleAskMeMore()}
+                  disabled={isAskingMore}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isAskingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 inline-block mr-2 animate-spin" />
+                      Preparing Questions...
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare className="w-4 h-4 inline-block mr-2" />
+                      Ask Me More ({11 - questionCount} questions left)
+                    </>
+                  )}
+                </motion.button>
+              )}
             </div>
             
             <p className="text-xs text-gray-500 text-center mt-3">
-              Choose "Ask Me More" for serious symptoms or when you need higher diagnostic certainty
+              {questionCount >= 11 
+                ? "Maximum questions reached (11 total). Please complete your analysis."
+                : "Choose \"Ask Me More\" for serious symptoms or when you need higher diagnostic certainty"
+              }
             </p>
           </div>
         )}
