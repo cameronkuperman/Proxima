@@ -56,15 +56,19 @@ export default function OracleAIModal({ isOpen, onClose, analysisData, bodyPart 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: question,
+          message: question,  // Backend now supports this
+          query: question,    // Backwards compatibility
           context: `Patient has been diagnosed with ${context.diagnosis} (${context.confidence}% confidence) affecting the ${context.bodyPart}. Other possibilities include: ${context.differentials.map((d: any) => `${d.name} (${d.likelihood}%)`).join(', ')}.`,
           conversation_id: `oracle-modal-${Date.now()}`,
-          model: 'openai/gpt-4o-mini'
+          model: 'openai/gpt-4o-mini',
+          user_id: null  // Backend supports anonymous users
         })
       })
       
       if (!response.ok) {
-        throw new Error('Failed to get response')
+        const errorText = await response.text()
+        console.error('Oracle AI error:', response.status, errorText)
+        throw new Error(`Failed to get response: ${response.status} ${response.statusText}`)
       }
       
       const data = await response.json()
@@ -78,9 +82,16 @@ export default function OracleAIModal({ isOpen, onClose, analysisData, bodyPart 
       
     } catch (error) {
       console.error('Oracle chat error:', error)
+      let errorContent = 'I apologize, but I encountered an error. Please try asking your question again.'
+      
+      // Since backend is fixed, these errors should be rare
+      if (error instanceof Error) {
+        console.error('Oracle AI error details:', error)
+      }
+      
       const errorMessage = {
         role: 'assistant' as const,
-        content: 'I apologize, but I encountered an error. Please try asking your question again.'
+        content: errorContent
       }
       setMessages(prev => [...prev, errorMessage])
     } finally {

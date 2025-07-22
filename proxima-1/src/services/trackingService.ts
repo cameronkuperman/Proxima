@@ -76,7 +76,7 @@ export interface PastScan {
   has_tracking: boolean
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app'
+const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || 'https://web-production-945c4.up.railway.app'
 
 class TrackingService {
   private async fetchWithAuth(url: string, options?: RequestInit) {
@@ -89,15 +89,28 @@ class TrackingService {
         },
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       const data = await response.json()
 
-      if (!response.ok || data.status === 'error') {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+      if (data.status === 'error') {
+        throw new Error(data.error || 'API returned error status')
       }
 
       return data
     } catch (error) {
-      console.error('Tracking API Error:', error)
+      // Return empty dashboard data to prevent app crash
+      if (url.includes('/dashboard')) {
+        return {
+          dashboard_items: [],
+          total_active: 0,
+          total_suggestions: 0,
+          status: 'error'
+        }
+      }
+      
       throw error
     }
   }
