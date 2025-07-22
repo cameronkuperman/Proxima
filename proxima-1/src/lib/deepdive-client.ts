@@ -232,16 +232,17 @@ export const deepDiveClient = {
   async askMeMore(
     sessionId: string,
     currentConfidence: number,
-    targetConfidence: number = 90,  // Backend defaults to 90
+    targetConfidence: number = 95,  // Backend guide says default is 95
     userId?: string,
-    maxQuestions: number = 5  // Keep for future use but don't send to backend
+    maxQuestions: number = 5
   ): Promise<any> {
-    // Create a clean request body with only the fields the backend expects
+    // Create request body with all supported fields
     const requestBody = {
       session_id: sessionId,
       current_confidence: Math.round(currentConfidence), // Ensure it's an integer
       target_confidence: Math.round(targetConfidence),   // Ensure it's an integer
-      user_id: userId
+      user_id: userId,
+      max_questions: maxQuestions
     }
     
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/ask-more`, {
