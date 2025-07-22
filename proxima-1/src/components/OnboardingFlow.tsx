@@ -29,7 +29,7 @@ const steps = [
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { recheckOnboarding } = useOnboarding();
+  const { markOnboardingComplete } = useOnboarding();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +46,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     family_history: [],
     allergies: []
   });
+
+
 
   // Measurement system and input states
   const [measurementSystem, setMeasurementSystem] = useState<'metric' | 'imperial'>('metric');
@@ -142,9 +144,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       const result = await completeOnboarding(user.id, dataToSubmit);
       
       if (result.success) {
-        // Immediately recheck onboarding status to update the global state
-        console.log('OnboardingFlow: Completed successfully, invalidating cache...');
-        await recheckOnboarding(); // This forces a fresh DB call
+        // Mark onboarding as complete immediately without DB call
+        console.log('OnboardingFlow: Completed successfully, updating cache...');
+        markOnboardingComplete(); // Update cache directly - no buffering!
         onComplete?.();
         router.push('/dashboard?showTutorial=true');
       } else {
@@ -434,7 +436,9 @@ function BasicInfoStep({
   imperialHeight, 
   setImperialHeight, 
   imperialWeight, 
-  setImperialWeight 
+  setImperialWeight,
+  validationErrors,
+  clearValidationError
 }: {
   formData: Partial<OnboardingData>;
   setFormData: React.Dispatch<React.SetStateAction<Partial<OnboardingData>>>;
@@ -445,74 +449,16 @@ function BasicInfoStep({
   imperialWeight: string;
   setImperialWeight: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  // State for validation messages
-  const [validationErrors, setValidationErrors] = useState<{
-    age?: string;
-    height?: string;
-    weight?: string;
-  }>({});
-
-  // Validation functions
-  const validateAge = (value: string) => {
-    if (!value) return '';
-    const age = parseInt(value);
-    if (isNaN(age) || age < 1 || age > 150) {
-      return 'Age must be between 1 and 150 years';
-    }
-    return '';
-  };
-
-  const validateMetricHeight = (value: string) => {
-    if (!value) return '';
-    const height = parseInt(value);
-    if (isNaN(height) || height < 50 || height > 300) {
-      return 'Height must be between 50 and 300 cm';
-    }
-    return '';
-  };
-
-  const validateImperialHeight = (feet: string, inches: string) => {
-    if (!feet && !inches) return '';
-    const feetNum = parseInt(feet || '0');
-    const inchesNum = parseInt(inches || '0');
-    const totalCm = convertHeightToMetric(feetNum, inchesNum);
-    if (totalCm < 50 || totalCm > 300) {
-      return 'Height must be between 1\'8" and 9\'10"';
-    }
-    return '';
-  };
-
-  const validateMetricWeight = (value: string) => {
-    if (!value) return '';
-    const weight = parseInt(value);
-    if (isNaN(weight) || weight < 10 || weight > 1000) {
-      return 'Weight must be between 10 and 1000 kg';
-    }
-    return '';
-  };
-
-  const validateImperialWeight = (value: string) => {
-    if (!value) return '';
-    const weight = parseInt(value);
-    const weightKg = convertWeightToMetric(weight);
-    if (isNaN(weight) || weightKg < 10 || weightKg > 1000) {
-      return 'Weight must be between 22 and 2200 lbs';
-    }
-    return '';
-  };
-
-  // Input handlers with validation
+  // Input handlers
   const handleAgeChange = (value: string) => {
     if (value === '' || /^\d+$/.test(value)) {
       setFormData((prev: Partial<OnboardingData>) => ({ ...prev, age: value }));
-      setValidationErrors(prev => ({ ...prev, age: validateAge(value) }));
     }
   };
 
   const handleMetricHeightChange = (value: string) => {
     if (value === '' || /^\d+$/.test(value)) {
       setFormData((prev: Partial<OnboardingData>) => ({ ...prev, height: value }));
-      setValidationErrors(prev => ({ ...prev, height: validateMetricHeight(value) }));
     }
   };
 
@@ -520,10 +466,6 @@ function BasicInfoStep({
     if (value === '' || /^\d+$/.test(value)) {
       const newHeight = { ...imperialHeight, [field]: value };
       setImperialHeight(newHeight);
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        height: validateImperialHeight(newHeight.feet, newHeight.inches) 
-      }));
     }
   };
 
@@ -531,10 +473,8 @@ function BasicInfoStep({
     if (value === '' || /^\d+$/.test(value)) {
       if (measurementSystem === 'metric') {
         setFormData((prev: Partial<OnboardingData>) => ({ ...prev, weight: value }));
-        setValidationErrors(prev => ({ ...prev, weight: validateMetricWeight(value) }));
       } else {
         setImperialWeight(value);
-        setValidationErrors(prev => ({ ...prev, weight: validateImperialWeight(value) }));
       }
     }
   };
@@ -563,7 +503,7 @@ function BasicInfoStep({
     onChange, 
     options, 
     placeholder,
-    className = "" 
+    className = ""
   }: {
     value: string;
     onChange: (value: string) => void;
@@ -628,46 +568,59 @@ function BasicInfoStep({
 
           <AnimatePresence>
             {isOpen && (
-              <motion.div
-                initial={{ 
-                  opacity: 0, 
-                  y: dropdownDirection === 'up' ? 10 : -10, 
-                  scale: 0.95 
-                }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ 
-                  opacity: 0, 
-                  y: dropdownDirection === 'up' ? 10 : -10, 
-                  scale: 0.95 
-                }}
-                transition={{ duration: 0.2 }}
-                className={`absolute left-0 right-0 z-[9999] backdrop-blur-md bg-white/[0.08] border border-white/[0.1] rounded-xl shadow-2xl max-h-60 overflow-auto ${
-                  dropdownDirection === 'up' 
-                    ? 'bottom-full mb-1' 
-                    : 'top-full mt-1'
-                }`}
-              >
-                <div className="p-1">
-                  {options.map((option, index) => (
-                    <motion.button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        onChange(option);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all hover:bg-white/[0.05] focus:outline-none focus:bg-white/[0.05] ${
-                        value === option ? 'bg-white/[0.05] text-white' : 'text-gray-300 hover:text-white'
-                      }`}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      {option}
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
+              <>
+                {/* Blur overlay for content below dropdown */}
+                <div 
+                  className="fixed inset-x-0 z-[9997]"
+                  style={{
+                    top: triggerRef.current ? `${triggerRef.current.getBoundingClientRect().bottom + 10}px` : '0',
+                    bottom: '0',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    pointerEvents: 'none',
+                    maskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)'
+                  }}
+                />
+                
+                <motion.div
+                  initial={{ 
+                    opacity: 0, 
+                    y: dropdownDirection === 'up' ? 10 : -10, 
+                    scale: 0.95 
+                  }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ 
+                    opacity: 0, 
+                    y: dropdownDirection === 'up' ? 10 : -10, 
+                    scale: 0.95 
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className={`absolute left-0 right-0 z-[9999] backdrop-blur-sm bg-black/[0.95] border border-white/[0.15] rounded-xl shadow-2xl max-h-60 overflow-y-auto scrollbar-hide ${
+                    dropdownDirection === 'up' 
+                      ? 'bottom-full mb-1' 
+                      : 'top-full mt-1'
+                  }`}
+                >
+                  <div className="p-1">
+                    {options.map((option, index) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          onChange(option);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all hover:bg-white/[0.1] focus:outline-none focus:bg-white/[0.1] ${
+                          value === option ? 'bg-white/[0.1] text-white' : 'text-gray-300 hover:text-white'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
         </div>
@@ -751,47 +704,60 @@ function BasicInfoStep({
 
           <AnimatePresence>
             {isOpen && (
-              <motion.div
-                initial={{ 
-                  opacity: 0, 
-                  y: dropdownDirection === 'up' ? 10 : -10, 
-                  scale: 0.95 
-                }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ 
-                  opacity: 0, 
-                  y: dropdownDirection === 'up' ? 10 : -10, 
-                  scale: 0.95 
-                }}
-                transition={{ duration: 0.2 }}
-                className={`absolute left-0 right-0 z-[9999] backdrop-blur-md bg-white/[0.08] border border-white/[0.1] rounded-xl shadow-2xl max-h-60 overflow-auto ${
-                  dropdownDirection === 'up' 
-                    ? 'bottom-full mb-1' 
-                    : 'top-full mt-1'
-                }`}
-              >
-                <div className="p-1">
-                  {genderOptions.map((option, index) => (
-                    <motion.button
-                      key={option.label}
-                      type="button"
-                      onClick={() => {
-                        onChange(option.value);
-                        setHasSelectedValue(true);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all hover:bg-white/[0.05] focus:outline-none focus:bg-white/[0.05] ${
-                        value === option.value ? 'bg-white/[0.05] text-white' : 'text-gray-300 hover:text-white'
-                      }`}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      {option.label}
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
+              <>
+                {/* Blur overlay for content below dropdown */}
+                <div 
+                  className="fixed inset-x-0 z-[9997]"
+                  style={{
+                    top: triggerRef.current ? `${triggerRef.current.getBoundingClientRect().bottom + 10}px` : '0',
+                    bottom: '0',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    pointerEvents: 'none',
+                    maskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)'
+                  }}
+                />
+                
+                <motion.div
+                  initial={{ 
+                    opacity: 0, 
+                    y: dropdownDirection === 'up' ? 10 : -10, 
+                    scale: 0.95 
+                  }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ 
+                    opacity: 0, 
+                    y: dropdownDirection === 'up' ? 10 : -10, 
+                    scale: 0.95 
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className={`absolute left-0 right-0 z-[9999] backdrop-blur-sm bg-black/[0.95] border border-white/[0.15] rounded-xl shadow-2xl max-h-60 overflow-y-auto scrollbar-hide ${
+                    dropdownDirection === 'up' 
+                      ? 'bottom-full mb-1' 
+                      : 'top-full mt-1'
+                  }`}
+                >
+                  <div className="p-1">
+                    {genderOptions.map((option, index) => (
+                      <button
+                        key={option.label}
+                        type="button"
+                        onClick={() => {
+                          onChange(option.value);
+                          setHasSelectedValue(true);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all hover:bg-white/[0.1] focus:outline-none focus:bg-white/[0.1] ${
+                          value === option.value ? 'bg-white/[0.1] text-white' : 'text-gray-300 hover:text-white'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
         </div>
@@ -808,32 +774,12 @@ function BasicInfoStep({
         className="space-y-2"
       >
         <label className="block text-white text-sm font-medium">Age</label>
-        <div className="space-y-1">
-          <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-2.5 hover:border-white/[0.1] transition-all">
-            <input
-              type="number"
-              value={formData.age || ''}
-              onChange={(e) => handleAgeChange(e.target.value)}
-              className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              placeholder="Enter your age"
-              min="1"
-              max="150"
-            />
-          </div>
-          {validationErrors.age && (
-            <AnimatePresence mode="wait">
-              <motion.p
-                initial={{ opacity: 0, y: -10, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: 'auto' }}
-                exit={{ opacity: 0, y: -10, height: 0 }}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="text-red-400 text-xs pl-1"
-              >
-                {validationErrors.age}
-              </motion.p>
-            </AnimatePresence>
-          )}
-        </div>
+        <CustomDropdown
+          value={formData.age || ''}
+          onChange={(value) => setFormData((prev: Partial<OnboardingData>) => ({ ...prev, age: value }))}
+          options={Array.from({ length: 93 }, (_, i) => (i + 18).toString())}
+          placeholder="Select your age"
+        />
       </motion.div>
 
       {/* Measurement System Toggle */}
@@ -930,19 +876,7 @@ function BasicInfoStep({
               </div>
             </div>
           )}
-          {validationErrors.height && (
-            <AnimatePresence mode="wait">
-              <motion.p
-                initial={{ opacity: 0, y: -10, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: 'auto' }}
-                exit={{ opacity: 0, y: -10, height: 0 }}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="text-red-400 text-xs pl-1"
-              >
-                {validationErrors.height}
-              </motion.p>
-            </AnimatePresence>
-          )}
+
         </div>
       </motion.div>
 
@@ -973,19 +907,7 @@ function BasicInfoStep({
               </span>
             </div>
           </div>
-          {validationErrors.weight && (
-            <AnimatePresence mode="wait">
-              <motion.p
-                initial={{ opacity: 0, y: -10, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: 'auto' }}
-                exit={{ opacity: 0, y: -10, height: 0 }}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="text-red-400 text-xs pl-1"
-              >
-                {validationErrors.weight}
-              </motion.p>
-            </AnimatePresence>
-          )}
+
         </div>
       </motion.div>
 
