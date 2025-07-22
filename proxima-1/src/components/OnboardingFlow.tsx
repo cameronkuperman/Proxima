@@ -147,8 +147,20 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         // Mark onboarding as complete immediately without DB call
         console.log('OnboardingFlow: Completed successfully, updating cache...');
         markOnboardingComplete(); // Update cache directly - no buffering!
-        onComplete?.();
-        router.push('/dashboard?showTutorial=true');
+        
+        // Call onComplete callback if provided
+        if (onComplete) {
+          console.log('OnboardingFlow: Calling onComplete callback');
+          onComplete();
+        }
+        
+        // Ensure redirect with tutorial parameter
+        console.log('OnboardingFlow: Redirecting to dashboard with showTutorial=true');
+        const dashboardUrl = '/dashboard?showTutorial=true';
+        
+        // Use window.location for more reliable redirect with query params
+        console.log('OnboardingFlow: Using window.location.href for redirect');
+        window.location.href = dashboardUrl;
       } else {
         setError(result.error || 'Failed to complete onboarding');
       }
