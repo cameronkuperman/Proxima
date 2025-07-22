@@ -194,8 +194,16 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
         setUltraAnalysis(result)
         setCurrentTier('ultra')
       } else {
+        // Store the entire result, not looking for nested properties
         setO4MiniAnalysis(result)
         setCurrentTier('enhanced')
+        
+        // Log the structure to debug
+        console.log('Think Harder result structure:', {
+          hasEnhancedAnalysis: !!result.enhanced_analysis,
+          hasO4MiniAnalysis: !!result.o4_mini_analysis,
+          keys: Object.keys(result)
+        })
       }
       
       // Show success notification
@@ -357,28 +365,70 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                 <div className="mb-6">
                   <h4 className="text-lg font-semibold text-gray-400 mb-3">Most Likely Condition</h4>
                   <h3 className="text-3xl font-bold text-white mb-3">
-                    {currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.ultra_diagnosis?.primary ||
-                     currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.enhanced_diagnosis?.primary ||
+                    {currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.primaryCondition ||
+                     currentTier === 'enhanced' && (o4MiniAnalysis?.enhanced_analysis?.primary_diagnosis?.condition || o4MiniAnalysis?.o4_mini_analysis?.enhanced_diagnosis?.primary) ||
                      analysisResult.primaryCondition}
                   </h3>
                   <p className="text-gray-300 mb-3">
-                    {currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.ultra_diagnosis?.description ||
-                     currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.enhanced_diagnosis?.description ||
+                    {currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.likelihood ||
+                     currentTier === 'enhanced' && (o4MiniAnalysis?.enhanced_analysis?.primary_diagnosis?.supporting_evidence?.join(', ') || o4MiniAnalysis?.o4_mini_analysis?.enhanced_diagnosis?.description) ||
                      analysisResult.likelihood}
                   </p>
                   
                   {/* Enhanced insights */}
-                  {currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.overlooked_considerations && (
+                  {currentTier === 'enhanced' && (o4MiniAnalysis?.enhanced_analysis || o4MiniAnalysis?.o4_mini_analysis?.overlooked_considerations) && (
                     <div className="mt-4 p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
-                      <h5 className="text-sm font-medium text-purple-400 mb-2">o4-mini Insights</h5>
+                      <h5 className="text-sm font-medium text-purple-400 mb-2">Enhanced Analysis (o4-mini)</h5>
                       <div className="space-y-2">
-                        {o4MiniAnalysis.o4_mini_analysis.overlooked_considerations.map((item: any, i: number) => (
-                          <div key={i} className="text-sm">
-                            <span className="text-purple-300 font-medium">{item.factor}:</span>
-                            <span className="text-gray-400 ml-2">{item.significance}</span>
-                          </div>
-                        ))}
+                        {/* Handle both response formats */}
+                        {o4MiniAnalysis?.enhanced_analysis ? (
+                          <>
+                            {/* New format from backend guide */}
+                            <div className="text-sm">
+                              <span className="text-purple-300 font-medium">Confidence:</span>
+                              <span className="text-gray-400 ml-2">{o4MiniAnalysis.enhanced_confidence || o4MiniAnalysis.enhanced_analysis.confidence}%</span>
+                            </div>
+                            {o4MiniAnalysis.enhanced_analysis.clinical_pearls && (
+                              <div className="text-sm">
+                                <span className="text-purple-300 font-medium">Clinical Insights:</span>
+                                <span className="text-gray-400 ml-2">{o4MiniAnalysis.enhanced_analysis.clinical_pearls.join(', ')}</span>
+                              </div>
+                            )}
+                            {o4MiniAnalysis.enhanced_analysis.red_flags && o4MiniAnalysis.enhanced_analysis.red_flags.length > 0 && (
+                              <div className="text-sm">
+                                <span className="text-purple-300 font-medium">Red Flags:</span>
+                                <span className="text-gray-400 ml-2">{o4MiniAnalysis.enhanced_analysis.red_flags[0].symptom}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : o4MiniAnalysis?.o4_mini_analysis?.overlooked_considerations ? (
+                          <>
+                            {/* Old format fallback */}
+                            {o4MiniAnalysis.o4_mini_analysis.overlooked_considerations.map((item: any, i: number) => (
+                              <div key={i} className="text-sm">
+                                <span className="text-purple-300 font-medium">{item.factor}:</span>
+                                <span className="text-gray-400 ml-2">{item.significance}</span>
+                              </div>
+                            ))}
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-400">Enhanced analysis data loading...</div>
+                        )}
                       </div>
+                      {/* Show confidence improvement */}
+                      {o4MiniAnalysis?.confidence_improvement && (
+                        <div className="mt-3 pt-3 border-t border-purple-500/20">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-purple-400">Confidence Progression:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400">{confidence}%</span>
+                              <span className="text-purple-400">→</span>
+                              <span className="text-purple-300 font-medium">{o4MiniAnalysis.enhanced_confidence || (confidence + o4MiniAnalysis.confidence_improvement)}%</span>
+                              <span className="text-green-400 text-xs">(+{o4MiniAnalysis.confidence_improvement}%)</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -393,9 +443,19 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                       </div>
                       {ultraAnalysis.ultra_analysis.complexity_score && (
                         <div className="mt-3 pt-3 border-t border-pink-500/20">
-                          <span className="text-xs text-pink-400">
-                            Case Complexity: {ultraAnalysis.ultra_analysis.complexity_score}/10
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-pink-400">
+                              Case Complexity: {ultraAnalysis.ultra_analysis.complexity_score}/10
+                            </span>
+                            {ultraAnalysis.confidence_progression && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-gray-400">{ultraAnalysis.confidence_progression.original || confidence}%</span>
+                                <span className="text-pink-400">→</span>
+                                <span className="text-pink-300 font-medium">{ultraAnalysis.confidence_progression.ultra || ultraAnalysis.ultra_analysis.confidence}%</span>
+                                <span className="text-green-400">(+{(ultraAnalysis.confidence_progression.ultra || ultraAnalysis.ultra_analysis.confidence) - (ultraAnalysis.confidence_progression.original || confidence)}%)</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -431,8 +491,8 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                 <div>
                   <h4 className="text-lg font-semibold text-gray-400 mb-3">Other Possibilities</h4>
                   <div className="space-y-3">
-                    {(currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.differential_refinement ||
-                      currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.differential_refinement ||
+                    {(currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.differentials ||
+                      currentTier === 'enhanced' && (o4MiniAnalysis?.enhanced_analysis?.differential_diagnoses || o4MiniAnalysis?.o4_mini_analysis?.differential_refinement) ||
                       analysisResult.differentials)?.map((diff: any, index: number) => (
                       <div key={index} className="bg-gray-800/30 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">

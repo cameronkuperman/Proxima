@@ -78,7 +78,7 @@ export const deepDiveClient = {
           painLevel: formData.painLevel ? parseInt(formData.painLevel) : undefined
         },
         user_id: userId,
-        model: model || 'deepseek/deepseek-r1-0528:free'
+        model: model || 'tngtech/deepseek-r1t-chimera:free'
       }),
     })
 
@@ -107,12 +107,14 @@ export const deepDiveClient = {
   async continueDeepDive(
     sessionId: string,
     answer: string,
-    questionNumber: number
+    questionNumber: number,
+    fallbackModel?: string
   ): Promise<DeepDiveContinueResponse> {
     const requestBody = {
       session_id: sessionId,
       answer: answer,
       question_number: questionNumber,
+      ...(fallbackModel && { fallback_model: fallbackModel })
     }
     
     console.log('Deep Dive Continue Request:', requestBody)
@@ -141,11 +143,13 @@ export const deepDiveClient = {
 
   async completeDeepDive(
     sessionId: string,
-    finalAnswer?: string
+    finalAnswer?: string,
+    fallbackModel?: string
   ): Promise<DeepDiveCompleteResponse> {
     const requestBody = {
       session_id: sessionId,
       final_answer: finalAnswer,
+      ...(fallbackModel && { fallback_model: fallbackModel })
     }
     
     console.log('Deep Dive Complete Request:', requestBody)
@@ -228,14 +232,15 @@ export const deepDiveClient = {
   async askMeMore(
     sessionId: string,
     currentConfidence: number,
-    targetConfidence: number = 90,
-    userId?: string
+    targetConfidence: number = 95,  // Backend defaults to 95
+    userId?: string,
+    maxQuestions: number = 5
   ): Promise<any> {
     console.log('Ask Me More Request:', {
       session_id: sessionId,
-      current_confidence: currentConfidence,
       target_confidence: targetConfidence,
-      user_id: userId
+      user_id: userId,
+      max_questions: maxQuestions
     })
     
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/ask-more`, {
@@ -243,9 +248,9 @@ export const deepDiveClient = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: sessionId,
-        current_confidence: currentConfidence,
+        user_id: userId,
         target_confidence: targetConfidence,
-        user_id: userId
+        max_questions: maxQuestions
       }),
     })
 
