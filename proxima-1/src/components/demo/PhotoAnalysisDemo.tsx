@@ -362,15 +362,16 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                       ))}
                       
                       {uploadedPhotos.length < 5 && (
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          {...getRootProps()}
-                          className="aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-colors flex items-center justify-center group cursor-pointer"
-                        >
-                          <input {...getInputProps()} />
-                          <Plus className="w-8 h-8 text-gray-600 group-hover:text-orange-500" />
-                        </motion.div>
+                        <div {...getRootProps()}>
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="aspect-square rounded-lg border-2 border-dashed border-gray-600 hover:border-orange-500 transition-colors flex items-center justify-center group cursor-pointer"
+                          >
+                            <input {...getInputProps()} />
+                            <Plus className="w-8 h-8 text-gray-600 group-hover:text-orange-500" />
+                          </motion.div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -379,15 +380,15 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                 {/* Initial Upload Area */}
                 {uploadedPhotos.length === 0 && (
                   <div className="space-y-4">
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      {...getRootProps()}
-                      className={`w-full cursor-pointer ${
-                        isDragActive ? 'scale-105' : ''
-                      }`}
-                    >
-                      <input {...getInputProps()} />
+                    <div {...getRootProps()}>
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`w-full cursor-pointer ${
+                          isDragActive ? 'scale-105' : ''
+                        }`}
+                      >
+                        <input {...getInputProps()} />
                       <div className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all group ${
                         isDragActive 
                           ? 'border-orange-500 bg-orange-500/10' 
@@ -403,7 +404,8 @@ export function PhotoAnalysisDemo({ onComplete }: PhotoAnalysisDemoProps) {
                           JPEG, PNG, HEIC up to 10MB each
                         </p>
                       </div>
-                    </motion.div>
+                      </motion.div>
+                    </div>
                     
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">

@@ -11,7 +11,7 @@ interface TutorialContextValue {
   showWelcome: () => void;
   isAnyTourActive: boolean;
   completedTours: string[];
-  initializeTutorial: () => void;
+  initializeTutorial: (forceShow?: boolean) => void;
 }
 
 const TutorialContext = createContext<TutorialContextValue | undefined>(undefined);

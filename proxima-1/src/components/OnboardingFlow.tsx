@@ -448,9 +448,7 @@ function BasicInfoStep({
   imperialHeight, 
   setImperialHeight, 
   imperialWeight, 
-  setImperialWeight,
-  validationErrors,
-  clearValidationError
+  setImperialWeight
 }: {
   formData: Partial<OnboardingData>;
   setFormData: React.Dispatch<React.SetStateAction<Partial<OnboardingData>>>;

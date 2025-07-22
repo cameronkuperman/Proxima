@@ -178,11 +178,9 @@ export default function NarrativeView() {
           id: response.health_story.story_id,
           user_id: user.id,
           header: response.health_story.header,
-          subtitle: response.health_story.subtitle,
           story_text: response.health_story.story_text,
           generated_date: response.health_story.generated_date,
-          created_at: new Date().toISOString(),
-          data_sources: response.health_story.data_sources
+          created_at: new Date().toISOString()
         };
 
         // Save the story to Supabase
