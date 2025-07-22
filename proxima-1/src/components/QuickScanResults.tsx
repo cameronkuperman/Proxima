@@ -235,26 +235,42 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   const handleAskMeMore = async () => {
     console.log('Ask Me More clicked, mode:', mode, 'scanData:', scanData)
     
-    // For Deep Dive mode, this should not happen (Ask Me More is in the chat interface)
-    if (mode === 'deep') {
-      console.error('Ask Me More should not be called from QuickScanResults in Deep Dive mode')
-      return
-    }
+    if (isAskingMore) return
     
-    if (!scanData.scan_id || isAskingMore) return
-    
-    setIsAskingMore(true)
-    
-    try {
-      // Redirect to Deep Dive with current scan data to continue questioning
-      const formDataEncoded = encodeURIComponent(JSON.stringify(scanData.formData))
-      router.push(`/scan?mode=deep&bodyPart=${scanData.bodyPart}&formData=${formDataEncoded}&fromScan=${scanData.scan_id}&continueToTarget=90`)
+    // Different behavior for Quick Scan vs Deep Dive
+    if (mode === 'quick') {
+      // Quick Scan: Redirect to Deep Dive
+      if (!scanData.scan_id) return
       
-    } catch (error) {
-      console.error('Ask Me More failed:', error)
-      alert('Unable to continue questioning right now. Please try again later.')
-    } finally {
-      setIsAskingMore(false)
+      setIsAskingMore(true)
+      try {
+        const formDataEncoded = encodeURIComponent(JSON.stringify(scanData.formData))
+        router.push(`/scan?mode=deep&bodyPart=${scanData.bodyPart}&formData=${formDataEncoded}&fromScan=${scanData.scan_id}&continueToTarget=90`)
+      } catch (error) {
+        console.error('Ask Me More failed:', error)
+        alert('Unable to continue questioning right now. Please try again later.')
+      } finally {
+        setIsAskingMore(false)
+      }
+    } else if (mode === 'deep') {
+      // Deep Dive: Continue with more questions in the existing session
+      const sessionId = scanData.deep_dive_id || scanData.scan_id
+      if (!sessionId) {
+        console.error('No session ID found for Deep Dive Ask Me More')
+        return
+      }
+      
+      setIsAskingMore(true)
+      try {
+        // For Deep Dive, redirect back to the chat with a flag to continue
+        const formDataEncoded = encodeURIComponent(JSON.stringify(scanData.formData))
+        router.push(`/scan?mode=deep&bodyPart=${scanData.bodyPart}&formData=${formDataEncoded}&continueSession=${sessionId}&targetConfidence=90`)
+      } catch (error) {
+        console.error('Ask Me More Deep Dive failed:', error)
+        alert('Unable to continue questioning. Please try again.')
+      } finally {
+        setIsAskingMore(false)
+      }
     }
   }
 
@@ -722,10 +738,14 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                   <div className="font-medium text-white">
                     {confidence < 70 
                       ? 'Get a deeper analysis with Oracle AI' 
+                      : confidence < 90
+                      ? 'Want higher confidence? Ask Oracle AI'
                       : 'Have questions? Ask Oracle AI'}
                   </div>
                   <div className="text-xs text-gray-400">
-                    Advanced reasoning for complex symptoms
+                    {confidence < 90 
+                      ? 'Ask for more questions to reach 90%+ confidence'
+                      : 'Advanced reasoning for complex symptoms'}
                   </div>
                 </div>
               </div>
@@ -740,7 +760,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
             {mode === 'deep' ? 'Maximize diagnostic certainty' : 'Need even more certainty about your diagnosis?'}
           </div>
           
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-3`}>
+          <div className={`grid grid-cols-1 ${mode === 'quick' ? 'md:grid-cols-2' : confidence < 90 ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-3`}>
             {/* Quick Scan: Dive Deeper button */}
             {mode === 'quick' && (
               <motion.button
@@ -813,54 +833,54 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
               )}
             </motion.button>
             
-            {/* Ask Me More - Deep Dive only */}
-            {mode === 'deep' && (
+            {/* Ask Me More - Deep Dive only when confidence < 90% */}
+            {mode === 'deep' && confidence < 90 && (
               <motion.button
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
+                transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
                 onClick={() => handleAskMeMore()}
                 disabled={isThinkingHarder || isAskingMore}
                 className="relative px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-cyan-600/30 hover:text-emerald-200 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
               >
-              {/* Animated background gradient */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-cyan-600/10"
-                animate={{
-                  opacity: isAskingMore ? [0.1, 0.3, 0.1] : 0,
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
-              
-              {isAskingMore ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="font-medium"
-                  >
-                    Preparing Deep Dive...
-                  </motion.div>
-                </>
-              ) : (
-                <>
-                  <MessageSquare className="w-5 h-5 group-hover:animate-bounce transition-transform group-hover:scale-110" />
-                  <span className="font-medium">Ask Me More</span>
-                  <motion.span
-                    className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-emerald-400"
-                  >
-                    90%+ confidence
-                  </motion.span>
-                </>
-              )}
-            </motion.button>
+                {/* Animated background gradient */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-cyan-600/10"
+                  animate={{
+                    opacity: isAskingMore ? [0.1, 0.3, 0.1] : 0,
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+                
+                {isAskingMore ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="font-medium"
+                    >
+                      Returning to Chat...
+                    </motion.div>
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="w-5 h-5 group-hover:animate-bounce transition-transform group-hover:scale-110" />
+                    <span className="font-medium">Ask Me More</span>
+                    <motion.span
+                      className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-emerald-400"
+                    >
+                      90%+ confidence
+                    </motion.span>
+                  </>
+                )}
+              </motion.button>
             )}
           </div>
 
@@ -874,7 +894,9 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
             ) : (
               <>
                 <p><span className="text-purple-400">Think Harder:</span> Grok 4 maximum reasoning power</p>
-                <p><span className="text-emerald-400">Ask Me More:</span> Continue until 90%+ confidence</p>
+                {confidence < 90 && (
+                  <p><span className="text-emerald-400">Ask Me More:</span> Continue until 90%+ confidence</p>
+                )}
               </>
             )}
           </div>
