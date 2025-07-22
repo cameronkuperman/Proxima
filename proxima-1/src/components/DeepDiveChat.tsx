@@ -379,6 +379,11 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setQuestionCount(nextQuestionNumber)
         setCurrentQuestion(response.question)
         setMessages(prev => [...prev, assistantMessage])
+        
+        // Update confidence if provided
+        if (response.current_confidence) {
+          setCurrentConfidence(response.current_confidence)
+        }
       } else if (!response.question || response.question.trim() === '') {
         // Check if we've asked enough questions
         if (questionCount >= 6) {
@@ -607,15 +612,34 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleAskMeMore = async () => {
-    console.log('handleAskMeMore called, sessionId:', sessionId, 'isComplete:', isComplete)
+    console.log('handleAskMeMore called, sessionId:', sessionId, 'isComplete:', isComplete, 'finalAnalysis:', !!finalAnalysis)
     
     if (!sessionId) {
       console.error('No session ID available for Ask Me More')
-      alert('Session not found. Please complete the initial analysis first.')
+      const errorMsg: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'Session not found. Please complete the initial analysis first.',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMsg])
       return
     }
     
     if (isAskingMore) return
+    
+    // Check if we already have a final analysis (session might be closed)
+    if (finalAnalysis) {
+      console.log('Session already finalized, cannot ask more questions')
+      const infoMsg: Message = {
+        id: `info-${Date.now()}`,
+        role: 'assistant',
+        content: 'The analysis has already been completed. To ask more questions, please start a new deep dive session.',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, infoMsg])
+      return
+    }
     
     setIsAskingMore(true)
     setError(null)
@@ -645,9 +669,8 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       const result = await deepDiveClient.askMeMore(
         sessionId,
         currentConfidenceLevel,
-        95,  // Target 95% confidence as per backend
-        user?.id,
-        5    // Max 5 additional questions
+        90,  // Target 90% confidence to match backend default
+        user?.id
       )
       
       console.log('Ask Me More result:', result)
@@ -703,9 +726,8 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         }
         
         setCurrentConfidence(result.current_confidence || 85)
-        setTimeout(() => {
-          completeDeepDive()
-        }, 3000)
+        // Don't auto-complete - let user decide when they're done
+        setAnalysisReady(true)
         
       } else if (result.message && result.message.includes('Target confidence') && result.message.includes('achieved')) {
         // Target confidence reached!
@@ -719,10 +741,8 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setAnalysisReady(true)
         setIsComplete(false)
         setCurrentConfidence(result.current_confidence || 90)
-        
-        setTimeout(() => {
-          completeDeepDive()
-        }, 2000)
+        // Don't auto-complete - show success and let user complete when ready
+        setAnalysisReady(true)
         
       } else {
         // Generic completion or already at target
@@ -741,69 +761,47 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     } catch (error) {
       console.error('Ask Me More failed:', error)
       
-      // TEMPORARY WORKAROUND: Generate questions on frontend while backend is being fixed
-      if (error instanceof Error && error.message.includes('NoneType')) {
-        console.log('Backend ask-more endpoint not working, using frontend fallback')
+      let errorContent = "I'm having trouble generating additional questions right now."
+      let showAlternatives = true
+      
+      if (error instanceof Error) {
+        console.error('Ask Me More error details:', error.message)
         
-        // Generate contextual follow-up questions based on body part and current confidence
-        const followUpQuestions = [
-          `Have you tried any medications or treatments for your ${scanData.bodyPart} symptoms, and if so, what was the response?`,
-          `Are there any specific times of day when your symptoms are notably better or worse?`,
-          `Have you noticed any environmental or dietary factors that seem to trigger or alleviate your symptoms?`,
-          `Is there a family history of similar ${scanData.bodyPart} conditions or related health issues?`,
-          `Have you experienced any recent changes in your lifestyle, stress levels, or physical activity that might be related?`
-        ]
-        
-        // Pick a question based on the current count
-        const questionIndex = Math.min(askMoreQuestionCount, followUpQuestions.length - 1)
-        const nextQuestion = followUpQuestions[questionIndex]
-        
-        const fallbackQuestion: Message = {
-          id: `fallback-q-${Date.now()}`,
-          role: 'assistant',
-          content: nextQuestion,
-          timestamp: new Date()
+        // If it's a backend session error, provide more specific guidance
+        if (error.message.includes('NoneType') || error.message.includes("'NoneType' object")) {
+          errorContent = "The session appears to have ended. You have a few options:"
+          
+          // Provide clear alternatives
+          const alternativesMessage: Message = {
+            id: `alternatives-${Date.now()}`,
+            role: 'assistant',
+            content: `${errorContent}
+
+1. **Complete Current Analysis** - Generate your report with ${currentConfidence || 85}% confidence
+2. **Use Ultra Think** - Get enhanced analysis with advanced AI reasoning (available on results page)
+3. **Start Fresh Deep Dive** - Begin a new session with your current insights
+
+Which would you prefer?`,
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, alternativesMessage])
+          showAlternatives = false
         }
-        
-        setMessages(prev => [...prev, fallbackQuestion])
-        setCurrentQuestion(nextQuestion)
-        setQuestionCount(prev => prev + 1)
-        setAskMoreQuestionCount(prev => prev + 1)
-        setAnalysisReady(false)
-        setIsComplete(false)
-        
-        // Simulate confidence increase
-        setCurrentConfidence(prev => Math.min(prev + 5, 90))
-        
-        // Stop after 3 additional questions
-        if (askMoreQuestionCount >= 2) {
-          setTimeout(() => {
-            const completeMsg: Message = {
-              id: `complete-${Date.now()}`,
-              role: 'assistant',
-              content: `I've gathered additional information. Let me generate your enhanced analysis with ${currentConfidence + 5}% confidence.`,
-              timestamp: new Date()
-            }
-            setMessages(prev => [...prev, completeMsg])
-            setCurrentConfidence(90)
-            setTimeout(() => completeDeepDive(), 2000)
-          }, 1000)
-        }
-        
-        setIsAskingMore(false)
-        return
       }
       
-      // Original error handling
-      let errorContent = "I'm having trouble generating additional questions right now."
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: errorContent,
-        timestamp: new Date()
+      if (showAlternatives) {
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: errorContent + " You can complete the current analysis or try again later.",
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
       }
-      setMessages(prev => [...prev, errorMessage])
+      
+      // Allow completing the analysis with current confidence
       setAnalysisReady(true)
+      // Don't auto-complete on error - let user decide
     } finally {
       setIsAskingMore(false)
     }

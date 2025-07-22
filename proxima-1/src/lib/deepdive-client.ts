@@ -232,31 +232,17 @@ export const deepDiveClient = {
   async askMeMore(
     sessionId: string,
     currentConfidence: number,
-    targetConfidence: number = 95,  // Backend defaults to 95
+    targetConfidence: number = 90,  // Backend defaults to 90
     userId?: string,
-    maxQuestions: number = 5
+    maxQuestions: number = 5  // Keep for future use but don't send to backend
   ): Promise<any> {
-    console.log('Ask Me More Request:', {
-      session_id: sessionId,
-      current_confidence: currentConfidence,
-      target_confidence: targetConfidence,
-      user_id: userId,
-      max_questions: maxQuestions
-    })
-    
-    // Try both parameter formats in case backend expects different names
+    // Create a clean request body with only the fields the backend expects
     const requestBody = {
       session_id: sessionId,
-      current_confidence: currentConfidence,
-      target_confidence: targetConfidence,
-      user_id: userId,
-      max_questions: maxQuestions,
-      // Also include these in case backend expects them
-      confidence: currentConfidence,
-      target: targetConfidence
+      current_confidence: Math.round(currentConfidence), // Ensure it's an integer
+      target_confidence: Math.round(targetConfidence),   // Ensure it's an integer
+      user_id: userId
     }
-    
-    console.log('Ask Me More Request Body:', JSON.stringify(requestBody, null, 2))
     
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/ask-more`, {
       method: 'POST',
@@ -270,8 +256,6 @@ export const deepDiveClient = {
     }
     
     const result = await response.json()
-    console.log('Ask Me More Response:', JSON.stringify(result, null, 2))
-    
     return result
   }
 }
