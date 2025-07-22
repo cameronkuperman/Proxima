@@ -122,6 +122,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   const [finalAnalysis, setFinalAnalysis] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
+  const [autoShowResults, setAutoShowResults] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [isThinkingHarder, setIsThinkingHarder] = useState(false)
@@ -296,6 +297,15 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         console.log('Ready for analysis, showing complete button')
         setAnalysisReady(true)
         setCurrentQuestion('')
+        
+        // Show a message to the user
+        const readyMessage: Message = {
+          id: `ready-${Date.now()}`,
+          role: 'assistant',
+          content: 'I have gathered enough information. Click the button below to generate your comprehensive health analysis.',
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, readyMessage])
       } else if (response.question && response.question.trim() !== '') {
         // Continue with next question
         setError(null) // Clear any previous errors
@@ -391,16 +401,25 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       const result = await deepDiveClient.completeDeepDive(
         sessionId!,
         null,
-        'google/gemini-2.0-pro'  // Fallback model as per backend guide
+        'deepseek/deepseek-chat'  // Fallback model - more reliable for JSON
       )
       console.log('Deep Dive complete result:', result)
+      console.log('Analysis type:', typeof result.analysis)
+      console.log('Analysis object:', result.analysis)
       
       // Validate the result has required data
       if (!result || !result.analysis) {
+        console.error('Invalid result structure:', result)
         throw new Error('Invalid analysis result received')
       }
       
-      setFinalAnalysis({
+      // Ensure analysis is an object, not a string
+      if (typeof result.analysis === 'string') {
+        console.error('ERROR: Backend returned analysis as string, should be object!')
+        throw new Error('Backend returned invalid analysis format')
+      }
+      
+      const finalData = {
         ...scanData,
         analysis: result.analysis || {},
         confidence: result.confidence || 0,
@@ -409,10 +428,16 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         questions_asked: result.questions_asked || 0,
         reasoning_snippets: result.reasoning_snippets || [],
         mode: 'deep'  // Ensure mode is set
-      })
+      }
+      
+      setFinalAnalysis(finalData)
       setIsComplete(true)
       setAnalysisReady(false) // Reset this since we've completed
       onComplete(result.analysis)
+      
+      // Auto-show results like Quick Scan
+      console.log('Auto-showing Deep Dive results')
+      setShowReport(true)
       
       // Generate tracking suggestion
       if (result.deep_dive_id && user?.id) {
@@ -427,7 +452,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       const diagnosisMessage: Message = {
         id: `diagnosis-${Date.now()}`,
         role: 'assistant',
-        content: `Based on your symptoms, this looks like **${primaryCondition}**${confidenceText}. ${likelihood}`,
+        content: `Based on your symptoms, this looks like **${primaryCondition}**${confidenceText}. ${likelihood}\n\nGenerating your comprehensive analysis report...`,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, diagnosisMessage])
@@ -614,8 +639,9 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     }
   }
 
-  if (showReport && finalAnalysis) {
-    console.log('Rendering QuickScanResults with finalAnalysis:', finalAnalysis)
+  // Show results immediately when we have final analysis
+  if (finalAnalysis && isComplete) {
+    console.log('Showing Deep Dive results, finalAnalysis:', finalAnalysis)
     // Ensure we pass the correct data structure
     const resultsData = {
       ...finalAnalysis,
@@ -698,7 +724,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                       <span className="text-xs text-indigo-400 font-medium">AI Assistant</span>
                     </div>
                   )}
-                  {message.id.startsWith('diagnosis-') ? (
+                  {(message.id.startsWith('diagnosis-') || message.content.includes('Based on your symptoms')) ? (
                     <div>
                       <p className="text-sm leading-relaxed mb-4" dangerouslySetInnerHTML={{ 
                         __html: message.content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>') 
@@ -709,7 +735,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 }}
-                          onClick={() => setShowReport(true)}
+                          onClick={() => {
+                            console.log('View Full Analysis button clicked')
+                            setShowReport(true)
+                          }}
                           className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2 shadow-lg"
                         >
                           <FileText className="w-5 h-5" />
