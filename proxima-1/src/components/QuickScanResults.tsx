@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2, MessageSquare } from 'lucide-react'
 import OracleEmbedded from '@/components/OracleEmbedded'
+import OracleAIModal from '@/components/OracleAIModal'
 import { useRouter } from 'next/navigation'
 import { useTrackingStore } from '@/stores/useTrackingStore'
 import { supabase } from '@/lib/supabase'
@@ -27,6 +28,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   const [activeTab, setActiveTab] = useState(0)
   const [showWhy, setShowWhy] = useState(false)
   const [showOraclePanel, setShowOraclePanel] = useState(false)
+  const [showOracleModal, setShowOracleModal] = useState(false)
   const [showTrackingSuggestion, setShowTrackingSuggestion] = useState(false)
   const [isGeneratingTracking, setIsGeneratingTracking] = useState(false)
   const [isLoadingTrackButton, setIsLoadingTrackButton] = useState(false)
@@ -143,7 +145,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   }
 
   const handleAskOracle = () => {
-    setShowOraclePanel(true)
+    setShowOracleModal(true)
   }
 
   const handleThinkHarder = async () => {
@@ -933,6 +935,22 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Oracle AI Modal */}
+      <OracleAIModal 
+        isOpen={showOracleModal}
+        onClose={() => setShowOracleModal(false)}
+        analysisData={{
+          confidence,
+          diagnosis: analysisResult.primaryCondition,
+          other_possibilities: analysisResult.differentials?.map((diff: any) => ({
+            name: diff.condition,
+            likelihood: diff.probability
+          })) || [],
+          reasoning: analysisResult.reasoning
+        }}
+        bodyPart={scanData.bodyPart}
+      />
     </>
   )
 }
