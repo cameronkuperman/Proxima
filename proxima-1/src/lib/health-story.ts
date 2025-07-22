@@ -227,12 +227,8 @@ export const healthStoryService = {
           health_story: {
             story_id: data.story_id,
             header: data.title || data.header, // Backend now sends 'title'
-            subtitle: data.subtitle, // New subtitle field
             story_text: data.content, // Map content to story_text
-            generated_date: data.date,
-            data_sources: data.data_sources,
-            usage: data.usage,
-            model: data.model
+            generated_date: data.date
           }
         };
       }
@@ -323,7 +319,7 @@ export const healthStoryService = {
       }
       
       // Map the database records to our HealthStoryData type
-      return (data || []).map(story => ({
+      return (data || []).map((story: any) => ({
         id: story.id,
         user_id: story.user_id,
         header: story.header,

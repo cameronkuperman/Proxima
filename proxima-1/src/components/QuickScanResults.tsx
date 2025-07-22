@@ -173,7 +173,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
       if (mode === 'deep') {
         endpoint = '/api/deep-dive/ultra-think'
         requestBody = {
-          session_id: scanData.scan_id || scanData.deep_dive_id,  // Deep dive uses session_id
+          session_id: scanData.scan_id,  // Deep dive uses session_id
           user_id: user?.id
         }
       } else {
@@ -254,7 +254,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
       }
     } else if (mode === 'deep') {
       // Deep Dive: Continue with more questions in the existing session
-      const sessionId = scanData.deep_dive_id || scanData.scan_id
+      const sessionId = scanData.scan_id
       if (!sessionId) {
         console.error('No session ID found for Deep Dive Ask Me More')
         return
@@ -1043,7 +1043,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
             name: diff.condition,
             likelihood: diff.probability
           })) || [],
-          reasoning: analysisResult.reasoning
+          reasoning: analysis.reasoning || ''
         }}
         bodyPart={scanData.bodyPart}
       />

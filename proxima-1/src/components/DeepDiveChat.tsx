@@ -179,7 +179,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
             content: `Your analysis has already reached ${askMoreResponse.current_confidence || 90}% confidence. No additional questions needed.`,
             timestamp: new Date()
           }])
-          setIsAnalysisReady(true)
+          setAnalysisReady(true)
           setIsLoading(false)
           initializingRef.current = false
           return
@@ -194,7 +194,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         }
         setMessages([assistantMessage])
         setCurrentQuestion(askMoreResponse.question)
-        setQuestionNumber(askMoreResponse.question_number || 1)
+        setQuestionCount(askMoreResponse.question_number || 1)
         setIsAskingMore(true)
         setCurrentConfidence(askMoreResponse.current_confidence || 85)
         
@@ -380,10 +380,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setCurrentQuestion(response.question)
         setMessages(prev => [...prev, assistantMessage])
         
-        // Update confidence if provided
-        if (response.current_confidence) {
-          setCurrentConfidence(response.current_confidence)
-        }
+        // Confidence is tracked separately in Ask Me More flow
       } else if (!response.question || response.question.trim() === '') {
         // Check if we've asked enough questions
         if (questionCount >= 6) {
@@ -459,7 +456,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       console.log('Calling deepDiveClient.completeDeepDive')
       const result = await deepDiveClient.completeDeepDive(
         sessionId!,
-        null,
+        undefined,
         'deepseek/deepseek-chat'  // Fallback model - more reliable for JSON
       )
       console.log('Deep Dive complete result:', result)

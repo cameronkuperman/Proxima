@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -100,7 +100,7 @@ import { formatDistanceToNow } from 'date-fns';
   }
 ];*/
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
@@ -1335,5 +1335,13 @@ export default function DashboardPage() {
         <UnifiedFAB />
       </div>
     </UnifiedAuthGuard>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black flex items-center justify-center"><div className="text-white">Loading...</div></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
