@@ -118,6 +118,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   const [questionCount, setQuestionCount] = useState(0)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isComplete, setIsComplete] = useState(false)
+  const [analysisReady, setAnalysisReady] = useState(false)
   const [finalAnalysis, setFinalAnalysis] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
@@ -125,6 +126,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   const [retryCount, setRetryCount] = useState(0)
   const [isThinkingHarder, setIsThinkingHarder] = useState(false)
   const [isAskingMore, setIsAskingMore] = useState(false)
+  const [askMoreQuestionCount, setAskMoreQuestionCount] = useState(0)
 
   // Initialize deep dive session with proper guards
   useEffect(() => {
@@ -151,9 +153,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       
       // Try different models if we keep getting blank responses
       const models = [
-        'deepseek/deepseek-r1-0528:free',
-        'deepseek/deepseek-chat',
-        'deepseek/deepseek-r1-distill-llama-70b:free'
+        'tngtech/deepseek-r1t-chimera:free',  // Updated primary model
+        'openai/gpt-4-turbo',
+        'anthropic/claude-3-sonnet',
+        'deepseek/deepseek-chat'
       ]
       const modelToUse = retryCount < models.length ? models[retryCount] : models[models.length - 1]
       console.log(`Using model: ${modelToUse} (retry ${retryCount})`)
@@ -173,11 +176,11 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         console.warn('Initial question was blank')
         
         // If we haven't tried all models yet, retry with a different one
-        if (retryCount < 2) {
+        if (retryCount < 3) {
           console.log('Retrying with a different model...')
           setRetryCount(retryCount + 1)
           initializingRef.current = false
-          setTimeout(() => initializeSession(), 500)
+          setTimeout(() => initializeSession(), 1000 * (retryCount + 1)) // Exponential backoff
           return
         }
         
@@ -211,8 +214,12 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       console.error('Failed to start deep dive:', error)
       
       // If all retries failed, show a user-friendly error
-      if (retryCount >= 2) {
-        setError('Unable to start the deep dive analysis. Please try again later.')
+      if (retryCount >= 3) {
+        let errorMessage = 'Our AI models are experiencing high demand. Please try again in a moment.'
+        if (error instanceof Error && error.message.includes('Model failed')) {
+          errorMessage = 'Having trouble connecting to our AI. Trying alternative analysis methods...'
+        }
+        setError(errorMessage)
         
         // Create a mock session with fallback questions
         const mockSessionId = `mock-${Date.now()}`
@@ -239,7 +246,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         // Retry with different model
         setRetryCount(retryCount + 1)
         initializingRef.current = false
-        setTimeout(() => initializeSession(), 500)
+        setTimeout(() => initializeSession(), 1000 * (retryCount + 1)) // Exponential backoff
         return
       }
     } finally {
@@ -270,7 +277,8 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       const response = await deepDiveClient.continueDeepDive(
         sessionId!,
         userMessage.content,
-        questionCount
+        questionCount,
+        'deepseek/deepseek-chat'  // Fallback model
       )
       
       console.log('Deep Dive continue response:', JSON.stringify(response, null, 2))
@@ -284,9 +292,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       })
       
       if (response.ready_for_analysis) {
-        // Complete the deep dive
-        console.log('Ready for analysis, calling completeDeepDive')
-        await completeDeepDive()
+        // Don't auto-complete, just mark as ready
+        console.log('Ready for analysis, showing complete button')
+        setAnalysisReady(true)
+        setCurrentQuestion('')
       } else if (response.question && response.question.trim() !== '') {
         // Continue with next question
         setError(null) // Clear any previous errors
@@ -309,8 +318,9 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       } else if (!response.question || response.question.trim() === '') {
         // Check if we've asked enough questions
         if (questionCount >= 6) {
-          console.log('Reached maximum questions (6), completing analysis')
-          await completeDeepDive()
+          console.log('Reached maximum questions (6), ready for analysis')
+          setAnalysisReady(true)
+          setCurrentQuestion('')
           return
         }
         
@@ -335,13 +345,29 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setCurrentQuestion(fallbackQuestion)
         setMessages(prev => [...prev, assistantMessage])
       } else {
-        // No more questions and ready_for_analysis might be implicitly true
-        console.log('No more questions, attempting to complete')
-        await completeDeepDive()
+        // No more questions, show complete button
+        console.log('No more questions, ready for analysis')
+        setAnalysisReady(true)
+        setCurrentQuestion('')
       }
     } catch (error) {
       console.error('Failed to submit answer:', error)
-      setError(error instanceof Error ? error.message : 'Failed to process answer')
+      
+      // Handle specific error messages from backend
+      let errorMessage = 'Failed to process answer'
+      if (error instanceof Error) {
+        if (error.message.includes('Session not found')) {
+          errorMessage = 'Your session has expired. Please start a new analysis.'
+        } else if (error.message.includes('Session already completed')) {
+          errorMessage = 'This analysis is finalized. Start a new Deep Dive for further questions.'
+        } else if (error.message.includes('Maximum additional questions')) {
+          errorMessage = 'You\'ve asked the maximum number of follow-up questions. Please review your analysis.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
       processingRef.current = false
@@ -362,7 +388,11 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
 
     try {
       console.log('Calling deepDiveClient.completeDeepDive')
-      const result = await deepDiveClient.completeDeepDive(sessionId!)
+      const result = await deepDiveClient.completeDeepDive(
+        sessionId!,
+        null,
+        'google/gemini-2.0-pro'  // Fallback model as per backend guide
+      )
       console.log('Deep Dive complete result:', result)
       
       // Validate the result has required data
@@ -381,6 +411,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         mode: 'deep'  // Ensure mode is set
       })
       setIsComplete(true)
+      setAnalysisReady(false) // Reset this since we've completed
       onComplete(result.analysis)
       
       // Generate tracking suggestion
@@ -416,10 +447,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
   }
 
   const handleThinkHarder = async () => {
-    console.log('Deep Dive Think Harder clicked, finalAnalysis:', finalAnalysis)
-    const scanId = finalAnalysis?.scan_id || finalAnalysis?.deep_dive_id
-    if (!scanId) {
-      console.error('No scan/deep_dive ID available:', finalAnalysis)
+    console.log('Deep Dive Ultra Think clicked, finalAnalysis:', finalAnalysis)
+    const deepDiveId = finalAnalysis?.deep_dive_id || sessionId
+    if (!deepDiveId) {
+      console.error('No deep_dive ID available:', finalAnalysis)
       alert('Unable to enhance analysis - ID not found. Please complete the analysis first.')
       return
     }
@@ -431,44 +462,53 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     const thinkingMessage: Message = {
       id: `thinking-${Date.now()}`,
       role: 'assistant',
-      content: "Let me engage Grok 4's advanced reasoning capabilities for a deeper analysis. This may take a moment...",
+      content: "🧠 Engaging Grok 4's ultra-advanced reasoning capabilities. This sophisticated analysis may take a moment...",
       timestamp: new Date()
     }
     setMessages(prev => [...prev, thinkingMessage])
     
     try {
-      // Use the Deep Dive Think Harder endpoint with Grok 4
-      const result = await deepDiveClient.thinkHarder(
-        sessionId!,
-        finalAnalysis?.analysis,
-        user?.id,
-        'grok-4'  // Use Grok 4 for Deep Dive
-      )
+      // Use Ultra Think endpoint with Grok 4 for Deep Dive
+      const result = await fetch(`${process.env.NEXT_PUBLIC_ORACLE_API_URL || 'https://web-production-945c4.up.railway.app'}/api/deep-dive/ultra-think`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: deepDiveId,  // Backend expects session_id
+          user_id: user?.id,
+          model: 'x-ai/grok-4'
+        })
+      })
       
-      console.log('Deep Dive Think Harder API response:', result)
-      
-      // Update with enhanced analysis
-      setFinalAnalysis((prev: any) => ({
-        ...prev,
-        analysis: result.ultra_analysis || result.analysis || prev.analysis,
-        confidence: result.ultra_confidence || result.confidence || prev.confidence,
-        reasoning_snippets: result.reasoning_snippets || [],
-        ultra_insights: result.key_insights || [],
-        ultra_analysis: result // Store the full response
-      }))
-      
-      // Extract key insight for message
-      let keyInsight = 'The ultra-analysis provides deeper insights into your condition.'
-      if (result.key_insights && result.key_insights.length > 0) {
-        keyInsight = result.key_insights[0]
-      } else if (result.ultra_analysis?.critical_insights && result.ultra_analysis.critical_insights.length > 0) {
-        keyInsight = result.ultra_analysis.critical_insights[0]
+      if (!result.ok) {
+        throw new Error('Failed to get ultra analysis')
       }
       
+      const data = await result.json()
+      console.log('Deep Dive Ultra Think response:', data)
+      
+      // Update with ultra analysis - match backend response format
+      setFinalAnalysis((prev: any) => ({
+        ...prev,
+        ultra_analysis: data.ultra_analysis || data,
+        confidence: data.ultra_analysis?.confidence || data.confidence_progression?.ultra || prev.confidence,
+        ultra_confidence: data.ultra_analysis?.confidence || data.confidence_progression?.ultra,
+        confidence_progression: data.confidence_progression,
+        reasoning_snippets: data.reasoning_snippets || [],
+        critical_insights: data.critical_insights || data.ultra_analysis?.critical_insights || [],
+        complexity_score: data.complexity_score || data.ultra_analysis?.complexity_score,
+        analysis_tier: data.analysis_tier,
+        total_confidence_gain: data.total_confidence_gain
+      }))
+      
+      // Extract key insights
+      const insights = data.critical_insights || data.ultra_analysis?.critical_insights || []
+      const complexityScore = data.complexity_score || data.ultra_analysis?.complexity_score || 'N/A'
+      const ultraConfidence = data.ultra_analysis?.confidence || data.confidence || 95
+      
       const enhancedMessage: Message = {
-        id: `enhanced-${Date.now()}`,
+        id: `ultra-${Date.now()}`,
         role: 'assistant',
-        content: `**Grok 4 Analysis Complete** 🧠\n\nAfter advanced reasoning, I have ${result.ultra_confidence || result.confidence || '95+'}% confidence.\n\n${keyInsight}`,
+        content: `**Grok 4 Ultra Analysis Complete** 🧠✨\n\n**Confidence:** ${ultraConfidence}% (Case Complexity: ${complexityScore}/10)\n\n**Critical Insights:**\n${insights.map((insight: string, i: number) => `${i + 1}. ${insight}`).join('\n')}\n\n${data.recommendation_change ? `**Updated Recommendation:** ${data.recommendation_change}` : ''}`,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, enhancedMessage])
@@ -501,6 +541,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
     setIsAskingMore(true)
     setError(null)
     setIsComplete(false) // Re-enable input form
+    setAnalysisReady(false) // Reset analysis ready state
     
     const moreQuestionsMessage: Message = {
       id: `more-questions-${Date.now()}`,
@@ -514,9 +555,10 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       // Call backend API for "Ask Me More" functionality
       const result = await deepDiveClient.askMeMore(
         sessionId,
-        finalAnalysis?.confidence || 0,
-        90,
-        user?.id
+        finalAnalysis?.confidence || 70,
+        95,  // Target 95% confidence as per backend
+        user?.id,
+        5    // Max 5 additional questions
       )
       
       if (result.question) {
@@ -530,6 +572,21 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         setMessages(prev => [...prev, newQuestion])
         setCurrentQuestion(result.question)
         setQuestionCount(prev => prev + 1)
+        setAskMoreQuestionCount(prev => prev + 1)
+        
+        // Check if we've reached the limit or backend says to finalize
+        if (askMoreQuestionCount >= 4 || result.should_finalize) {
+          const limitMessage: Message = {
+            id: `limit-${Date.now()}`,
+            role: 'assistant',
+            content: result.should_finalize 
+              ? "I have enough information for a comprehensive analysis. Let me finalize your results."
+              : "We've reached the maximum additional questions. Let me complete the enhanced analysis now.",
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, limitMessage])
+          setTimeout(() => completeDeepDive(), 2000)
+        }
       } else {
         // No more questions needed
         const completeMessage: Message = {
@@ -703,7 +760,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                             ) : (
                               <>
                                 <Brain className="w-5 h-5 group-hover:animate-pulse transition-transform group-hover:scale-110" />
-                                <span className="font-medium">Think Harder</span>
+                                <span className="font-medium">Ultra Think</span>
                               </>
                             )}
                           </motion.button>
@@ -758,7 +815,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
                           transition={{ delay: 1 }}
                           className="text-xs text-gray-400 text-center space-y-1"
                         >
-                          <p><span className="text-purple-400">Think Harder:</span> Advanced AI reasoning for complex cases</p>
+                          <p><span className="text-purple-400">Ultra Think:</span> Grok 4's most advanced reasoning for complex cases</p>
                           <p><span className="text-emerald-400">Ask Me More:</span> Continue until 90%+ confidence</p>
                         </motion.div>
                       </div>
@@ -791,7 +848,7 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         </div>
 
         {/* Input Form */}
-        {!isComplete && currentQuestion && currentQuestion.trim() !== '' && (
+        {!isComplete && !analysisReady && currentQuestion && currentQuestion.trim() !== '' && (
           <form onSubmit={handleSubmit} className="p-6 border-t border-white/10">
             <div className="flex gap-3">
               <textarea
@@ -829,11 +886,11 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
           </form>
         )}
         
-        {/* Manual complete button after sufficient Q&A */}
-        {!isComplete && messages.length >= 3 && (!currentQuestion || currentQuestion.trim() === '') && !isLoading && (
+        {/* Complete button when analysis is ready */}
+        {!isComplete && analysisReady && !isLoading && (
           <div className="p-4 text-center border-t border-white/10">
             <p className="text-sm text-gray-400 mb-3">
-              Ready to generate your comprehensive health analysis?
+              I've gathered enough information to provide a comprehensive analysis.
             </p>
             <button
               onClick={() => completeDeepDive()}
