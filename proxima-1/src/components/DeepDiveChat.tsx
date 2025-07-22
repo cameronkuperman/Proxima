@@ -797,6 +797,12 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
               <textarea
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSubmit(e as any)
+                  }
+                }}
                 placeholder="Type your answer here..."
                 disabled={isLoading}
                 rows={2}
