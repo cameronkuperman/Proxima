@@ -20,6 +20,8 @@ function ScanPageContent() {
   const bodyPart = searchParams.get('bodyPart')
   const formDataParam = searchParams.get('formData')
   const fromScan = searchParams.get('fromScan')
+  const continueSession = searchParams.get('continueSession')
+  const targetConfidence = searchParams.get('targetConfidence')
   const [currentStep, setCurrentStep] = useState<'intro' | 'form' | 'analysis'>('intro')
   const [scanData, setScanData] = useState<any>(null)
   const [userGender, setUserGender] = useState<'male' | 'female'>('male') // Default to male
@@ -47,19 +49,21 @@ function ScanPageContent() {
   }, [user?.id])
 
   useEffect(() => {
-    // If coming from a Quick Scan, skip intro and go directly to Deep Dive
-    if (fromScan && bodyPart && formDataParam && mode === 'deep') {
+    // If continuing a Deep Dive session or coming from a Quick Scan
+    if ((fromScan || continueSession) && bodyPart && formDataParam && mode === 'deep') {
       try {
         const formData = JSON.parse(decodeURIComponent(formDataParam))
         setScanData({
           bodyPart,
           formData,
           mode: 'deep',
-          fromScan
+          fromScan,
+          continueSession,
+          targetConfidence: targetConfidence ? parseInt(targetConfidence) : undefined
         })
         setCurrentStep('analysis')
       } catch (error) {
-        console.error('Failed to parse form data from Quick Scan:', error)
+        console.error('Failed to parse form data:', error)
         setCurrentStep('form')
       }
     } else {
@@ -69,7 +73,7 @@ function ScanPageContent() {
       }, 2000)
       return () => clearTimeout(timer)
     }
-  }, [fromScan, bodyPart, formDataParam, mode])
+  }, [fromScan, continueSession, bodyPart, formDataParam, mode, targetConfidence])
 
   const handleFormComplete = async (data: any) => {
     if (mode === 'quick') {

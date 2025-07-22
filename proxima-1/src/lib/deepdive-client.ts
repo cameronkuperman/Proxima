@@ -238,20 +238,30 @@ export const deepDiveClient = {
   ): Promise<any> {
     console.log('Ask Me More Request:', {
       session_id: sessionId,
+      current_confidence: currentConfidence,
       target_confidence: targetConfidence,
       user_id: userId,
       max_questions: maxQuestions
     })
     
+    // Try both parameter formats in case backend expects different names
+    const requestBody = {
+      session_id: sessionId,
+      current_confidence: currentConfidence,
+      target_confidence: targetConfidence,
+      user_id: userId,
+      max_questions: maxQuestions,
+      // Also include these in case backend expects them
+      confidence: currentConfidence,
+      target: targetConfidence
+    }
+    
+    console.log('Ask Me More Request Body:', JSON.stringify(requestBody, null, 2))
+    
     const response = await fetch(`${API_BASE_URL}/api/deep-dive/ask-more`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: sessionId,
-        user_id: userId,
-        target_confidence: targetConfidence,
-        max_questions: maxQuestions
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {
