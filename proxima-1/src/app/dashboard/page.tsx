@@ -1,9 +1,8 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import HealthProfileModal from '@/components/HealthProfileModal';
 import OracleChat from '@/components/OracleChat';
 import { QuickReportChat } from '@/components/health/QuickReportChat';
@@ -11,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 import UnifiedFAB from '@/components/UnifiedFAB';
 import { useTutorial } from '@/contexts/TutorialContext';
-import { MapPin, Pill, Heart, Clock, Moon, Coffee, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Star, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, Stethoscope, ClipboardList } from 'lucide-react';
+import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
 import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
@@ -21,8 +20,9 @@ import LogDataModal from '@/components/tracking/LogDataModal';
 import TrackingChart from '@/components/tracking/TrackingChart';
 import { DashboardItem } from '@/services/trackingService';
 import HistoryModal from '@/components/HistoryModal';
-import { useTimeline } from '@/hooks/useTimeline';
 import { formatDistanceToNow } from 'date-fns';
+import { reportsService, GeneratedReport } from '@/services/reportsService';
+import { healthStoryService } from '@/lib/health-story';
 
 // Mock graph data - Removed, no longer needed for tracking dashboard
 /*const mockGraphData = [
@@ -104,7 +104,7 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
-  const { initializeTutorial, showWelcome } = useTutorial();
+  const { initializeTutorial } = useTutorial();
   
   // Debug logging for tutorial
   useEffect(() => {
@@ -116,15 +116,10 @@ function DashboardContent() {
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineAnimating, setTimelineAnimating] = useState(false);
-  const { 
-    interactions: timelineData, 
-    isLoading: timelineLoading,
-    error: timelineError,
-    hasLoaded,
-    handleItemClick,
-    getInteractionColor,
-    refetch: refetchTimeline 
-  } = useTimeline({ search: timelineSearch });
+  const [timelineData, setTimelineData] = useState<any[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(true);
+  const [timelineError, setTimelineError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
@@ -166,15 +161,164 @@ function DashboardContent() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
   
-  // Past reports queue
-  const [reportQueue] = useState([
-    { id: 1, title: 'Severe Headache Report', time: '2 days ago', content: 'You reported a throbbing headache (7/10) on the right side of your head. You mentioned it started after a stressful meeting and lack of sleep.', tags: [{ icon: <MapPin className="w-3 h-3" />, text: 'Right temporal' }, { icon: <Pill className="w-3 h-3" />, text: 'Took ibuprofen' }] },
-    { id: 2, title: 'Chest Discomfort Analysis', time: '3 days ago', content: 'You reported mild chest tightness (4/10) during exercise. Symptoms resolved with rest. You noted it might be stress-related.', tags: [{ icon: <Heart className="w-3 h-3" />, text: 'During exercise' }, { icon: <Clock className="w-3 h-3" />, text: '5 min duration' }] },
-    { id: 3, title: 'Sleep Quality Check', time: '5 days ago', content: 'You reported poor sleep (4/10) with frequent wake-ups. Mentioned anxiety about upcoming deadlines affecting rest.', tags: [{ icon: <Moon className="w-3 h-3" />, text: '4 hrs total' }, { icon: <Moon className="w-3 h-3" />, text: '3 wake-ups' }] },
-    { id: 4, title: 'Energy Crash Analysis', time: '1 week ago', content: 'You reported afternoon fatigue (3/10 energy) around 2-3 PM daily. Linked to irregular meal timing and high caffeine intake.', tags: [{ icon: <Coffee className="w-3 h-3" />, text: '4 cups/day' }, { icon: <Utensils className="w-3 h-3" />, text: 'Skipped lunch' }] },
-    { id: 5, title: 'Anxiety Episode', time: '10 days ago', content: 'You reported elevated anxiety (6/10) with racing thoughts. Triggered by work presentation. Used breathing exercises.', tags: [{ icon: <BrainCircuit className="w-3 h-3" />, text: 'Meditation helped' }, { icon: <Star className="w-3 h-3" />, text: 'Work trigger' }] }
-  ]);
-  const [visibleReports, setVisibleReports] = useState([0, 1]);
+  // Health timeline reports state
+  const [healthTimelineData, setHealthTimelineData] = useState<GeneratedReport[]>([]);
+  const [healthTimelineLoading, setHealthTimelineLoading] = useState(true);
+  
+  // Health story state
+  const [latestHealthStory, setLatestHealthStory] = useState<any>(null);
+  const [healthStoryLoading, setHealthStoryLoading] = useState(true);
+  
+  // Initialize visible reports based on available data
+  const [visibleReports, setVisibleReports] = useState<number[]>([]);
+  
+  // Update visible reports when timeline data changes
+  useEffect(() => {
+    if (healthTimelineData.length > 0) {
+      // Show first 2 reports if available
+      setVisibleReports(healthTimelineData.length >= 2 ? [0, 1] : [0]);
+    }
+  }, [healthTimelineData]);
+  
+  // Fetch health reports
+  useEffect(() => {
+    const fetchReports = async () => {
+      if (!user?.id) return;
+      
+      setHealthTimelineLoading(true);
+      try {
+        const reports = await reportsService.fetchUserReports(user.id);
+        // Get the most recent 10 reports
+        const recentReports = reports.slice(0, 10);
+        setHealthTimelineData(recentReports);
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+        setHealthTimelineData([]);
+      } finally {
+        setHealthTimelineLoading(false);
+      }
+    };
+    
+    fetchReports();
+  }, [user?.id]);
+  
+  // Fetch latest health story
+  useEffect(() => {
+    const fetchLatestHealthStory = async () => {
+      if (!user?.id) return;
+      
+      setHealthStoryLoading(true);
+      try {
+        const stories = await healthStoryService.getHealthStories(user.id);
+        if (stories.length > 0) {
+          // Get the most recent story
+          setLatestHealthStory(stories[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching health story:', error);
+        setLatestHealthStory(null);
+      } finally {
+        setHealthStoryLoading(false);
+      }
+    };
+    
+    fetchLatestHealthStory();
+  }, [user?.id]);
+  
+  // Fetch timeline data for sidebar (keeping existing functionality)
+  const fetchTimeline = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setTimelineLoading(true);
+    setTimelineError(null);
+    
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      
+      // Build the query - RLS will ensure users only see their own data
+      let query = supabase
+        .from('user_interactions')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      // Add search filter if provided
+      if (timelineSearch) {
+        query = query.or(`title.ilike.%${timelineSearch}%,metadata->>body_part.ilike.%${timelineSearch}%,metadata->>condition.ilike.%${timelineSearch}%`);
+      }
+      
+      // Add pagination
+      query = query.range(0, 49);
+      
+      const { data, error: queryError, count } = await query;
+      
+      if (queryError) {
+        throw new Error(queryError.message);
+      }
+      
+      setTimelineData(data || []);
+      setHasLoaded(true);
+      
+    } catch (err) {
+      console.error('Timeline fetch error:', err);
+      setTimelineError(err instanceof Error ? err.message : 'Failed to load timeline');
+      setTimelineData([]);
+    } finally {
+      setTimelineLoading(false);
+    }
+  }, [user?.id, timelineSearch]);
+  
+  useEffect(() => {
+    fetchTimeline();
+  }, [fetchTimeline]);
+  
+  // Helper function to get interaction color
+  const getInteractionColor = useCallback((type: string) => {
+    switch (type) {
+      case 'quick_scan':
+        return {
+          gradient: 'from-emerald-500/20 to-green-500/20',
+          iconColor: 'text-emerald-400',
+          borderColor: 'border-emerald-500/20',
+        };
+      case 'deep_dive':
+        return {
+          gradient: 'from-indigo-500/20 to-purple-500/20',
+          iconColor: 'text-indigo-400',
+          borderColor: 'border-indigo-500/20',
+        };
+      case 'photo_analysis':
+        return {
+          gradient: 'from-pink-500/20 to-rose-500/20',
+          iconColor: 'text-pink-400',
+          borderColor: 'border-pink-500/20',
+        };
+      case 'report':
+        return {
+          gradient: 'from-blue-500/20 to-cyan-500/20',
+          iconColor: 'text-blue-400',
+          borderColor: 'border-blue-500/20',
+        };
+      case 'oracle_chat':
+        return {
+          gradient: 'from-amber-500/20 to-yellow-500/20',
+          iconColor: 'text-amber-400',
+          borderColor: 'border-amber-500/20',
+        };
+      case 'tracking_log':
+        return {
+          gradient: 'from-gray-500/20 to-slate-500/20',
+          iconColor: 'text-gray-400',
+          borderColor: 'border-gray-500/20',
+        };
+      default:
+        return {
+          gradient: 'from-gray-500/20 to-gray-500/20',
+          iconColor: 'text-gray-400',
+          borderColor: 'border-gray-500/20',
+        };
+    }
+  }, []);
 
   // Initialize tutorial ONLY when coming from onboarding
   useEffect(() => {
@@ -256,11 +400,26 @@ function DashboardContent() {
     }
   }, [user?.id, fetchDashboard]);
 
-  // Refresh timeline when returning to dashboard
+  // Refresh timeline and reports when returning to dashboard
   useEffect(() => {
-    const handleFocus = () => {
+    const handleFocus = async () => {
       if (document.visibilityState === 'visible') {
-        refetchTimeline();
+        fetchTimeline();
+        // Also refresh reports and health story
+        if (user?.id) {
+          try {
+            const reports = await reportsService.fetchUserReports(user.id);
+            setHealthTimelineData(reports.slice(0, 10));
+            
+            // Refresh health story
+            const stories = await healthStoryService.getHealthStories(user.id);
+            if (stories.length > 0) {
+              setLatestHealthStory(stories[0]);
+            }
+          } catch (error) {
+            console.error('Error refreshing data:', error);
+          }
+        }
       }
     };
     
@@ -271,7 +430,7 @@ function DashboardContent() {
       document.removeEventListener('visibilitychange', handleFocus);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [refetchTimeline]);
+  }, [fetchTimeline, user?.id]);
 
   // Calculate profile completion percentage
   const calculateProfileCompletion = () => {
@@ -351,11 +510,45 @@ function DashboardContent() {
   const dismissReport = (index: number) => {
     const newVisible = [...visibleReports];
     // Find next available report not currently visible
-    const nextIndex = reportQueue.findIndex((_, idx) => !visibleReports.includes(idx) && idx !== visibleReports[index]);
+    const nextIndex = healthTimelineData.findIndex((_, idx) => !visibleReports.includes(idx) && idx !== visibleReports[index]);
     if (nextIndex !== -1) {
       newVisible[index] = nextIndex;
       setVisibleReports(newVisible);
     }
+  };
+  
+  // Helper function to format report for display
+  const formatReportItem = (report: GeneratedReport) => {
+    const tags = [];
+    
+    // Show confidence as primary tag
+    if (report.confidence_score) {
+      tags.push({ 
+        icon: <AlertTriangle className="w-3 h-3" />, 
+        text: `${report.confidence_score}% confidence` 
+      });
+    }
+    
+    // Add report type icon/tag
+    const getReportIcon = () => {
+      switch(report.report_type) {
+        case 'comprehensive': return <FileText className="w-3 h-3" />;
+        case 'urgent_triage': return <AlertTriangle className="w-3 h-3" />;
+        case 'photo_progression': return <Camera className="w-3 h-3" />;
+        case 'symptom_timeline': return <Clock className="w-3 h-3" />;
+        case 'specialist_focused': return <Stethoscope className="w-3 h-3" />;
+        case 'annual_summary': return <Calendar className="w-3 h-3" />;
+        default: return <FileText className="w-3 h-3" />;
+      }
+    };
+    
+    return {
+      ...report,
+      content: report.executive_summary,
+      tags,
+      icon: getReportIcon(),
+      time: formatDistanceToNow(new Date(report.created_at), { addSuffix: true })
+    };
   };
 
   // Removed: const currentGraph = mockGraphData[currentGraphIndex]; - No longer needed for tracking dashboard
@@ -836,7 +1029,7 @@ function DashboardContent() {
                 data-tour="reports-card"
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
-                onClick={() => setReportsMenuOpen(!reportsMenuOpen)}
+                onClick={() => router.push('/reports')}
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <FileText className="w-6 h-6 text-blue-400" />
@@ -844,80 +1037,10 @@ function DashboardContent() {
                 <h3 className="text-xl font-semibold text-white mb-2">Health Reports</h3>
                 <p className="text-gray-400 text-sm mb-2">Generate medical reports from your data</p>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-blue-400">{reportQueue.length} reports</span>
+                  <span className="text-blue-400">{healthTimelineData.length} reports</span>
                   <span className="text-gray-500">•</span>
                   <span className="text-gray-500">View all</span>
                 </div>
-
-                {/* Reports Floating Menu */}
-                <AnimatePresence>
-                  {reportsMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute bottom-full left-0 right-0 mb-2 bg-gray-900/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="p-3 space-y-2">
-                        <button
-                          onClick={() => {
-                            setShowQuickReportChat(true);
-                            setReportsMenuOpen(false);
-                          }}
-                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg">
-                              <FileText className="w-4 h-4 text-purple-400" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-white">Generate New Report</p>
-                              <p className="text-xs text-gray-400">Create a medical report from your data</p>
-                            </div>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            router.push('/reports');
-                            setReportsMenuOpen(false);
-                          }}
-                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-lg">
-                              <ClipboardList className="w-4 h-4 text-blue-400" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-white">View All Reports</p>
-                              <p className="text-xs text-gray-400">Browse your report history</p>
-                            </div>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            refetchTimeline();
-                            setReportsMenuOpen(false);
-                          }}
-                          className="w-full text-left px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-lg transition-all group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-lg">
-                              <Activity className="w-4 h-4 text-green-400" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-white">Refresh Progress</p>
-                              <p className="text-xs text-gray-400">Update timeline & health data</p>
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
 
             </div>
@@ -934,69 +1057,116 @@ function DashboardContent() {
                   className="flex flex-col h-full"
                 >
                   <div className="space-y-4 flex-1">
-                    {/* Dismissible Reports */}
-                    <AnimatePresence mode="popLayout">
-                      {visibleReports.map((reportIndex, idx) => {
-                        const report = reportQueue[reportIndex];
-                        return (
-                          <motion.div
-                            key={report.id}
-                            layout
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -100 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            className="relative group"
-                          >
-                            <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-5 hover:border-white/[0.1] transition-all cursor-pointer">
-                              <button
-                                onClick={() => dismissReport(idx)}
-                                className="absolute top-4 right-4 w-6 h-6 rounded-full bg-white/[0.05] hover:bg-white/[0.1] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                              <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-base font-medium text-white">{report.title}</h3>
-                                <span className="text-xs text-gray-400">{report.time}</span>
-                              </div>
-                              <p className="text-gray-400 text-sm mb-3">
-                                {report.content}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                {report.tags.map((tag, tagIdx) => (
-                                  <React.Fragment key={tag.text}>
-                                    <div className="flex items-center gap-1">
-                                      {tag.icon}
-                                      <span className="text-xs text-gray-400">{tag.text}</span>
-                                    </div>
-                                    {tagIdx < report.tags.length - 1 && <span className="text-xs text-gray-500">•</span>}
-                                  </React.Fragment>
-                                ))}
-                              </div>
+                    {/* Loading State */}
+                    {healthTimelineLoading && (
+                      <div className="space-y-4">
+                        {[...Array(2)].map((_, i) => (
+                          <div key={i} className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-5">
+                            <div className="animate-pulse">
+                              <div className="h-4 bg-white/[0.05] rounded w-1/3 mb-3"></div>
+                              <div className="h-3 bg-white/[0.05] rounded w-full mb-2"></div>
+                              <div className="h-3 bg-white/[0.05] rounded w-3/4"></div>
                             </div>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-
-                    {/* View All Button - Athena inspired */}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full py-3 backdrop-blur-[20px] bg-white/[0.02] border border-white/[0.05] rounded-xl hover:border-white/[0.1] transition-all group"
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span className="text-sm text-gray-400 group-hover:text-white transition-colors">View all reports</span>
-                        <svg className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                          </div>
+                        ))}
                       </div>
-                    </motion.button>
+                    )}
+                    
+                    {/* Empty State */}
+                    {!healthTimelineLoading && healthTimelineData.length === 0 && (
+                      <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-8 text-center">
+                        <div className="mb-4">
+                          <div className="w-12 h-12 mx-auto bg-gray-800/50 rounded-full flex items-center justify-center">
+                            <FileText className="w-6 h-6 text-gray-600" />
+                          </div>
+                        </div>
+                        <p className="text-gray-400 mb-2">No health reports yet</p>
+                        <p className="text-xs text-gray-500">Generate a report from your health data to see it here</p>
+                      </div>
+                    )}
+                    
+                    {/* Timeline Reports */}
+                    {!healthTimelineLoading && healthTimelineData.length > 0 && (
+                      <>
+                        <AnimatePresence mode="popLayout">
+                          {visibleReports.map((reportIndex, idx) => {
+                            const report = healthTimelineData[reportIndex];
+                            if (!report) return null;
+                            
+                            const formattedReport = formatReportItem(report);
+                            return (
+                              <motion.div
+                                key={report.id}
+                                layout
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -100 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                className="relative group"
+                              >
+                                <div 
+                                  onClick={() => router.push(`/reports/${report.id}`)}
+                                  className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-5 hover:border-white/[0.1] transition-all cursor-pointer"
+                                >
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      dismissReport(idx);
+                                    }}
+                                    className="absolute top-4 right-4 w-6 h-6 rounded-full bg-white/[0.05] hover:bg-white/[0.1] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-5 h-5 text-gray-400">{formattedReport.icon}</div>
+                                      <h3 className="text-base font-medium text-white">{formattedReport.title}</h3>
+                                    </div>
+                                    <span className="text-xs text-gray-400">{formattedReport.time}</span>
+                                  </div>
+                                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                                    {formattedReport.content}
+                                  </p>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {formattedReport.tags.map((tag, tagIdx) => (
+                                      <React.Fragment key={`${tag.text}-${tagIdx}`}>
+                                        <div className="flex items-center gap-1">
+                                          {tag.icon}
+                                          <span className="text-xs text-gray-400">{tag.text}</span>
+                                        </div>
+                                        {tagIdx < formattedReport.tags.length - 1 && <span className="text-xs text-gray-500">•</span>}
+                                      </React.Fragment>
+                                    ))}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </>
+                    )}
+
+                    {/* View All Button - Always visible */}
+                    {!healthTimelineLoading && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => router.push('/reports')}
+                        className="w-full py-3 backdrop-blur-[20px] bg-white/[0.02] border border-white/[0.05] rounded-xl hover:border-white/[0.1] transition-all group"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <svg className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <span className="text-sm text-gray-400 group-hover:text-white transition-colors">View all reports</span>
+                          <svg className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </motion.button>
+                    )}
                   </div>
                 </motion.div>
 
@@ -1108,7 +1278,10 @@ function DashboardContent() {
                       <p className="text-sm text-gray-300">
                         Based on your patterns, you might experience a migraine in 2 days. Consider preventive measures.
                       </p>
-                      <button className="text-xs text-yellow-400 hover:text-yellow-300 mt-2">
+                      <button 
+                        onClick={() => router.push('/predictive-insights')}
+                        className="text-xs text-yellow-400 hover:text-yellow-300 mt-2"
+                      >
                         View prevention tips →
                       </button>
                     </div>
