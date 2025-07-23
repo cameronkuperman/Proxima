@@ -1324,23 +1324,54 @@ function DashboardContent() {
                 onClick={() => router.push('/intelligence')}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all"
               >
-                <div className="prose prose-invert max-w-none">
-                  <p className="text-gray-300 leading-relaxed">
-                    <span className="text-white font-medium">Today&apos;s chapter:</span> Your health journey continues to show positive trends. The reduction in headache intensity over the past week correlates with your improved sleep quality scores. Your body is responding well to the new routine you established 7 days ago.
-                  </p>
-                  <p className="text-gray-300 leading-relaxed mt-4">
-                    The AI analysis suggests that maintaining your current hydration levels and continuing with the stress management techniques will likely prevent the predicted migraine. Your consistency in tracking symptoms has enabled more accurate health predictions.
-                  </p>
-                  <div className="flex items-center justify-between mt-4">
-                    <span className="text-xs text-gray-500">AI-generated narrative • Updated 2 hours ago</span>
-                    <div className="flex items-center gap-2 text-xs text-purple-400">
-                      <span>View full intelligence</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                {healthStoryLoading ? (
+                  // Loading state
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-white/[0.05] rounded w-3/4 mb-4"></div>
+                    <div className="h-3 bg-white/[0.05] rounded w-full mb-2"></div>
+                    <div className="h-3 bg-white/[0.05] rounded w-5/6"></div>
+                  </div>
+                ) : latestHealthStory ? (
+                  // Display latest health story
+                  <div className="prose prose-invert max-w-none">
+                    {latestHealthStory.header && (
+                      <h3 className="text-white font-medium text-lg mb-3">{latestHealthStory.header}</h3>
+                    )}
+                    <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                      {/* Show first 300 characters of the story */}
+                      {latestHealthStory.story_text.length > 300 
+                        ? latestHealthStory.story_text.substring(0, 300) + '...' 
+                        : latestHealthStory.story_text}
+                    </p>
+                    <div className="flex items-center justify-between mt-4">
+                      <span className="text-xs text-gray-500">
+                        AI-generated narrative • {formatDistanceToNow(new Date(latestHealthStory.created_at), { addSuffix: true })}
+                      </span>
+                      <div className="flex items-center gap-2 text-xs text-purple-400">
+                        <span>View full intelligence</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  // Default content when no health story exists
+                  <div className="prose prose-invert max-w-none">
+                    <p className="text-gray-300 leading-relaxed">
+                      <span className="text-white font-medium">Start your health journey:</span> Complete health scans and track your symptoms to generate personalized health narratives. Your AI will analyze patterns and provide insights about your wellness trends.
+                    </p>
+                    <div className="flex items-center justify-between mt-4">
+                      <span className="text-xs text-gray-500">No health story yet</span>
+                      <div className="flex items-center gap-2 text-xs text-purple-400">
+                        <span>Generate your first story</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
 
