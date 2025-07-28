@@ -145,17 +145,18 @@ export default function LiquidGlassLogin() {
       console.log('Window origin:', window.location.origin);
       console.log('Full URL:', window.location.href);
       
-      // Use redirectTo only in production, let Supabase handle it in dev
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: isDevelopment ? undefined : redirectUrl,
-          queryParams: provider === 'google' ? {
-            access_type: 'offline',
-            prompt: 'consent',
-          } : undefined,
+          redirectTo: redirectUrl,
+          queryParams: {
+            ...(provider === 'google' ? {
+              access_type: 'offline',
+              prompt: 'consent',
+            } : {}),
+            response_type: 'code'
+          },
+          skipBrowserRedirect: false
         }
       });
       
