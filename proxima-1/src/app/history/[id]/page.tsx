@@ -9,6 +9,8 @@ import {
   BarChart, MapPin, AlertTriangle, TrendingUp,
   RefreshCw, ChevronRight, User, Shield
 } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';

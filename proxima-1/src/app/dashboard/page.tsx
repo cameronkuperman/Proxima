@@ -8,6 +8,8 @@ import OracleChat from '@/components/OracleChat';
 import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { useAuth } from '@/contexts/AuthContext';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
+
+export const dynamic = 'force-dynamic';
 import UnifiedFAB from '@/components/UnifiedFAB';
 import { useTutorial } from '@/contexts/TutorialContext';
 import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope } from 'lucide-react';

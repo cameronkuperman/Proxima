@@ -7,6 +7,8 @@ import NarrativeView from '@/components/intelligence/NarrativeView';
 import DataView from '@/components/intelligence/DataView';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
+export const dynamic = 'force-dynamic';
+
 export default function IntelligencePage() {
   const router = useRouter();
   const [activeView, setActiveView] = useState<'narrative' | 'data'>('narrative');

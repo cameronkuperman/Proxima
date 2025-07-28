@@ -6,6 +6,8 @@ import { ReportList } from '@/components/ReportList';
 import { useAuth } from '@/contexts/AuthContext';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
+export const dynamic = 'force-dynamic';
+
 export default function ReportsGeneratePage() {
   const { user } = useAuth();
   const [showGenerator, setShowGenerator] = useState(false);

@@ -13,6 +13,8 @@ import { useQuickScan } from '@/hooks/useQuickScan'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserProfile } from '@/utils/onboarding'
 
+export const dynamic = 'force-dynamic'
+
 function ScanPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()

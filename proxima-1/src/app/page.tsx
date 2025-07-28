@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import NavBar from "@/components/NavBar";
 import Hero from "@/components/Hero";
@@ -15,7 +15,9 @@ import Contact from "@/components/Contact";
 import UnifiedAuthGuard from "@/components/UnifiedAuthGuard";
 import { supabase } from '@/lib/supabase';
 
-export default function Home() {
+export const dynamic = 'force-dynamic';
+
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -60,5 +62,13 @@ export default function Home() {
         <Contact />
       </main>
     </UnifiedAuthGuard>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

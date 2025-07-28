@@ -6,6 +6,8 @@ import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { TutorialProvider } from "@/contexts/TutorialContext";
 import SessionSync from "@/components/SessionSync";
 
+export const dynamic = 'force-dynamic';
+
 const bodyFont = Nunito_Sans({
   subsets: ["latin"],
   variable: "--font-body",
