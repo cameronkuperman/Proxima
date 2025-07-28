@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { TutorialProvider } from "@/contexts/TutorialContext";
+import SessionSync from "@/components/SessionSync";
 
 const bodyFont = Nunito_Sans({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
         <AuthProvider>
           <OnboardingProvider>
             <TutorialProvider>
+              <SessionSync />
               {children}
             </TutorialProvider>
           </OnboardingProvider>

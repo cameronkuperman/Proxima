@@ -9,129 +9,82 @@ export async function GET(request: NextRequest) {
   const error = requestUrl.searchParams.get('error')
   const errorDescription = requestUrl.searchParams.get('error_description')
 
-  // Log ALL parameters received
-  const allParams: Record<string, string> = {}
-  requestUrl.searchParams.forEach((value, key) => {
-    allParams[key] = value
-  })
-
   console.log('OAuth callback received:', {
     hasCode: !!code,
     error,
     errorDescription,
     fullUrl: request.url,
-    origin: requestUrl.origin,
-    pathname: requestUrl.pathname,
-    allParams,
-    headers: {
-      referer: request.headers.get('referer'),
-      host: request.headers.get('host'),
-    }
   })
 
-  // Handle OAuth errors from provider
+  // Handle OAuth errors
   if (error) {
     console.error('OAuth provider error:', error, errorDescription)
-    return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(errorDescription || error)}`, request.url)
-    )
+    return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent(errorDescription || error)}`)
   }
 
   if (code) {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-    
     try {
+      const cookieStore = cookies()
+      const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+      
+      // Exchange code for session
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
       
       if (exchangeError) {
-        console.error('OAuth callback: Error exchanging code:', exchangeError)
-        return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent(exchangeError.message)}`, request.url)
-        )
+        console.error('Error exchanging code:', exchangeError)
+        return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent(exchangeError.message)}`)
       }
       
-      console.log('OAuth callback: Successfully exchanged code for session', {
-        userId: data.session?.user?.id,
-        email: data.session?.user?.email,
-        provider: data.session?.user?.app_metadata?.provider
+      if (!data.session) {
+        console.error('No session returned after code exchange')
+        return NextResponse.redirect(`${requestUrl.origin}/login?error=No session created`)
+      }
+      
+      console.log('Successfully authenticated:', {
+        userId: data.session.user.id,
+        email: data.session.user.email,
       })
       
-      // Create medical record for OAuth users if it doesn't exist
-      if (data.session?.user) {
-        // Check if medical record already exists
-        const { data: existingProfile } = await supabase
-          .from('medical')
-          .select('id, age, height, weight, personal_health_context')
-          .eq('id', data.session.user.id)
-          .single()
-        
-        let isNewUser = false;
-        
-        // Only create if it doesn't exist
-        if (!existingProfile) {
-          isNewUser = true;
-          const { error: profileError } = await supabase
-            .from('medical')
-            .insert({
-              id: data.session.user.id,
-              email: data.session.user.email || '',
-              name: data.session.user.user_metadata?.full_name || 
-                    data.session.user.user_metadata?.name || 
-                    data.session.user.email?.split('@')[0] || '',
-              // Don't pre-fill any other fields - let onboarding handle them
-              medications: [],  // Empty array for ARRAY type
-              family_history: [],  // Empty array for JSONB
-              allergies: [],  // Empty array for JSONB
-              race: [],  // Empty array for JSONB
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-          
-          if (profileError) {
-            console.error('Failed to create medical record for OAuth user:', profileError)
-            // Don't fail the auth flow, let onboarding handle this
-          } else {
-            console.log('Created initial medical record for OAuth user')
-          }
-        } else {
-          // Check if existing user has completed onboarding
-          const isOnboardingComplete = existingProfile.age && 
-                                       existingProfile.height && 
-                                       existingProfile.weight && 
-                                       existingProfile.personal_health_context;
-          
-          if (!isOnboardingComplete) {
-            isNewUser = true; // Treat as new user if onboarding not complete
-          }
-          
-          console.log('Medical record already exists for OAuth user, onboarding complete:', !isNewUser)
+      // Check if user needs onboarding
+      const { data: profile } = await supabase
+        .from('medical')
+        .select('age, height, weight, personal_health_context')
+        .eq('id', data.session.user.id)
+        .single()
+      
+      const needsOnboarding = !profile || !profile.age || !profile.height || !profile.weight || !profile.personal_health_context
+      
+      if (needsOnboarding) {
+        // Create medical record if it doesn't exist
+        if (!profile) {
+          await supabase.from('medical').insert({
+            id: data.session.user.id,
+            email: data.session.user.email || '',
+            name: data.session.user.user_metadata?.full_name || 
+                  data.session.user.user_metadata?.name || 
+                  data.session.user.email?.split('@')[0] || '',
+            medications: [],
+            family_history: [],
+            allergies: [],
+            race: [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
         }
         
-        // Small delay to ensure database writes complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Redirect based on user status
-        if (isNewUser) {
-          console.log('OAuth callback: New user or incomplete onboarding, redirecting to onboarding');
-          return NextResponse.redirect(new URL('/onboarding', request.url))
-        }
+        return NextResponse.redirect(`${requestUrl.origin}/onboarding`)
       }
+      
+      // User has completed onboarding
+      return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
+      
     } catch (error) {
-      console.error('OAuth callback: Unexpected error:', error)
-      return NextResponse.redirect(
-        new URL('/login?error=Authentication%20failed', request.url)
-      )
+      console.error('Unexpected error in auth callback:', error)
+      return NextResponse.redirect(`${requestUrl.origin}/login?error=Authentication failed`)
     }
-  } else {
-    console.error('OAuth callback: No code parameter received')
-    return NextResponse.redirect(
-      new URL('/login?error=No%20authorization%20code%20received', request.url)
-    )
   }
 
-  // URL to redirect to after sign in process completes
-  // If we get here, user has completed onboarding
-  console.log('OAuth callback: Existing user with complete onboarding, redirecting to dashboard');
-  return NextResponse.redirect(new URL('/dashboard', request.url))
+  // No code received
+  console.error('No authorization code received')
+  return NextResponse.redirect(`${requestUrl.origin}/login?error=No authorization code received`)
 }
