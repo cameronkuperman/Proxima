@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import HealthConstellation from '@/components/HealthConstellation';
 
+export const dynamic = 'force-dynamic';
+
 interface Prediction {
   id: string;
   type: 'immediate' | 'seasonal' | 'longterm';

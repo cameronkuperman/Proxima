@@ -14,6 +14,8 @@ import PhotoQualityModal from '@/components/photo-analysis/PhotoQualityModal';
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis';
 import { PhotoSession, PhotoCategory, AnalysisResult } from '@/types/photo-analysis';
 
+export const dynamic = 'force-dynamic';
+
 export default function PhotoAnalysisPage() {
   const router = useRouter();
   const { user } = useAuth();

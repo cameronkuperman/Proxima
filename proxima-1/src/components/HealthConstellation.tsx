@@ -73,7 +73,7 @@ const nodes: Node[] = [
 export default function HealthConstellation() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   
   useEffect(() => {
     const canvas = canvasRef.current;

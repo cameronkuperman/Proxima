@@ -8,6 +8,8 @@ import { PastReports } from '@/components/health/PastReports';
 import { ReportViewerModal } from '@/components/health/ReportViewerModal';
 import { QuickReportChat } from '@/components/health/QuickReportChat';
 import { GeneratedReport } from '@/services/reportsService';
+
+export const dynamic = 'force-dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 

@@ -8,7 +8,8 @@
       "Bash(grep:*)",
       "Bash(mkdir:*)",
       "Bash(rm:*)",
-      "Bash(del srcmiddleware.ts)"
+      "Bash(del srcmiddleware.ts)",
+      "Bash(npm audit:*)"
     ],
     "deny": []
   }

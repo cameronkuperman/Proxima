@@ -1,6 +1,5 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/client';
 
 export async function GET(request: Request) {
   try {
@@ -10,9 +9,8 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || '';
     const type = searchParams.get('type') || '';
     
-    // Create Supabase client with proper server-side auth handling
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    // Create Supabase client
+    const supabase = createClient();
     
     // Get session instead of user for better auth handling
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -97,8 +95,7 @@ export async function POST(request: Request) {
   try {
     const { interactionId, interactionType } = await request.json();
     
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = createClient();
     
     // Get session for auth
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();

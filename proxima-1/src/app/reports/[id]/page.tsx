@@ -6,6 +6,8 @@ import { ReportViewer } from '@/components/ReportViewer';
 import { reportService } from '@/services/reportService';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
+export const dynamic = 'force-dynamic';
+
 export default function ReportViewPage() {
   const params = useParams();
   const router = useRouter();

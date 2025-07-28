@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { quickScanClient } from '@/lib/quickscan-client'
 
+export const dynamic = 'force-dynamic'
+
 export default function TestQuickScan() {
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)

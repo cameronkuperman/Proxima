@@ -8,6 +8,8 @@ import SubscriptionCard from '@/components/profile/SubscriptionCard';
 import AccountSettings from '@/components/profile/AccountSettings';
 import HealthDataSummary from '@/components/profile/HealthDataSummary';
 import HealthProfileModal from '@/components/HealthProfileModal';
+
+export const dynamic = 'force-dynamic';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function ProfilePage() {
