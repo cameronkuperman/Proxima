@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/utils/logger'
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -8,7 +9,7 @@ export async function GET() {
   
   const { data: { session }, error } = await supabase.auth.getSession()
   
-  console.log('Session check:', {
+  logger.debug('Session check:', {
     hasSession: !!session,
     userId: session?.user?.id,
     error: error?.message,

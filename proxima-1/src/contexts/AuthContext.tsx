@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/utils/logger';
 
 interface AuthContextType {
   session: Session | null;
@@ -29,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Prevent multiple auth listeners
     if (authListenerInitialized) {
-      console.warn('AuthProvider: Auth listener already initialized, skipping...');
+      logger.warn('AuthProvider: Auth listener already initialized, skipping...');
       // Still get the current session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (mounted.current) {
@@ -42,11 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     authListenerInitialized = true;
-    console.log('AuthProvider: Initializing auth listener...');
+    logger.debug('AuthProvider: Initializing auth listener...');
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('AuthProvider: Initial session:', session ? 'Found user' : 'No session');
+      logger.debug('AuthProvider: Initial session:', session ? 'Found user' : 'No session');
       if (mounted.current) {
         setSession(session);
         setUser(session?.user ?? null);
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('AuthProvider: Auth state changed:', event, session ? 'User authenticated' : 'User not authenticated');
+      logger.debug('AuthProvider: Auth state changed:', event, session ? 'User authenticated' : 'User not authenticated');
       
       if (mounted.current) {
         setSession(session);
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Log user info when authenticated
         if (session?.user) {
-          console.log('AuthProvider: User details:', {
+          logger.debug('AuthProvider: User details:', {
             id: session.user.id,
             email: session.user.email,
             name: session.user.user_metadata?.full_name
@@ -78,13 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted.current = false;
-      console.log('AuthProvider: Component unmounting');
+      logger.debug('AuthProvider: Component unmounting');
       // Don't unsubscribe the global listener
     };
   }, []);
 
   const signOut = async () => {
-    console.log('AuthProvider: Signing out user...');
+    logger.debug('AuthProvider: Signing out user...');
     await supabase.auth.signOut();
     router.push('/login');
   };

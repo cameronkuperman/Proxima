@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/client';
+import { logger } from '@/utils/logger';
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     // Get session instead of user for better auth handling
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
-      console.error('Session error in timeline:', sessionError);
+      logger.error('Session error in timeline:', sessionError);
       return NextResponse.json({ 
         error: 'Unauthorized',
         interactions: [],
@@ -50,8 +51,8 @@ export async function GET(request: Request) {
     const { data, error, count } = await query;
     
     if (error) {
-      console.error('Timeline query error:', error);
-      console.error('Query details:', { user_id: user.id, search, type, limit, offset });
+      logger.error('Timeline query error:', error);
+      logger.error('Query details:', { user_id: user.id, search, type, limit, offset });
       
       // Try a direct query to quick_scans to debug
       const { data: debugData, error: debugError } = await supabase
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
         .select('id, user_id, created_at')
         .limit(5);
         
-      console.log('Debug quick_scans query:', { debugData, debugError });
+      logger.debug('Debug quick_scans query:', { debugData, debugError });
       
       return NextResponse.json({ 
         error: 'Failed to fetch timeline data',
@@ -81,7 +82,7 @@ export async function GET(request: Request) {
     });
     
   } catch (error) {
-    console.error('Timeline API error:', error);
+    logger.error('Timeline API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error',
       interactions: [],
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
     // Get session for auth
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
-      console.error('Session error in timeline validation:', sessionError);
+      logger.error('Session error in timeline validation:', sessionError);
       return NextResponse.json({ 
         isValid: false,
         error: 'Unauthorized' 
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
     });
     
   } catch (error) {
-    console.error('Validation error:', error);
+    logger.error('Validation error:', error);
     return NextResponse.json({ 
       isValid: false,
       error: 'Failed to validate interaction' 

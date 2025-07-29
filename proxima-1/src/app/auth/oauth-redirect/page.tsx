@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/utils/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +15,11 @@ export default function OAuthRedirectPage() {
   useEffect(() => {
     async function checkAndRedirect() {
       if (!user) {
-        console.log('OAuth redirect: No user, waiting...');
+        logger.debug('OAuth redirect: No user, waiting...');
         return;
       }
 
-      console.log('OAuth redirect: Checking user onboarding status');
+      logger.debug('OAuth redirect: Checking user onboarding status');
       
       try {
         const { data: profile } = await supabase
@@ -34,14 +35,14 @@ export default function OAuthRedirectPage() {
           profile.personal_health_context && profile.personal_health_context.trim() !== '';
 
         if (!isComplete) {
-          console.log('OAuth redirect: Onboarding incomplete, redirecting to /onboarding');
+          logger.debug('OAuth redirect: Onboarding incomplete, redirecting to /onboarding');
           router.push('/onboarding');
         } else {
-          console.log('OAuth redirect: Onboarding complete, redirecting to /dashboard');
+          logger.debug('OAuth redirect: Onboarding complete, redirecting to /dashboard');
           router.push('/dashboard');
         }
       } catch (error) {
-        console.error('OAuth redirect: Error checking profile:', error);
+        logger.error('OAuth redirect: Error checking profile:', error);
         router.push('/onboarding');
       }
     }

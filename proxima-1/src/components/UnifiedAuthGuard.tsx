@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { logger } from '@/utils/logger';
 
 interface UnifiedAuthGuardProps {
   children: React.ReactNode;
@@ -36,10 +37,10 @@ export default function UnifiedAuthGuard({
       // Special case: login page should redirect authenticated users
       if (pathname === '/login' && user) {
         if (isComplete) {
-          console.log('UnifiedAuthGuard: Authenticated user on login page, redirecting to dashboard');
+          logger.debug('UnifiedAuthGuard: Authenticated user on login page, redirecting to dashboard');
           router.push('/dashboard');
         } else {
-          console.log('UnifiedAuthGuard: Authenticated user on login page, redirecting to onboarding');
+          logger.debug('UnifiedAuthGuard: Authenticated user on login page, redirecting to onboarding');
           router.push('/onboarding');
         }
         return;
@@ -47,7 +48,7 @@ export default function UnifiedAuthGuard({
       
       // If user is logged in but hasn't completed onboarding, redirect
       if (user && !isComplete && !allowIncompleteOnboarding && pathname !== '/onboarding') {
-        console.log('UnifiedAuthGuard: Authenticated user needs onboarding');
+        logger.debug('UnifiedAuthGuard: Authenticated user needs onboarding');
         router.push('/onboarding');
         return;
       }
@@ -59,14 +60,14 @@ export default function UnifiedAuthGuard({
     if (requireAuth) {
       // No user - redirect to login
       if (!user) {
-        console.log('UnifiedAuthGuard: Auth required, redirecting to login');
+        logger.debug('UnifiedAuthGuard: Auth required, redirecting to login');
         router.push('/login');
         return;
       }
 
       // User exists but onboarding incomplete
       if (!isComplete && !allowIncompleteOnboarding) {
-        console.log('UnifiedAuthGuard: Protected page requires completed onboarding');
+        logger.debug('UnifiedAuthGuard: Protected page requires completed onboarding');
         router.push('/onboarding');
         return;
       }
