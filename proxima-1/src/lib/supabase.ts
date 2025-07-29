@@ -24,9 +24,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: 'proxima-auth',
-    flowType: 'implicit',  // Use implicit flow for OAuth
     debug: true  // Enable debug mode to see what's happening
   }
 }) 
