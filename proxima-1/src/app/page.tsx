@@ -34,6 +34,36 @@ function HomeContent() {
         return;
       }
       
+      // Check for OAuth hash fragments
+      if (window.location.hash) {
+        console.log('Found hash fragments, processing OAuth...');
+        // Supabase client will automatically handle the hash
+        // Wait a bit for it to process
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check if we now have a session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          console.log('OAuth successful, session established. Redirecting...');
+          // Check if user needs onboarding
+          const { data: profile } = await supabase
+            .from('medical')
+            .select('age, height, weight, personal_health_context')
+            .eq('id', session.user.id)
+            .single();
+            
+          const needsOnboarding = !profile || !profile.age || !profile.height || !profile.weight || !profile.personal_health_context;
+          
+          if (needsOnboarding) {
+            router.push('/onboarding');
+          } else {
+            router.push('/dashboard');
+          }
+          return;
+        }
+      }
+      
       // Check if we have a session after OAuth redirect
       const { data: { session } } = await supabase.auth.getSession();
       
