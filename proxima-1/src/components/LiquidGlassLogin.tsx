@@ -149,14 +149,10 @@ export default function LiquidGlassLogin() {
         provider,
         options: {
           redirectTo: redirectUrl,
-          queryParams: {
-            ...(provider === 'google' ? {
-              access_type: 'offline',
-              prompt: 'consent',
-            } : {}),
-            response_type: 'code'
-          },
-          skipBrowserRedirect: false
+          queryParams: provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : undefined
         }
       });
       
