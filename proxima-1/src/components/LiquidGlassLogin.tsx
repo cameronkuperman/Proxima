@@ -139,20 +139,21 @@ export default function LiquidGlassLogin() {
     setError(null);
     
     try {
+      if (provider === 'google') {
+        // Use server-side route for Google OAuth
+        console.log('Redirecting to Google OAuth...');
+        window.location.href = '/api/auth/google';
+        return;
+      }
+      
+      // Handle other providers normally
       console.log(`Attempting ${provider} OAuth login...`);
       const redirectUrl = `${window.location.origin}/auth/callback`;
-      console.log('Redirect URL:', redirectUrl);
-      console.log('Window origin:', window.location.origin);
-      console.log('Full URL:', window.location.href);
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: redirectUrl,
-          queryParams: provider === 'google' ? {
-            access_type: 'offline',
-            prompt: 'consent',
-          } : undefined
+          redirectTo: redirectUrl
         }
       });
       
@@ -161,7 +162,6 @@ export default function LiquidGlassLogin() {
         setError(error.message);
       } else {
         console.log(`${provider} OAuth initiated successfully:`, data);
-        console.log('OAuth URL:', data?.url);
       }
     } catch (err) {
       console.error(`${provider} OAuth exception:`, err);

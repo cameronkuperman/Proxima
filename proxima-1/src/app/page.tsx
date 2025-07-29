@@ -34,42 +34,62 @@ function HomeContent() {
         return;
       }
       
-      // Check for OAuth hash fragments
-      if (window.location.hash) {
-        console.log('Found hash fragments, processing OAuth...');
-        // Supabase client will automatically handle the hash
-        // Wait a bit for it to process
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if this is from OAuth callback
+      const isOAuthCallback = searchParams.get('oauth_callback') === 'true';
+      
+      if (isOAuthCallback || window.location.hash) {
+        console.log('OAuth callback detected, waiting for session...');
         
-        // Check if we now have a session
-        const { data: { session } } = await supabase.auth.getSession();
+        // Give Supabase time to process the auth
+        let attempts = 0;
+        const maxAttempts = 10;
         
-        if (session) {
-          console.log('OAuth successful, session established. Redirecting...');
-          // Check if user needs onboarding
-          const { data: profile } = await supabase
-            .from('medical')
-            .select('age, height, weight, personal_health_context')
-            .eq('id', session.user.id)
-            .single();
-            
-          const needsOnboarding = !profile || !profile.age || !profile.height || !profile.weight || !profile.personal_health_context;
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          if (needsOnboarding) {
-            router.push('/onboarding');
-          } else {
-            router.push('/dashboard');
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            console.log('Session established!', session.user.email);
+            
+            // Check if user needs onboarding
+            const { data: profile } = await supabase
+              .from('medical')
+              .select('age, height, weight, personal_health_context')
+              .eq('id', session.user.id)
+              .single();
+              
+            const needsOnboarding = !profile || !profile.age || !profile.height || !profile.weight || !profile.personal_health_context;
+            
+            // Clean up URL
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('oauth_callback');
+            window.history.replaceState({}, '', cleanUrl.toString());
+            
+            if (needsOnboarding) {
+              console.log('Redirecting to onboarding...');
+              router.push('/onboarding');
+            } else {
+              console.log('Redirecting to dashboard...');
+              router.push('/dashboard');
+            }
+            return;
           }
-          return;
+          
+          attempts++;
         }
+        
+        // If we get here, no session was established
+        console.error('No session established after OAuth');
+        router.push('/login?error=Authentication failed - please try again');
+        return;
       }
       
-      // Check if we have a session after OAuth redirect
+      // Check if we have an existing session
       const { data: { session } } = await supabase.auth.getSession();
       
-      // If we have a session and we're on the home page, redirect to dashboard
-      if (session && !window.location.hash && !searchParams.toString()) {
-        console.log('Found session on home page, likely OAuth redirect. Redirecting to dashboard...');
+      if (session) {
+        console.log('Existing session found, redirecting to dashboard...');
         router.push('/dashboard');
       }
     };
