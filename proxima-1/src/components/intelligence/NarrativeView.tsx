@@ -3,8 +3,11 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { healthStoryService, HealthStoryData, RefreshInfo } from '@/lib/health-story';
-import { RefreshCw, Calendar, Info } from 'lucide-react';
+import { storyNotesService, StoryNote } from '@/lib/story-notes';
+import { RefreshCw, Calendar, Info, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+
+
 
 interface Insight {
   id: string;
@@ -14,16 +17,8 @@ interface Insight {
   confidence: number;
 }
 
-interface Prediction {
-  id: string;
-  event: string;
-  probability: number;
-  timeframe: string;
-  preventable: boolean;
-}
-
 interface Episode {
-  id: number;
+  id: string; // Changed to string to match story IDs
   date: string;
   title: string;
   subtitle?: string;
@@ -36,6 +31,27 @@ interface Episode {
     deep_dives?: number;
     symptom_entries?: number;
   };
+}
+
+interface ShadowPattern {
+  id: string;
+  pattern: string;
+  lastSeen: string;
+  significance: 'high' | 'medium' | 'low';
+}
+
+interface HealthStrategy {
+  id: string;
+  strategy: string;
+  type: 'discovery' | 'pattern' | 'prevention';
+}
+
+interface Prediction {
+  id: string;
+  event: string;
+  probability: number;
+  timeframe: string;
+  preventable: boolean;
 }
 
 export default function NarrativeView() {
@@ -74,6 +90,56 @@ export default function NarrativeView() {
     }
   ]);
 
+
+  const [shadowPatterns] = useState<ShadowPattern[]>([
+    {
+      id: '1',
+      pattern: 'Exercise',
+      lastSeen: 'unusual - averaged 4x/week last month',
+      significance: 'medium'
+    },
+    {
+      id: '2',
+      pattern: 'Work stress',
+      lastSeen: 'was prominent in last 3 stories',
+      significance: 'high'
+    },
+    {
+      id: '3',
+      pattern: 'Sleep quality',
+      lastSeen: 'first time missing in 8 weeks',
+      significance: 'high'
+    }
+  ]);
+
+  const [healthStrategies] = useState<HealthStrategy[]>([
+    {
+      id: '1',
+      strategy: 'Track afternoon energy to understand the 3pm crashes',
+      type: 'discovery'
+    },
+    {
+      id: '2',
+      strategy: 'Test if morning protein changes your headache pattern',
+      type: 'pattern'
+    },
+    {
+      id: '3',
+      strategy: 'Document mood during migraines for pattern insights',
+      type: 'discovery'
+    },
+    {
+      id: '4',
+      strategy: 'Monitor hydration levels before and after symptoms',
+      type: 'prevention'
+    },
+    {
+      id: '5',
+      strategy: 'Compare sleep quality on symptom vs symptom-free days',
+      type: 'pattern'
+    }
+  ]);
+
   const [predictions] = useState<Prediction[]>([
     {
       id: '1',
@@ -93,6 +159,9 @@ export default function NarrativeView() {
 
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [note, setNote] = useState('');
+  const [storyNote, setStoryNote] = useState<StoryNote | null>(null);
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   // Load health stories from backend when component mounts
   useEffect(() => {
@@ -102,10 +171,79 @@ export default function NarrativeView() {
     }
   }, [user?.id]);
 
+  // Load note for current story
+  useEffect(() => {
+    if (story && user?.id) {
+      loadNoteForStory(story.id);
+    }
+  }, [story?.id, user?.id]);
+
   const loadRefreshInfo = async () => {
     if (!user?.id) return;
     const info = await healthStoryService.getRefreshInfo(user.id);
     setRefreshInfo(info);
+  };
+
+  const loadNoteForStory = async (storyId: string) => {
+    const note = await storyNotesService.getNoteForStory(storyId);
+    setStoryNote(note);
+    setNote('');
+    setShowNoteInput(false);
+    setIsEditingNote(false);
+  };
+
+  const saveNote = async () => {
+    if (!user?.id || !story || !note.trim()) return;
+    
+    setIsSavingNote(true);
+    try {
+      if (storyNote && isEditingNote) {
+        // Update existing note
+        const updatedNote = await storyNotesService.updateNote(storyNote.id, note);
+        if (updatedNote) {
+          setStoryNote(updatedNote);
+          setIsEditingNote(false);
+        }
+      } else {
+        // Create new note
+        const newNote = await storyNotesService.createNote(user.id, {
+          story_id: story.id,
+          note_text: note
+        });
+        if (newNote) {
+          setStoryNote(newNote);
+        }
+      }
+      setShowNoteInput(false);
+      setNote('');
+    } catch (error) {
+      console.error('Error saving note:', error);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  const deleteNote = async () => {
+    if (!storyNote) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this note?');
+    if (!confirmed) return;
+    
+    const success = await storyNotesService.deleteNote(storyNote.id);
+    if (success) {
+      setStoryNote(null);
+      setNote('');
+      setIsEditingNote(false);
+      setShowNoteInput(false);
+    }
+  };
+
+  const startEditingNote = () => {
+    if (storyNote) {
+      setNote(storyNote.note_text);
+      setIsEditingNote(true);
+      setShowNoteInput(true);
+    }
   };
 
   const loadHealthStories = async () => {
@@ -214,7 +352,7 @@ export default function NarrativeView() {
 
   const getDefaultEpisodes = (): Episode[] => [
     {
-      id: 0,
+      id: 'default-1',
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       title: 'Your Health Patterns This Week',
       subtitle: 'An analysis of your wellness trends',
@@ -226,14 +364,14 @@ The persistent morning headaches you've been experiencing appear to be linked to
 Your body's response to the new exercise routine has been overwhelmingly positive. Heart rate variability has improved by 15%, and your resting heart rate has decreased by 4 bpm over the past month. These are strong indicators of improving cardiovascular health.`
     },
     {
-      id: 1,
+      id: 'default-2',
       date: 'December 8, 2024',
       title: 'The Hydration Discovery',
       preview: 'How water intake affected your symptoms',
       content: `This week revealed a crucial connection between your hydration levels and symptom frequency. After increasing water intake by 40%, morning headaches decreased by 60%. The data shows optimal hydration windows throughout your day.`
     },
     {
-      id: 2,
+      id: 'default-3',
       date: 'December 1, 2024',
       title: 'Stress and Sleep Correlation',
       preview: 'Understanding your rest patterns',
@@ -242,8 +380,8 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
   ];
 
   const updateEpisodesFromStories = (stories: HealthStoryData[]) => {
-    const newEpisodes = stories.map((story, index) => ({
-      id: index,
+    const newEpisodes: Episode[] = stories.map((story) => ({
+      id: story.id, // Use the actual story ID
       date: new Date(story.created_at).toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
@@ -298,15 +436,17 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         </div>
       </motion.div>
 
-      {/* Main Content - Much wider */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="flex-1 max-w-5xl space-y-6"
-      >
-        {/* Main Story */}
-        {isInitialLoad && isLoading ? (
+      {/* Main Content Area */}
+      <div className="flex-1 flex gap-6">
+        {/* Main Story Column */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="flex-1 max-w-5xl space-y-6"
+        >
+          {/* Main Story */}
+          {isInitialLoad && isLoading ? (
           <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-8">
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
@@ -439,9 +579,43 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
             </div>
           )}
 
-          {/* Add Note Section */}
+          {/* Personal Note Section */}
           <div className="mt-6 pt-6 border-t border-white/[0.05]">
-            {!showNoteInput ? (
+            {/* Display existing note */}
+            {storyNote && !showNoteInput && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-400">Personal Note</h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={startEditingNote}
+                      className="p-1 text-gray-400 hover:text-white transition-colors"
+                      title="Edit note"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={deleteNote}
+                      className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                      title="Delete note"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">{storyNote.note_text}</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Added {new Date(storyNote.created_at).toLocaleDateString()}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Add/Edit note input */}
+            {!storyNote && !showNoteInput ? (
               <button
                 onClick={() => setShowNoteInput(true)}
                 className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors"
@@ -451,7 +625,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                 </svg>
                 Add personal note
               </button>
-            ) : (
+            ) : showNoteInput ? (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -463,30 +637,30 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                   placeholder="Add context or personal observations..."
                   className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-lg text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500/50 transition-colors"
                   rows={3}
+                  autoFocus
                 />
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      // Save note logic
-                      setShowNoteInput(false);
-                      setNote('');
-                    }}
-                    className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg transition-colors text-sm"
+                    onClick={saveNote}
+                    disabled={isSavingNote || !note.trim()}
+                    className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Save Note
+                    {isSavingNote ? 'Saving...' : isEditingNote ? 'Update Note' : 'Save Note'}
                   </button>
                   <button
                     onClick={() => {
                       setShowNoteInput(false);
                       setNote('');
+                      setIsEditingNote(false);
                     }}
-                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm"
+                    disabled={isSavingNote}
+                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm disabled:opacity-50"
                   >
                     Cancel
                   </button>
                 </div>
               </motion.div>
-            )}
+            ) : null}
           </div>
         </div>
         )}
@@ -581,7 +755,107 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
           </button>
         </div>
         )}
-      </motion.div>
+        </motion.div>
+
+        {/* Health Advisory Sidebar */}
+        {story && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="w-64 hidden xl:block"
+          >
+            <div className="sticky top-24 space-y-4">
+              {/* Shadow Patterns */}
+              <div className="backdrop-blur-[20px] bg-white/[0.02] border border-white/[0.03] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-400">Not Mentioned</h4>
+                  <div className="relative group">
+                    <Info className="w-3.5 h-3.5 text-gray-500 cursor-help" />
+                    <div className="absolute right-0 -left-60 top-0 w-56 p-3 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none group-hover:pointer-events-auto">
+                      <p className="text-xs text-gray-300">
+                        Patterns that are missing from your recent stories can be as revealing as what's present
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2.5">
+                  {shadowPatterns.map((pattern) => (
+                    <motion.div
+                      key={pattern.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="group"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-300">{pattern.pattern}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{pattern.lastSeen}</p>
+                        </div>
+                        <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                          pattern.significance === 'high' ? 'bg-orange-400/60' :
+                          pattern.significance === 'medium' ? 'bg-yellow-400/60' :
+                          'bg-gray-400/60'
+                        }`} />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Strategic Moves */}
+              <div className="backdrop-blur-[20px] bg-white/[0.02] border border-white/[0.03] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-400">Strategic Moves</h4>
+                  <div className="relative group">
+                    <Info className="w-3.5 h-3.5 text-gray-500 cursor-help" />
+                    <div className="absolute right-0 -left-[272px] top-0 w-64 p-3 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none group-hover:pointer-events-auto">
+                      <p className="text-xs text-gray-300 mb-2">
+                        Small experiments and observations that unlock deeper understanding of your health patterns
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                          <span>Discovery</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
+                          <span>Pattern</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                          <span>Prevention</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {healthStrategies.map((strategy, index) => (
+                    <motion.div
+                      key={strategy.id}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="group cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                          strategy.type === 'discovery' ? 'bg-blue-400' :
+                          strategy.type === 'pattern' ? 'bg-purple-400' :
+                          'bg-green-400'
+                        }`} />
+                        <p className="text-xs text-gray-300 group-hover:text-white transition-colors leading-relaxed">
+                          {strategy.strategy}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }

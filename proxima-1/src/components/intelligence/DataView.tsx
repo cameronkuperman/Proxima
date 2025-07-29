@@ -10,6 +10,7 @@ interface Correlation {
   direction: 'positive' | 'negative';
 }
 
+
 export default function DataView() {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
   const [correlations] = useState<Correlation[]>([
