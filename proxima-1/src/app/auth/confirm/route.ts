@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/utils/logger'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (!error) {
       // Ensure session is established before redirect
       const { data: { session } } = await supabase.auth.getSession()
-      console.log('Email confirmation successful, session:', !!session)
+      logger.debug('Email confirmation successful, session:', !!session)
       
       return NextResponse.redirect(new URL(next, request.url))
     }

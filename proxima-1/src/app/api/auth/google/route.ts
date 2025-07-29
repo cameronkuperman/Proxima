@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/utils/logger'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   })
   
   if (error) {
-    console.error('OAuth initialization error:', error)
+    logger.error('OAuth initialization error:', error)
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`)
   }
   
