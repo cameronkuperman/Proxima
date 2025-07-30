@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import React from 'react';
 
 interface Correlation {
   symptom1: string;
@@ -113,8 +114,8 @@ export default function DataView() {
               
               {/* Rows */}
               {['Headache', 'Energy', 'Mood', 'Focus'].map((rowLabel, rowIndex) => (
-                <>
-                  <div key={rowLabel} className="text-xs text-gray-400 pr-2 flex items-center justify-end">
+                <React.Fragment key={rowLabel}>
+                  <div className="text-xs text-gray-400 pr-2 flex items-center justify-end">
                     {rowLabel}
                   </div>
                   {['Sleep', 'Stress', 'Exercise', 'Diet'].map((_, colIndex) => {
@@ -146,7 +147,7 @@ export default function DataView() {
                       </motion.div>
                     );
                   })}
-                </>
+                </React.Fragment>
               ))}
             </div>
             <div className="flex items-center justify-center gap-8 mt-4 text-xs text-gray-500">

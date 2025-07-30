@@ -6,12 +6,17 @@ import { healthStoryService, HealthStoryData, RefreshInfo } from '@/lib/health-s
 import { storyNotesService, StoryNote } from '@/lib/story-notes';
 import { RefreshCw, Calendar, Info, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useHealthAnalysis, useExportPDF, useShareWithDoctor } from '@/hooks/useHealthIntelligence';
+import { format, startOfWeek } from 'date-fns';
+import { toast } from 'sonner';
+import { ShareModal } from '@/components/modals/ShareModal';
 
 
 
 interface Insight {
   id: string;
-  type: 'positive' | 'warning' | 'neutral';
+  insight_type?: 'positive' | 'warning' | 'neutral'; // Backend field
+  type?: 'positive' | 'warning' | 'neutral'; // Fallback
   title: string;
   description: string;
   confidence: number;
@@ -35,23 +40,28 @@ interface Episode {
 
 interface ShadowPattern {
   id: string;
-  pattern: string;
-  lastSeen: string;
+  pattern?: string; // Fallback field
+  pattern_name?: string; // Backend field
+  lastSeen?: string; // Fallback field
+  last_seen_description?: string; // Backend field
   significance: 'high' | 'medium' | 'low';
 }
 
 interface HealthStrategy {
   id: string;
   strategy: string;
-  type: 'discovery' | 'pattern' | 'prevention';
+  type?: 'discovery' | 'pattern' | 'prevention'; // Fallback
+  strategy_type?: 'discovery' | 'pattern' | 'prevention'; // Backend field
 }
 
 interface Prediction {
   id: string;
-  event: string;
+  event?: string; // Fallback
+  event_description?: string; // Backend field
   probability: number;
   timeframe: string;
   preventable: boolean;
+  reasoning?: string; // Backend field
 }
 
 export default function NarrativeView() {
@@ -63,10 +73,18 @@ export default function NarrativeView() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [refreshInfo, setRefreshInfo] = useState<RefreshInfo | null>(null);
+  
+  // Backend integration hooks
+  const { data: analysisData, isLoading: isAnalysisLoading, error: analysisError } = useHealthAnalysis();
+  const { exportPDF, isExporting } = useExportPDF();
+  const { share: shareWithDoctor, isSharing } = useShareWithDoctor();
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const story = episodes[currentEpisode] || null;
 
-  const [insights] = useState<Insight[]>([
+  // Use backend data if available, otherwise use defaults
+  const insights = analysisData?.insights || [
     {
       id: '1',
       type: 'positive',
@@ -88,10 +106,10 @@ export default function NarrativeView() {
       description: 'Average daily water intake 30% below recommended',
       confidence: 85
     }
-  ]);
+  ];
 
 
-  const [shadowPatterns] = useState<ShadowPattern[]>([
+  const shadowPatterns = analysisData?.shadow_patterns || [
     {
       id: '1',
       pattern: 'Exercise',
@@ -110,9 +128,9 @@ export default function NarrativeView() {
       lastSeen: 'first time missing in 8 weeks',
       significance: 'high'
     }
-  ]);
+  ];
 
-  const [healthStrategies] = useState<HealthStrategy[]>([
+  const healthStrategies = analysisData?.strategies || [
     {
       id: '1',
       strategy: 'Track afternoon energy to understand the 3pm crashes',
@@ -138,9 +156,9 @@ export default function NarrativeView() {
       strategy: 'Compare sleep quality on symptom vs symptom-free days',
       type: 'pattern'
     }
-  ]);
+  ];
 
-  const [predictions] = useState<Prediction[]>([
+  const predictions = analysisData?.predictions || [
     {
       id: '1',
       event: 'Migraine',
@@ -155,7 +173,7 @@ export default function NarrativeView() {
       timeframe: 'Tonight',
       preventable: true
     }
-  ]);
+  ];
 
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [note, setNote] = useState('');
@@ -312,13 +330,15 @@ export default function NarrativeView() {
       console.log('Health story generation response:', response);
 
       if (response.success && response.health_story) {
-        const newStory: HealthStoryData = {
+        const newStory: HealthStoryData & { title?: string; subtitle?: string } = {
           id: response.health_story.story_id,
           user_id: user.id,
           header: response.health_story.header,
           story_text: response.health_story.story_text,
           generated_date: response.health_story.generated_date,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          title: response.health_story.title,
+          subtitle: response.health_story.subtitle
         };
 
         // Save the story to Supabase
@@ -387,10 +407,10 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         day: 'numeric',
         year: 'numeric'
       }),
-      title: story.header || 'Health Story',
-      subtitle: story.subtitle,
+      title: story.metadata?.title || story.header || 'Health Story',
+      subtitle: story.metadata?.subtitle || story.subtitle,
       preview: story.subtitle || story.story_text.substring(0, 100) + '...',
-      content: story.story_text,
+      content: story.story_text, // This is already clean content from health-story.ts
       generatedDate: story.generated_date,
       dataSources: story.data_sources
     }));
@@ -676,9 +696,9 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className={`p-4 rounded-lg border cursor-pointer hover:bg-white/[0.02] transition-all ${
-                insight.type === 'positive' 
+                (insight.insight_type || insight.type) === 'positive' 
                   ? 'bg-green-500/5 border-green-500/20' 
-                  : insight.type === 'warning'
+                  : (insight.insight_type || insight.type) === 'warning'
                   ? 'bg-yellow-500/5 border-yellow-500/20'
                   : 'bg-white/[0.02] border-white/[0.05]'
               }`}
@@ -712,7 +732,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
               className="p-4 bg-white/[0.02] border border-white/[0.05] rounded-lg"
             >
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-white">{prediction.event}</h4>
+                <h4 className="font-medium text-white">{prediction.event_description || prediction.event}</h4>
                 {prediction.preventable && (
                   <span className="text-xs px-2 py-1 bg-green-500/10 text-green-400 rounded-full">
                     Preventable
@@ -747,11 +767,39 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         {/* Export Options */}
         {story && (
         <div className="flex justify-end gap-3">
-          <button className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all">
-            Export as PDF
+          <button 
+            onClick={async () => {
+              const result = await exportPDF([story.id], {
+                includeAnalysis: true,
+                includeNotes: !!storyNote
+              });
+              if (result?.pdf_url) {
+                window.open(result.pdf_url, '_blank');
+                toast.success('PDF exported successfully');
+              } else {
+                toast.error('Failed to export PDF');
+              }
+            }}
+            disabled={isExporting}
+            className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExporting ? 'Exporting...' : 'Export as PDF'}
           </button>
-          <button className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all">
-            Share with Doctor
+          <button 
+            onClick={async () => {
+              const result = await shareWithDoctor([story.id]);
+              if (result?.share_link) {
+                setShareLink(result.share_link);
+                setShowShareModal(true);
+                toast.success('Share link created');
+              } else {
+                toast.error('Failed to create share link');
+              }
+            }}
+            disabled={isSharing}
+            className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSharing ? 'Creating link...' : 'Share with Doctor'}
           </button>
         </div>
         )}
@@ -788,8 +836,8 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm text-gray-300">{pattern.pattern}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{pattern.lastSeen}</p>
+                          <p className="text-sm text-gray-300">{pattern.pattern_name || pattern.pattern}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{pattern.last_seen_description || pattern.lastSeen}</p>
                         </div>
                         <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
                           pattern.significance === 'high' ? 'bg-orange-400/60' :
@@ -840,8 +888,8 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                     >
                       <div className="flex items-start gap-2">
                         <div className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                          strategy.type === 'discovery' ? 'bg-blue-400' :
-                          strategy.type === 'pattern' ? 'bg-purple-400' :
+                          (strategy.strategy_type || strategy.type) === 'discovery' ? 'bg-blue-400' :
+                          (strategy.strategy_type || strategy.type) === 'pattern' ? 'bg-purple-400' :
                           'bg-green-400'
                         }`} />
                         <p className="text-xs text-gray-300 group-hover:text-white transition-colors leading-relaxed">
@@ -856,6 +904,18 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
           </motion.div>
         )}
       </div>
+      
+      {/* Share Modal */}
+      {shareLink && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => {
+            setShowShareModal(false);
+            setShareLink(null);
+          }}
+          shareLink={shareLink}
+        />
+      )}
     </div>
   );
 }
