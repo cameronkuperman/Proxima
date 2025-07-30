@@ -25,6 +25,8 @@ interface HealthStoryResponse {
     story_text: string;
     generated_date: string;
     story_id: string;
+    title?: string;
+    subtitle?: string;
   };
   error?: string;
   message?: string;
@@ -48,6 +50,10 @@ interface HealthStoryData {
     symptom_entries: number;
   };
   created_at: string;
+  metadata?: {
+    title?: string;
+    subtitle?: string;
+  };
 }
 
 interface RefreshInfo {
@@ -57,6 +63,27 @@ interface RefreshInfo {
   week_start: string;
   next_reset: string;
   can_refresh: boolean;
+}
+
+// Utility function to extract clean story content
+function extractStoryContent(storyData: any): string {
+  // If it's already a string, return it
+  if (typeof storyData === 'string') {
+    // Check if it's a JSON string
+    try {
+      const parsed = JSON.parse(storyData);
+      return parsed.content || storyData;
+    } catch {
+      return storyData;
+    }
+  }
+
+  // If it's an object with content field
+  if (storyData && typeof storyData === 'object' && storyData.content) {
+    return storyData.content;
+  }
+
+  return storyData;
 }
 
 export const healthStoryService = {
@@ -221,14 +248,20 @@ export const healthStoryService = {
           throw new Error('Rate limit reached. Please try again in a few moments.');
         }
         
+        // Extract clean content from the response
+        const cleanContent = extractStoryContent(data.content);
+        
         // Transform backend response to expected frontend format
         return {
           success: true,
           health_story: {
             story_id: data.story_id,
             header: data.title || data.header, // Backend now sends 'title'
-            story_text: data.content, // Map content to story_text
-            generated_date: data.date
+            story_text: cleanContent, // Use clean content
+            generated_date: data.date,
+            // Include original title and subtitle for metadata
+            title: data.title,
+            subtitle: data.subtitle
           }
         };
       }
@@ -258,20 +291,25 @@ export const healthStoryService = {
     }
   },
 
-  async saveHealthStory(story: HealthStoryData): Promise<boolean> {
+  async saveHealthStory(story: HealthStoryData & { title?: string; subtitle?: string }): Promise<boolean> {
     try {
       const supabase = getSupabaseClient();
+      
+      // Ensure we're saving clean content
+      const cleanContent = extractStoryContent(story.story_text);
       
       // Map to the actual database schema
       const dbRecord = {
         id: story.id,
         user_id: story.user_id,
         header: story.header, // Keep using header column for now
-        story_text: story.story_text,
+        story_text: cleanContent, // Save clean content without JSON structure
         generated_date: story.generated_date,
         data_sources: story.data_sources,
-        created_at: story.created_at
-        // Don't include subtitle yet as it doesn't exist in the table
+        created_at: story.created_at,
+        // Store title and subtitle in their respective columns
+        title: story.title,
+        subtitle: story.subtitle
       };
       
       const { error } = await supabase
@@ -319,17 +357,26 @@ export const healthStoryService = {
       }
       
       // Map the database records to our HealthStoryData type
-      return (data || []).map((story: any) => ({
-        id: story.id,
-        user_id: story.user_id,
-        header: story.header,
-        subtitle: story.subtitle,
-        story_text: story.story_text,
-        generated_date: story.generated_date,
-        date_range: story.date_range,
-        data_sources: story.data_sources,
-        created_at: story.created_at
-      }));
+      return (data || []).map((story: any) => {
+        // Extract clean content if story_text contains JSON structure
+        const cleanContent = extractStoryContent(story.story_text);
+        
+        return {
+          id: story.id,
+          user_id: story.user_id,
+          header: story.header || story.title, // Use title if header is empty
+          subtitle: story.subtitle,
+          story_text: cleanContent, // Return clean content
+          generated_date: story.generated_date,
+          date_range: story.date_range,
+          data_sources: story.data_sources,
+          created_at: story.created_at,
+          metadata: {
+            title: story.title,
+            subtitle: story.subtitle
+          }
+        };
+      });
     } catch (error) {
       console.error('Error fetching health stories:', error);
       return [];

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { reportService } from '@/services/reportService';
 import { ReportAnalysisRequest, SpecialtyType } from '@/types/reports';
 import { useAuth } from '@/contexts/AuthContext';
+import { SpecialtyTriage } from './reports/SpecialtyTriage';
 
 interface ReportGeneratorProps {
   userId?: string;
@@ -24,10 +25,11 @@ export function ReportGenerator({
   const userId = propUserId || user?.id;
   
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'select' | 'analyzing' | 'generating' | 'complete'>('select');
+  const [step, setStep] = useState<'select' | 'triage' | 'analyzing' | 'generating' | 'complete'>('select');
   const [error, setError] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedReport, setGeneratedReport] = useState<any>(null);
+  const [triageResult, setTriageResult] = useState<any>(null);
 
   // Configuration
   const [reportType, setReportType] = useState<'symptom' | 'time' | 'specialist'>('symptom');
@@ -242,29 +244,29 @@ export function ReportGenerator({
 
           {reportType === 'specialist' && (
             <div className="space-y-4">
-              <select
-                value={selectedSpecialty}
-                onChange={(e) => setSelectedSpecialty(e.target.value as SpecialtyType)}
-                className="w-full p-3 border rounded-lg"
-              >
-                <option value="cardiology">Cardiology</option>
-                <option value="neurology">Neurology</option>
-                <option value="psychiatry">Psychiatry</option>
-                <option value="dermatology">Dermatology</option>
-                <option value="gastroenterology">Gastroenterology</option>
-                <option value="endocrinology">Endocrinology</option>
-                <option value="pulmonology">Pulmonology</option>
-              </select>
+              <p className="text-gray-600">
+                Let's find the right specialist for your needs based on your symptoms.
+              </p>
               <button
-                onClick={handleGenerateSpecialistReport}
-                disabled={loading}
+                onClick={() => setStep('triage')}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                Generate {selectedSpecialty} Report
+                Find the Right Specialist
               </button>
             </div>
           )}
         </>
+      )}
+
+      {step === 'triage' && (
+        <SpecialtyTriage
+          userId={userId}
+          onSpecialtySelected={(specialty, triage) => {
+            setSelectedSpecialty(specialty);
+            setTriageResult(triage);
+            handleGenerateSpecialistReport();
+          }}
+        />
       )}
 
       {step === 'analyzing' && (

@@ -50,7 +50,8 @@ export type SpecialtyType =
   | 'dermatology' 
   | 'gastroenterology' 
   | 'endocrinology' 
-  | 'pulmonology';
+  | 'pulmonology'
+  | 'primary-care';
 
 export interface ReportData {
   executive_summary?: {

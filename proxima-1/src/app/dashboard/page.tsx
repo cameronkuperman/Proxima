@@ -12,9 +12,10 @@ import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 export const dynamic = 'force-dynamic';
 import UnifiedFAB from '@/components/UnifiedFAB';
 import { useTutorial } from '@/contexts/TutorialContext';
-import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope } from 'lucide-react';
+import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
+import { useAIPredictiveAlert } from '@/hooks/useAIPredictiveAlert';
 import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
 import ActiveTrackingCard from '@/components/tracking/ActiveTrackingCard';
 import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal';
@@ -132,6 +133,10 @@ function DashboardContent() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [quickScanLoading, setQuickScanLoading] = useState(false);
   const [showQuickReportChat, setShowQuickReportChat] = useState(false);
+  
+  // AI Predictive Alert
+  const { alert: aiAlert, isLoading: alertLoading } = useAIPredictiveAlert();
+  
   const [lastActivityTimes] = useState({
     quickScan: '2 hours ago',
     bodyMap: '3 days ago',
@@ -1271,24 +1276,88 @@ function DashboardContent() {
               
               {/* Predictive Alert and AI Oracle - Below insights and graph */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-12">
-                {/* Predictive Alert */}
-                <div className="backdrop-blur-[20px] bg-gradient-to-r from-yellow-600/10 to-orange-600/10 border border-yellow-600/20 rounded-xl p-5">
-                  <div className="flex items-start gap-3">
-                    <Zap className="w-6 h-6 text-yellow-500" />
-                    <div className="flex-1">
-                      <h3 className="text-base font-medium text-white mb-2">Predictive Alert</h3>
-                      <p className="text-sm text-gray-300">
-                        Based on your patterns, you might experience a migraine in 2 days. Consider preventive measures.
-                      </p>
-                      <button 
-                        onClick={() => router.push('/predictive-insights')}
-                        className="text-xs text-yellow-400 hover:text-yellow-300 mt-2"
-                      >
-                        View prevention tips →
-                      </button>
+                {/* AI-Powered Predictive Alert */}
+                {alertLoading ? (
+                  <div className="backdrop-blur-[20px] bg-gradient-to-r from-gray-600/10 to-gray-600/10 
+                                  border border-gray-600/20 rounded-xl p-5 animate-pulse">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-gray-600/20 rounded"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-600/20 rounded w-1/3"></div>
+                        <div className="h-3 bg-gray-600/20 rounded w-full"></div>
+                        <div className="h-3 bg-gray-600/20 rounded w-3/4"></div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : aiAlert ? (
+                  <div className={`backdrop-blur-[20px] rounded-xl p-5 border transition-all
+                    ${aiAlert.severity === 'critical' 
+                      ? 'bg-gradient-to-r from-red-600/10 to-orange-600/10 border-red-600/20' 
+                      : aiAlert.severity === 'warning'
+                      ? 'bg-gradient-to-r from-yellow-600/10 to-orange-600/10 border-yellow-600/20'
+                      : 'bg-gradient-to-r from-blue-600/10 to-cyan-600/10 border-blue-600/20'
+                    }`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        aiAlert.severity === 'critical' ? 'bg-red-500/20' :
+                        aiAlert.severity === 'warning' ? 'bg-yellow-500/20' :
+                        'bg-blue-500/20'
+                      }`}>
+                        {aiAlert.severity === 'critical' ? <AlertTriangle className="w-5 h-5 text-red-400" /> :
+                         aiAlert.severity === 'warning' ? <Zap className="w-5 h-5 text-yellow-400" /> :
+                         <TrendingUp className="w-5 h-5 text-blue-400" />}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-base font-medium text-white mb-2">{aiAlert.title}</h3>
+                        <p className="text-sm text-gray-300 mb-2">
+                          {aiAlert.description}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-gray-400">
+                            {aiAlert.timeframe} • {aiAlert.confidence}% confidence
+                          </p>
+                          <button 
+                            onClick={() => router.push(aiAlert.actionUrl || '/predictive-insights')}
+                            className={`text-xs transition-colors ${
+                              aiAlert.severity === 'critical' ? 'text-red-400 hover:text-red-300' :
+                              aiAlert.severity === 'warning' ? 'text-yellow-400 hover:text-yellow-300' :
+                              'text-blue-400 hover:text-blue-300'
+                            }`}
+                          >
+                            {aiAlert.severity === 'critical' ? 'Take action →' : 'View details →'}
+                          </button>
+                        </div>
+                        {aiAlert.preventionTip && (
+                          <p className="text-xs text-gray-400 mt-2 italic">
+                            Quick tip: {aiAlert.preventionTip}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // No alerts state - good news!
+                  <div className="backdrop-blur-[20px] bg-gradient-to-r from-green-600/10 to-emerald-600/10 
+                                  border border-green-600/20 rounded-xl p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-green-500/20">
+                        <Shield className="w-5 h-5 text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-base font-medium text-white mb-2">All Clear</h3>
+                        <p className="text-sm text-gray-300">
+                          No concerning patterns detected. Keep up your healthy habits!
+                        </p>
+                        <button 
+                          onClick={() => router.push('/predictive-insights')}
+                          className="text-xs text-green-400 hover:text-green-300 mt-2"
+                        >
+                          View your patterns →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* AI Oracle Chat */}
                 <motion.div 
