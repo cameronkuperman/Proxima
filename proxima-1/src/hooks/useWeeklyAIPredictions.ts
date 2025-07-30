@@ -1,0 +1,176 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface WeeklyPredictions {
+  id: string;
+  dashboard_alert: {
+    id: string;
+    severity: 'info' | 'warning' | 'critical';
+    title: string;
+    description: string;
+    timeframe: string;
+    confidence: number;
+    actionUrl: string;
+    preventionTip?: string;
+  };
+  predictions: Array<{
+    id: string;
+    type: 'immediate' | 'seasonal' | 'longterm';
+    severity: 'info' | 'warning' | 'alert';
+    title: string;
+    description: string;
+    pattern: string;
+    confidence: number;
+    preventionProtocols: string[];
+    category: string;
+    reasoning?: string;
+    dataPoints?: string[];
+    gradient?: string;
+  }>;
+  pattern_questions: Array<{
+    id: string;
+    question: string;
+    category: 'sleep' | 'energy' | 'mood' | 'physical' | 'other';
+    answer: string;
+    deepDive: string[];
+    connections: string[];
+    relevanceScore: number;
+    basedOn: string[];
+  }>;
+  body_patterns: {
+    tendencies: string[];
+    positiveResponses: string[];
+  };
+  generated_at: string;
+  data_quality_score: number;
+  is_current: boolean;
+  viewed_at?: string;
+}
+
+export function useWeeklyAIPredictions() {
+  const { user } = useAuth();
+  const [predictions, setPredictions] = useState<WeeklyPredictions | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [status, setStatus] = useState<'success' | 'needs_initial' | 'not_found'>('success');
+
+  useEffect(() => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    fetchPredictions();
+  }, [user?.id]);
+
+  const fetchPredictions = async () => {
+    try {
+      setIsLoading(true);
+      const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
+      const response = await fetch(
+        `${API_URL}/api/ai/weekly/${user.id}`
+      );
+      
+      const data = await response.json();
+      setStatus(data.status);
+      
+      if (data.status === 'success' && data.predictions) {
+        setPredictions(data.predictions);
+      } else if (data.status === 'needs_initial' || data.status === 'not_found') {
+        // Automatically generate initial predictions
+        await generateInitialPredictions();
+      }
+    } catch (error) {
+      console.error('Error fetching weekly predictions:', error);
+      setStatus('not_found');
+      // Try to generate if fetch fails
+      await generateInitialPredictions();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateInitialPredictions = async () => {
+    if (!user?.id || isGenerating) return;
+    
+    try {
+      setIsGenerating(true);
+      const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
+      const response = await fetch(
+        `${API_URL}/api/ai/generate-initial/${user.id}`,
+        { method: 'POST' }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          // Wait a moment for generation to complete
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          // Fetch the newly generated predictions
+          await fetchPredictions();
+        }
+      }
+    } catch (error) {
+      console.error('Error generating initial predictions:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const regeneratePredictions = async () => {
+    if (!user?.id || isGenerating) return;
+    
+    try {
+      setIsGenerating(true);
+      const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
+      const response = await fetch(
+        `${API_URL}/api/ai/regenerate/${user.id}`,
+        { method: 'POST' }
+      );
+      
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        // Wait for regeneration
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        await fetchPredictions();
+        return { success: true };
+      } else if (data.status === 'rate_limited') {
+        return { success: false, message: data.message };
+      }
+      
+      return { success: false, message: 'Failed to regenerate predictions' };
+    } catch (error) {
+      console.error('Error regenerating predictions:', error);
+      return { success: false, message: 'An error occurred' };
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Extract individual components for backward compatibility
+  const dashboardAlert = predictions?.dashboard_alert || null;
+  const allPredictions = predictions?.predictions || [];
+  const patternQuestions = predictions?.pattern_questions || [];
+  const bodyPatterns = predictions?.body_patterns || null;
+
+  return {
+    // Full predictions object
+    predictions,
+    
+    // Individual components
+    dashboardAlert,
+    allPredictions,
+    patternQuestions,
+    bodyPatterns,
+    
+    // Status
+    isLoading,
+    isGenerating,
+    status,
+    
+    // Actions
+    regeneratePredictions,
+    refreshPredictions: fetchPredictions
+  };
+}

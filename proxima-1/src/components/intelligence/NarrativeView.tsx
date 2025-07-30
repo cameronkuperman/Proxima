@@ -15,8 +15,7 @@ import { ShareModal } from '@/components/modals/ShareModal';
 
 interface Insight {
   id: string;
-  insight_type?: 'positive' | 'warning' | 'neutral'; // Backend field
-  type?: 'positive' | 'warning' | 'neutral'; // Fallback
+  insight_type: 'positive' | 'warning' | 'neutral';
   title: string;
   description: string;
   confidence: number;
@@ -50,8 +49,7 @@ interface ShadowPattern {
 interface HealthStrategy {
   id: string;
   strategy: string;
-  type?: 'discovery' | 'pattern' | 'prevention'; // Fallback
-  strategy_type?: 'discovery' | 'pattern' | 'prevention'; // Backend field
+  strategy_type: 'prevention' | 'optimization' | 'discovery' | 'maintenance';
 }
 
 interface Prediction {
@@ -696,9 +694,9 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className={`p-4 rounded-lg border cursor-pointer hover:bg-white/[0.02] transition-all ${
-                (insight.insight_type || insight.type) === 'positive' 
+                insight.insight_type === 'positive' 
                   ? 'bg-green-500/5 border-green-500/20' 
-                  : (insight.insight_type || insight.type) === 'warning'
+                  : insight.insight_type === 'warning'
                   ? 'bg-yellow-500/5 border-yellow-500/20'
                   : 'bg-white/[0.02] border-white/[0.05]'
               }`}
@@ -888,9 +886,10 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                     >
                       <div className="flex items-start gap-2">
                         <div className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                          (strategy.strategy_type || strategy.type) === 'discovery' ? 'bg-blue-400' :
-                          (strategy.strategy_type || strategy.type) === 'pattern' ? 'bg-purple-400' :
-                          'bg-green-400'
+                          strategy.strategy_type === 'discovery' ? 'bg-blue-400' :
+                          strategy.strategy_type === 'optimization' ? 'bg-purple-400' :
+                          strategy.strategy_type === 'prevention' ? 'bg-green-400' :
+                          'bg-gray-400'
                         }`} />
                         <p className="text-xs text-gray-300 group-hover:text-white transition-colors leading-relaxed">
                           {strategy.strategy}

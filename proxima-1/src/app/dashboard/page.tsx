@@ -15,7 +15,7 @@ import { useTutorial } from '@/contexts/TutorialContext';
 import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
-import { useAIPredictiveAlert } from '@/hooks/useAIPredictiveAlert';
+import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
 import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
 import ActiveTrackingCard from '@/components/tracking/ActiveTrackingCard';
 import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal';
@@ -134,8 +134,8 @@ function DashboardContent() {
   const [quickScanLoading, setQuickScanLoading] = useState(false);
   const [showQuickReportChat, setShowQuickReportChat] = useState(false);
   
-  // AI Predictive Alert
-  const { alert: aiAlert, isLoading: alertLoading } = useAIPredictiveAlert();
+  // Weekly AI Dashboard Alert
+  const { dashboardAlert: aiAlert, isLoading: alertLoading } = useWeeklyAIPredictions();
   
   const [lastActivityTimes] = useState({
     quickScan: '2 hours ago',
