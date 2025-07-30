@@ -10,185 +10,12 @@ import {
   AlertTriangle, TrendingUp, Sparkles, ChevronRight,
   Droplets, Moon, Sun, Leaf, Activity, Eye, HelpCircle,
   Coffee, Wind, CloudRain, Pill, ThermometerSun, Waves,
-  TreePine, Flower2, Sunrise, Network, BookOpen
+  TreePine, Flower2, Sunrise, Network, BookOpen, RefreshCw
 } from 'lucide-react';
 import HealthConstellation from '@/components/HealthConstellation';
-import { useAIPredictions } from '@/hooks/useAIPredictions';
-import { useAIPatternQuestions } from '@/hooks/useAIPatternQuestions';
-import { useAIBodyPatterns } from '@/hooks/useAIBodyPatterns';
+import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
 
 export const dynamic = 'force-dynamic';
-
-interface Prediction {
-  id: string;
-  type: 'immediate' | 'seasonal' | 'longterm';
-  severity: 'info' | 'warning' | 'alert';
-  title: string;
-  description: string;
-  pattern: string;
-  confidence: number;
-  preventionProtocols: string[];
-  icon: React.ReactNode;
-  gradient: string;
-}
-
-interface Pattern {
-  id: string;
-  question: string;
-  category: 'sleep' | 'energy' | 'mood' | 'physical';
-  icon: React.ReactNode;
-  answer: string;
-  deepDive: string[];
-  connections: string[];
-}
-
-const mockPredictions: Prediction[] = [
-  // This Week
-  {
-    id: 'migraine-risk',
-    type: 'immediate',
-    severity: 'alert',
-    title: 'Migraine Risk Building',
-    description: 'Watch for migraine conditions in the next few days',
-    pattern: 'Stress accumulation + weather pressure drop',
-    confidence: 87,
-    preventionProtocols: [
-      'Increase water intake by 40% starting today',
-      'Atenolol timing: Take 30 min earlier than usual',
-      'Magnesium supplement before bed (400mg)',
-      'Avoid aged cheeses and red wine'
-    ],
-    icon: <CloudRain className="w-6 h-6" />,
-    gradient: 'from-red-500/20 to-orange-500/20'
-  },
-  {
-    id: 'sleep-disruption',
-    type: 'immediate',
-    severity: 'warning',
-    title: 'Sleep Disruption Alert',
-    description: 'Insomnia pattern emerging mid-week',
-    pattern: 'Late screen time + work deadline stress',
-    confidence: 75,
-    preventionProtocols: [
-      '9 PM digital sunset (blue light off)',
-      'Lavender + chamomile tea ritual',
-      'Progressive muscle relaxation',
-      'Morning light exposure (15 min)'
-    ],
-    icon: <Moon className="w-6 h-6" />,
-    gradient: 'from-indigo-500/20 to-purple-500/20'
-  },
-  {
-    id: 'energy-window',
-    type: 'immediate',
-    severity: 'info',
-    title: 'Energy Optimization Window',
-    description: 'Peak performance window approaching',
-    pattern: 'Your cortisol rhythm + good sleep streak',
-    confidence: 92,
-    preventionProtocols: [
-      'Morning protein within 30 min of waking',
-      'Strategic caffeine: 10 AM only',
-      '20-min power walk at lunch'
-    ],
-    icon: <Zap className="w-6 h-6" />,
-    gradient: 'from-green-500/20 to-emerald-500/20'
-  },
-  // Seasonal
-  {
-    id: 'allergy-cascade',
-    type: 'seasonal',
-    severity: 'warning',
-    title: 'Allergy Cascade Warning',
-    description: 'Spring pollen will trigger your histamine sensitivity',
-    pattern: 'Timeline: Starting in 3-4 weeks',
-    confidence: 82,
-    preventionProtocols: [
-      'Start Zyrtec 2 weeks before season (March 1)',
-      'HEPA filter for bedroom',
-      'Neti pot routine (evening)',
-      'Local honey protocol (1 tbsp daily)'
-    ],
-    icon: <Flower2 className="w-6 h-6" />,
-    gradient: 'from-yellow-500/20 to-amber-500/20'
-  },
-  {
-    id: 'seasonal-mood',
-    type: 'seasonal',
-    severity: 'warning',
-    title: 'Seasonal Energy Dip',
-    description: 'Late winter energy dip approaching',
-    pattern: 'Vitamin D deficiency + less daylight',
-    confidence: 78,
-    preventionProtocols: [
-      'Light therapy box (10,000 lux, 30 min AM)',
-      'Vitamin D3 supplement (4000 IU)',
-      'Maintain exercise even when unmotivated'
-    ],
-    icon: <ThermometerSun className="w-6 h-6" />,
-    gradient: 'from-gray-500/20 to-slate-500/20'
-  }
-];
-
-const patternExplorer: Pattern[] = [
-  {
-    id: 'sunday-anxiety',
-    question: 'Why do I get Sunday anxiety?',
-    category: 'mood',
-    icon: <Brain className="w-5 h-5" />,
-    answer: 'Your Sunday anxiety stems from anticipating the work week.',
-    deepDive: [
-      'It peaks around 6-8pm when you start thinking about Monday',
-      'Stronger when you have unfinished tasks',
-      'Less intense after productive weekends',
-      'Your body starts releasing stress hormones in anticipation'
-    ],
-    connections: ['Poor Sunday sleep', 'Monday morning fatigue', 'Tuesday recovery']
-  },
-  {
-    id: 'sleep-breakers',
-    question: 'What breaks my sleep?',
-    category: 'sleep',
-    icon: <Moon className="w-5 h-5" />,
-    answer: 'Your sleep is most fragile between 2-4am.',
-    deepDive: [
-      'Late meals (after 8pm) = 70% chance of disrupted sleep',
-      'Screen time past 10pm = lighter sleep all night',
-      'Alcohol = wake up at 3am phenomenon',
-      'Stress = takes 45+ min to fall asleep'
-    ],
-    connections: ['Next day brain fog', 'Afternoon crashes', '48hr recovery time']
-  },
-  {
-    id: 'best-days',
-    question: 'What makes my best days?',
-    category: 'energy',
-    icon: <Sparkles className="w-5 h-5" />,
-    answer: 'Your best days follow a specific pattern we\'ve discovered.',
-    deepDive: [
-      'Morning sunlight within 30 min of waking',
-      'Protein breakfast before 9am',
-      'Movement before noon',
-      'Meaningful work progress',
-      'Evening wind-down routine'
-    ],
-    connections: ['Better sleep that night', 'Positive momentum next day', 'Lower stress all week']
-  },
-  {
-    id: 'headache-timing',
-    question: 'Why headaches on Thursdays?',
-    category: 'physical',
-    icon: <Zap className="w-5 h-5" />,
-    answer: 'Your headaches are delayed stress responses.',
-    deepDive: [
-      'Monday-Tuesday stress accumulates',
-      'Wednesday your body holds tension',
-      'Thursday it releases as head pain',
-      'Dehydration amplifies the pattern'
-    ],
-    connections: ['Neck tension Tuesday', 'Poor sleep Wednesday', 'Recovery by Saturday']
-  }
-];
 
 export default function PredictiveInsightsPage() {
   const router = useRouter();
@@ -197,14 +24,20 @@ export default function PredictiveInsightsPage() {
   const [selectedPrediction, setSelectedPrediction] = useState<string | null>(null);
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
   
-  // Use AI hooks instead of mock data
-  const { predictions, isLoading: predictionsLoading } = useAIPredictions();
-  const { questions, isLoading: questionsLoading } = useAIPatternQuestions();
-  const { patterns: bodyPatterns, isLoading: patternsLoading } = useAIBodyPatterns();
+  // Use weekly AI predictions hook
+  const { 
+    allPredictions,
+    patternQuestions,
+    bodyPatterns,
+    isLoading,
+    isGenerating,
+    status,
+    regeneratePredictions
+  } = useWeeklyAIPredictions();
 
   const getTabPredictions = () => {
-    if (!predictions || !Array.isArray(predictions)) return [];
-    return predictions.filter(p => p.type === activeTab);
+    if (!allPredictions || !Array.isArray(allPredictions)) return [];
+    return allPredictions.filter(p => p.type === activeTab);
   };
 
   const getSeverityColor = (severity: string) => {
@@ -229,6 +62,16 @@ export default function PredictiveInsightsPage() {
       'other': <Activity className="w-6 h-6" />
     };
     return icons[category] || icons.other;
+  };
+
+  const handleRegenerate = async () => {
+    const result = await regeneratePredictions();
+    if (result?.success) {
+      // Success handled in hook
+    } else if (result?.message) {
+      // Show error message (e.g., rate limited)
+      console.error(result.message);
+    }
   };
 
   return (
@@ -288,9 +131,32 @@ export default function PredictiveInsightsPage() {
               </button>
               
               <div className="text-center mb-8">
-                <h1 className="text-4xl font-bold text-white">Predictive Alerts</h1>
+                <h1 className="text-4xl font-bold text-white mb-2">Predictive Alerts</h1>
+                <p className="text-gray-400">Weekly AI-powered health predictions</p>
               </div>
             </div>
+
+            {/* Status Message */}
+            {status === 'needs_initial' && (
+              <div className="text-center py-8">
+                <p className="text-gray-400 mb-4">Generating your personalized predictions...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-600 border-t-transparent mx-auto"></div>
+              </div>
+            )}
+
+            {/* Regenerate Button */}
+            {status === 'success' && !isGenerating && (
+              <div className="flex justify-center mb-6">
+                <button
+                  onClick={handleRegenerate}
+                  disabled={isGenerating}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm text-gray-400 hover:text-white transition-all"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                  {isGenerating ? 'Regenerating...' : 'Refresh Predictions'}
+                </button>
+              </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="flex justify-center mb-8">
@@ -341,134 +207,49 @@ export default function PredictiveInsightsPage() {
                 transition={{ duration: 0.3 }}
                 className="mb-8"
               >
-                {activeTab === 'immediate' && (
-                  <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-2xl p-6">
-                    <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
-                      <Calendar className="w-6 h-6 text-purple-400" />
-                      Next 7 Days
-                      <span className="text-sm text-gray-400 font-normal ml-auto">
-                        {predictionsLoading ? 'Loading...' : `${getTabPredictions().length} predictions`}
-                      </span>
-                    </h2>
-                    {predictionsLoading ? (
-                      <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="animate-pulse">
-                            <div className="border border-gray-800 rounded-xl p-6">
-                              <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 bg-gray-800 rounded-lg"></div>
-                                <div className="flex-1 space-y-3">
-                                  <div className="h-5 bg-gray-800 rounded w-3/4"></div>
-                                  <div className="h-4 bg-gray-800 rounded w-full"></div>
-                                  <div className="h-4 bg-gray-800 rounded w-2/3"></div>
-                                </div>
+                <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-2xl p-6">
+                  <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
+                    {activeTab === 'immediate' && <Calendar className="w-6 h-6 text-purple-400" />}
+                    {activeTab === 'seasonal' && <Leaf className="w-6 h-6 text-green-400" />}
+                    {activeTab === 'longterm' && <Eye className="w-6 h-6 text-purple-400" />}
+                    {activeTab === 'immediate' ? 'Next 7 Days' : 
+                     activeTab === 'seasonal' ? 'Next 3 Months' : 
+                     'Long-term Outlook'}
+                    <span className="text-sm text-gray-400 font-normal ml-auto">
+                      {isLoading || isGenerating ? 'Loading...' : `${getTabPredictions().length} predictions`}
+                    </span>
+                  </h2>
+                  
+                  {(isLoading || isGenerating) ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="border border-gray-800 rounded-xl p-6">
+                            <div className="flex items-start gap-4">
+                              <div className="w-12 h-12 bg-gray-800 rounded-lg"></div>
+                              <div className="flex-1 space-y-3">
+                                <div className="h-5 bg-gray-800 rounded w-3/4"></div>
+                                <div className="h-4 bg-gray-800 rounded w-full"></div>
+                                <div className="h-4 bg-gray-800 rounded w-2/3"></div>
                               </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : getTabPredictions().length === 0 ? (
-                      <div className="text-center py-12">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-800 mb-4">
-                          <Activity className="w-8 h-8 text-gray-600" />
                         </div>
-                        <h3 className="text-lg font-medium text-white mb-2">
-                          No predictions for this week
-                        </h3>
-                        <p className="text-gray-400 mb-4 max-w-md mx-auto">
-                          Keep logging your health data. As we learn your patterns, predictions will appear here.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {getTabPredictions().map((prediction) => (
-                          <motion.div
-                            key={prediction.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            whileHover={{ scale: 1.01 }}
-                            className={`backdrop-blur-[20px] bg-gradient-to-r ${prediction.gradient || 'from-gray-500/20 to-slate-500/20'} border ${getSeverityColor(prediction.severity)} rounded-xl p-6 cursor-pointer transition-all`}
-                            onClick={() => setSelectedPrediction(
-                              selectedPrediction === prediction.id ? null : prediction.id
-                            )}
-                          >
-                          <div className="flex items-start gap-4">
-                            <div className={`p-3 rounded-lg bg-white/[0.05] ${getSeverityColor(prediction.severity)}`}>
-                              {getCategoryIcon(prediction.category)}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-xl font-semibold text-white mb-2">
-                                {prediction.title}
-                              </h3>
-                              <p className="text-gray-300 mb-2">{prediction.description}</p>
-                              <p className="text-sm text-gray-400 mb-3">
-                                Pattern: {prediction.pattern}
-                              </p>
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="text-gray-400">
-                                  Your trigger combo detected
-                                </span>
-                                <span className={`font-medium ${
-                                  prediction.confidence > 80 ? 'text-green-400' : 'text-yellow-400'
-                                }`}>
-                                  {prediction.confidence}% historical accuracy
-                                </span>
-                              </div>
-                            </div>
-                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
-                              selectedPrediction === prediction.id ? 'rotate-90' : ''
-                            }`} />
-                          </div>
-
-                          <AnimatePresence>
-                            {selectedPrediction === prediction.id && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="mt-6 pt-6 border-t border-white/[0.1]"
-                              >
-                                <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
-                                  <Shield className="w-5 h-5 text-green-400" />
-                                  Prevention Protocol
-                                </h4>
-                                <div className="space-y-3">
-                                  {prediction.preventionProtocols.map((protocol, idx) => (
-                                    <div key={idx} className="flex items-start gap-3">
-                                      <div className="w-6 h-6 rounded-full bg-white/[0.05] flex items-center justify-center text-xs text-gray-400">
-                                        {idx + 1}
-                                      </div>
-                                      <p className="text-gray-300">{protocol}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                                <div className="mt-6 flex gap-3">
-                                  <button className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-white transition-all">
-                                    Start Protocol
-                                  </button>
-                                  <button className="px-4 py-2 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] rounded-lg text-gray-400 transition-all">
-                                    Remind Me Later
-                                  </button>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
                       ))}
                     </div>
-                  )}
-                )}
-
-                {activeTab === 'seasonal' && (
-                  <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-2xl p-6">
-                    <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
-                      <Leaf className="w-6 h-6 text-green-400" />
-                      Next 3 Months
-                      <span className="text-sm text-gray-400 font-normal ml-auto">
-                        {getTabPredictions().length} patterns
-                      </span>
-                    </h2>
+                  ) : getTabPredictions().length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-800 mb-4">
+                        <Activity className="w-8 h-8 text-gray-600" />
+                      </div>
+                      <h3 className="text-lg font-medium text-white mb-2">
+                        No {activeTab} predictions available
+                      </h3>
+                      <p className="text-gray-400 mb-4 max-w-md mx-auto">
+                        Keep logging your health data. As we learn your patterns, predictions will appear here.
+                      </p>
+                    </div>
+                  ) : (
                     <div className="space-y-6">
                       {getTabPredictions().map((prediction) => (
                         <motion.div
@@ -476,163 +257,90 @@ export default function PredictiveInsightsPage() {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           whileHover={{ scale: 1.01 }}
-                          className={`backdrop-blur-[20px] bg-gradient-to-r ${prediction.gradient} border ${getSeverityColor(prediction.severity)} rounded-xl p-6 cursor-pointer transition-all`}
+                          className={`backdrop-blur-[20px] bg-gradient-to-r ${prediction.gradient || 'from-gray-500/20 to-slate-500/20'} border ${getSeverityColor(prediction.severity)} rounded-xl p-6 cursor-pointer transition-all`}
                           onClick={() => setSelectedPrediction(
                             selectedPrediction === prediction.id ? null : prediction.id
                           )}
                         >
-                          <div className="flex items-start gap-4">
-                            <div className={`p-3 rounded-lg bg-white/[0.05] ${getSeverityColor(prediction.severity)}`}>
-                              {getCategoryIcon(prediction.category)}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-xl font-semibold text-white mb-2">
-                                {prediction.title}
-                              </h3>
-                              <p className="text-gray-300 mb-2">{prediction.description}</p>
-                              <p className="text-sm text-gray-400 mb-3">
-                                {prediction.pattern}
-                              </p>
-                            </div>
-                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
-                              selectedPrediction === prediction.id ? 'rotate-90' : ''
-                            }`} />
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg bg-white/[0.05] ${getSeverityColor(prediction.severity)}`}>
+                            {getCategoryIcon(prediction.category)}
                           </div>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-semibold text-white mb-2">
+                              {prediction.title}
+                            </h3>
+                            <p className="text-gray-300 mb-2">{prediction.description}</p>
+                            <p className="text-sm text-gray-400 mb-3">
+                              Pattern: {prediction.pattern}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-gray-400">
+                                AI confidence level
+                              </span>
+                              <span className={`font-medium ${
+                                prediction.confidence > 80 ? 'text-green-400' : 'text-yellow-400'
+                              }`}>
+                                {prediction.confidence}% accuracy
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
+                            selectedPrediction === prediction.id ? 'rotate-90' : ''
+                          }`} />
+                        </div>
 
-                          <AnimatePresence>
-                            {selectedPrediction === prediction.id && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="mt-6 pt-6 border-t border-white/[0.1]"
-                              >
-                                <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
-                                  <Shield className="w-5 h-5 text-green-400" />
-                                  Prevention Protocol
-                                </h4>
-                                <div className="space-y-3">
-                                  {prediction.preventionProtocols.map((protocol, idx) => (
-                                    <div key={idx} className="flex items-start gap-3">
-                                      <div className="w-6 h-6 rounded-full bg-white/[0.05] flex items-center justify-center text-xs text-gray-400">
-                                        {idx + 1}
-                                      </div>
-                                      <p className="text-gray-300">{protocol}</p>
+                        <AnimatePresence>
+                          {selectedPrediction === prediction.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="mt-6 pt-6 border-t border-white/[0.1]"
+                            >
+                              <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-green-400" />
+                                Prevention Protocol
+                              </h4>
+                              <div className="space-y-3">
+                                {prediction.preventionProtocols.map((protocol, idx) => (
+                                  <div key={idx} className="flex items-start gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-white/[0.05] flex items-center justify-center text-xs text-gray-400">
+                                      {idx + 1}
                                     </div>
-                                  ))}
+                                    <p className="text-gray-300">{protocol}</p>
+                                  </div>
+                                ))}
+                              </div>
+                              {prediction.reasoning && (
+                                <div className="mt-4 p-3 bg-white/[0.02] rounded-lg">
+                                  <p className="text-sm text-gray-400">AI Reasoning: {prediction.reasoning}</p>
                                 </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      ))}
-                    </div>
+                              )}
+                              {prediction.dataPoints && prediction.dataPoints.length > 0 && (
+                                <div className="mt-4">
+                                  <h5 className="text-sm text-gray-400 mb-2">Based on:</h5>
+                                  <ul className="space-y-1">
+                                    {prediction.dataPoints.slice(0, 3).map((point, idx) => (
+                                      <li key={idx} className="text-sm text-gray-500">• {point}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    ))}
                   </div>
                 )}
-
-                {activeTab === 'longterm' && (
-                  <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-2xl p-6">
-                    <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
-                      <Eye className="w-6 h-6 text-purple-400" />
-                      Long-term Outlook
-                      <span className="text-sm text-gray-400 font-normal ml-auto">
-                        Based on your profile
-                      </span>
-                    </h2>
-                    
-                    {/* Cardiovascular Outlook */}
-                    <div className="space-y-6">
-                      <div className="backdrop-blur-[20px] bg-gradient-to-r from-red-500/10 to-pink-500/10 border border-red-500/20 rounded-xl p-6">
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="p-3 rounded-lg bg-white/[0.05] text-red-400">
-                            <Heart className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-semibold text-white mb-2">
-                              Cardiovascular Risk Assessment
-                            </h3>
-                            <p className="text-gray-300">
-                              Current: Beta blocker managed hypertension
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <div>
-                            <h4 className="text-white font-medium mb-2">Risk Factors:</h4>
-                            <ul className="space-y-1 text-gray-400 text-sm">
-                              <li>• Family history (father: heart disease)</li>
-                              <li>• Work stress levels</li>
-                              <li>• Occasional poor sleep</li>
-                            </ul>
-                          </div>
-                          
-                          <div className="p-4 bg-white/[0.03] rounded-lg">
-                            <h4 className="text-white font-medium mb-2">Your Trajectory:</h4>
-                            <p className="text-gray-300 text-sm">
-                              Current path: Stable but requires vigilance<br />
-                              Optimized path: Could reduce medication by 45
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-white font-medium mb-2">Prevention Strategy:</h4>
-                            <ul className="space-y-1 text-gray-300 text-sm">
-                              <li>• Mediterranean diet adoption (proven 30% risk reduction)</li>
-                              <li>• Daily 30-min walks (reduces BP by 5-10 points)</li>
-                              <li>• Stress management program</li>
-                              <li>• Sleep optimization (7-8 hours consistently)</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Diabetes Risk */}
-                      <div className="backdrop-blur-[20px] bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/20 rounded-xl p-6">
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="p-3 rounded-lg bg-white/[0.05] text-amber-400">
-                            <Activity className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-semibold text-white mb-2">
-                              Metabolic Health Forecast
-                            </h3>
-                            <p className="text-gray-300">
-                              Current Risk: 32% by age 50 (population avg: 20%)
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <div>
-                            <h4 className="text-white font-medium mb-2">Contributing Factors:</h4>
-                            <ul className="space-y-1 text-gray-400 text-sm">
-                              <li>• Family history (mother: Type 2)</li>
-                              <li>• Current BMI trending upward</li>
-                              <li>• Irregular meal timing</li>
-                            </ul>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-white font-medium mb-2">Prevention Protocol:</h4>
-                            <ul className="space-y-1 text-gray-300 text-sm">
-                              <li>• Time-restricted eating (8-hour window)</li>
-                              <li>• Replace simple carbs with complex</li>
-                              <li>• Annual A1C monitoring</li>
-                              <li>• Maintain weight within 5 lbs of current</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                </div>
               </motion.div>
             </AnimatePresence>
 
             {/* AI-Generated Body Patterns */}
-            {!patternsLoading && bodyPatterns && (
+            {!isLoading && !isGenerating && bodyPatterns && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -647,23 +355,31 @@ export default function PredictiveInsightsPage() {
                   <div>
                     <h4 className="text-gray-400 mb-3">You tend to...</h4>
                     <ul className="space-y-2 text-gray-300">
-                      {bodyPatterns?.tendencies?.map((tendency, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-purple-400 mt-1">•</span>
-                          {tendency}
-                        </li>
-                      )) || <li className="text-gray-500">Loading patterns...</li>}
+                      {bodyPatterns?.tendencies && bodyPatterns.tendencies.length > 0 ? (
+                        bodyPatterns.tendencies.map((tendency, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-purple-400 mt-1">•</span>
+                            {tendency}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-gray-500">No patterns detected yet. Keep logging your health data!</li>
+                      )}
                     </ul>
-                </div>
+                  </div>
                   <div>
                     <h4 className="text-gray-400 mb-3">Your body responds well to...</h4>
                     <ul className="space-y-2 text-gray-300">
-                      {bodyPatterns?.positiveResponses?.map((response, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-green-400 mt-1">•</span>
-                          {response}
-                        </li>
-                      )) || <li className="text-gray-500">Loading responses...</li>}
+                      {bodyPatterns?.positiveResponses && bodyPatterns.positiveResponses.length > 0 ? (
+                        bodyPatterns.positiveResponses.map((response, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-green-400 mt-1">•</span>
+                            {response}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-gray-500">We're still learning what works best for you.</li>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -671,7 +387,7 @@ export default function PredictiveInsightsPage() {
             )}
 
             {/* AI-Generated Pattern Explorer */}
-            {!questionsLoading && questions && questions.length > 0 && (
+            {!isLoading && !isGenerating && patternQuestions && patternQuestions.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -684,7 +400,7 @@ export default function PredictiveInsightsPage() {
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                  {questions.slice(0, 4).map((pattern) => (
+                  {patternQuestions.slice(0, 4).map((pattern) => (
                   <motion.button
                     key={pattern.id}
                     whileHover={{ scale: 1.02 }}
@@ -728,7 +444,7 @@ export default function PredictiveInsightsPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    {questions.filter(p => p.id === selectedPattern).map(pattern => (
+                    {patternQuestions.filter(p => p.id === selectedPattern).map(pattern => (
                       <div key={pattern.id} className="bg-white/[0.03] rounded-2xl p-6 border border-white/[0.05]">
                         <p className="text-lg text-white mb-4">{pattern.answer}</p>
                         
