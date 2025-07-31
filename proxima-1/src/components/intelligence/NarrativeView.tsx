@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { healthStoryService, HealthStoryData, RefreshInfo } from '@/lib/health-story';
 import { storyNotesService, StoryNote } from '@/lib/story-notes';
-import { RefreshCw, Calendar, Info, Edit2, Trash2 } from 'lucide-react';
+import { RefreshCw, Calendar, Info, Edit2, Trash2, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useHealthAnalysis, useExportPDF, useShareWithDoctor } from '@/hooks/useHealthIntelligence';
+import { useHealthAnalysis, useExportPDF, useShareWithDoctor, useHealthIntelligence } from '@/hooks/useHealthIntelligence';
 import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
 import { format, startOfWeek } from 'date-fns';
 import { toast } from 'sonner';
@@ -16,10 +16,15 @@ import { ShareModal } from '@/components/modals/ShareModal';
 
 interface Insight {
   id: string;
+  user_id?: string;
+  story_id?: string | null;
   insight_type: 'positive' | 'warning' | 'neutral';
   title: string;
   description: string;
   confidence: number;
+  week_of?: string;
+  created_at?: string;
+  metadata?: Record<string, any>;
 }
 
 interface Episode {
@@ -40,27 +45,45 @@ interface Episode {
 
 interface ShadowPattern {
   id: string;
+  user_id?: string;
   pattern?: string; // Fallback field
   pattern_name?: string; // Backend field
+  pattern_category?: 'symptom' | 'treatment' | 'wellness' | 'medication' | 'other';
   lastSeen?: string; // Fallback field
   last_seen_description?: string; // Backend field
   significance: 'high' | 'medium' | 'low';
+  last_mentioned_date?: string;
+  days_missing?: number;
+  week_of?: string;
+  created_at?: string;
 }
 
 interface HealthStrategy {
   id: string;
+  user_id?: string;
   strategy: string;
-  strategy_type: 'prevention' | 'optimization' | 'discovery' | 'maintenance';
+  strategy_type: 'discovery' | 'pattern' | 'prevention' | 'optimization';
+  priority?: number;
+  rationale?: string;
+  expected_outcome?: string;
+  week_of?: string;
+  created_at?: string;
+  completion_status?: 'pending' | 'in_progress' | 'completed' | 'skipped';
 }
 
 interface Prediction {
   id: string;
+  user_id?: string;
+  story_id?: string | null;
   event?: string; // Fallback
   event_description?: string; // Backend field
   probability: number;
   timeframe: string;
   preventable: boolean;
-  reasoning?: string; // Backend field
+  reasoning?: string;
+  suggested_actions?: string[];
+  week_of?: string;
+  created_at?: string;
 }
 
 export default function NarrativeView() {
@@ -75,6 +98,22 @@ export default function NarrativeView() {
   
   // Backend integration hooks
   const { data: analysisData, isLoading: isAnalysisLoading, error: analysisError } = useHealthAnalysis();
+  
+  // Get updateStrategyStatus from health intelligence hook
+  const { updateStrategyStatus } = useHealthIntelligence();
+  
+  // Log analysis data for debugging
+  useEffect(() => {
+    console.log('🔍 NarrativeView Analysis Data:', {
+      analysisData,
+      isLoading: isAnalysisLoading,
+      error: analysisError,
+      insights: analysisData?.insights,
+      predictions: analysisData?.predictions,
+      shadowPatterns: analysisData?.shadow_patterns,
+      strategies: analysisData?.strategies
+    });
+  }, [analysisData, isAnalysisLoading, analysisError]);
   
   // Use weekly AI predictions for pattern questions
   const { 
@@ -91,53 +130,27 @@ export default function NarrativeView() {
 
   const story = episodes[currentEpisode] || null;
 
-  // Use backend data if available, otherwise use defaults
-  const insights = analysisData?.insights || [
-    {
-      id: '1',
-      type: 'positive',
-      title: 'Sleep quality improved by 23%',
-      description: 'Deep sleep phases increased after reducing evening screen time',
-      confidence: 92
-    },
-    {
-      id: '2',
-      type: 'warning',
-      title: 'Morning headaches pattern detected',
-      description: 'Strong correlation with nights of <6 hours sleep',
-      confidence: 78
-    },
-    {
-      id: '3',
-      type: 'neutral',
-      title: 'Hydration levels suboptimal',
-      description: 'Average daily water intake 30% below recommended',
-      confidence: 85
-    }
-  ];
+  // Use backend data only - no fallbacks
+  const insights = analysisData?.insights || [];
+  
+  // Log what insights we're using
+  console.log('📊 Insights being used:', {
+    fromBackend: analysisData?.insights,
+    actualInsights: insights,
+    count: insights.length
+  });
 
 
-  // Combine shadow patterns from health intelligence with body patterns from weekly predictions
+  // Use shadow patterns from backend only
   const shadowPatterns = analysisData?.shadow_patterns || [];
+  const patternsToShow = shadowPatterns;
   
-  // Convert body patterns to shadow pattern format if needed
-  const bodyPatternsAsShadow = weeklyBodyPatterns ? [
-    ...(weeklyBodyPatterns.tendencies || []).map((tendency, idx) => ({
-      id: `tendency-${idx}`,
-      pattern_name: tendency,
-      last_seen_description: 'Recent pattern',
-      significance: 'medium' as const
-    })),
-    ...(weeklyBodyPatterns.positive_responses || weeklyBodyPatterns.positiveResponses || []).map((response, idx) => ({
-      id: `response-${idx}`,
-      pattern_name: response,
-      last_seen_description: 'Positive response pattern',
-      significance: 'high' as const
-    }))
-  ] : [];
-  
-  // Use shadow patterns if available, otherwise show body patterns
-  const patternsToShow = shadowPatterns.length > 0 ? shadowPatterns : bodyPatternsAsShadow;
+  // Log shadow patterns data
+  console.log('👻 Shadow Patterns:', {
+    fromBackend: shadowPatterns,
+    patternsToShow,
+    count: patternsToShow.length
+  });
 
   // Combine strategies from health intelligence with pattern questions from weekly predictions
   const baseStrategies = analysisData?.strategies || [];
@@ -714,8 +727,27 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         </motion.div>
       )}
 
+      {/* Emergency Generate Button if no data */}
+      {insights.length === 0 && !isAnalysisLoading && (
+        <div className="backdrop-blur-[20px] bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6 mb-6">
+          <h3 className="text-lg font-semibold text-yellow-400 mb-2">No Health Intelligence Data</h3>
+          <p className="text-gray-300 mb-4">
+            It looks like your health intelligence data hasn't been generated yet. This is required to show your insights and predictions.
+          </p>
+          <p className="text-sm text-gray-400 mb-4">
+            Backend API might not have any data for this week. Try generating fresh data.
+          </p>
+          <button
+            onClick={() => window.location.href = '/intelligence'}
+            className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
+          >
+            Go to Intelligence Page to Generate
+          </button>
+        </div>
+      )}
+
       {/* Key Insights */}
-      {story && (
+      {insights.length > 0 && (
       <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Key Insights</h3>
         <div className="space-y-3">
@@ -749,7 +781,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
       )}
 
       {/* Predictions */}
-      {story && (
+      {predictions.length > 0 && (
       <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Predictive Insights</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -835,7 +867,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         </motion.div>
 
         {/* Health Advisory Sidebar */}
-        {story && (
+        {(
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -917,18 +949,44 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="group cursor-pointer"
+                      className={`group cursor-pointer ${
+                        strategy.completion_status === 'completed' ? 'opacity-60' : ''
+                      }`}
                     >
                       <div className="flex items-start gap-2">
-                        <div className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                          strategy.strategy_type === 'discovery' ? 'bg-blue-400' :
-                          strategy.strategy_type === 'optimization' ? 'bg-purple-400' :
-                          strategy.strategy_type === 'prevention' ? 'bg-green-400' :
-                          'bg-gray-400'
-                        }`} />
-                        <p className="text-xs text-gray-300 group-hover:text-white transition-colors leading-relaxed">
-                          {strategy.strategy}
-                        </p>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const newStatus = strategy.completion_status === 'completed' ? 'pending' : 'completed';
+                              await updateStrategyStatus(strategy.id, newStatus);
+                              toast.success(`Strategy marked as ${newStatus}`);
+                            } catch (error) {
+                              toast.error('Failed to update strategy');
+                            }
+                          }}
+                          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                            strategy.completion_status === 'completed' 
+                              ? 'bg-green-500 border-green-500' 
+                              : 'border-gray-600 hover:border-gray-400'
+                          }`}
+                        >
+                          {strategy.completion_status === 'completed' && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </button>
+                        <div className="flex-1">
+                          <p className={`text-xs text-gray-300 group-hover:text-white transition-colors leading-relaxed ${
+                            strategy.completion_status === 'completed' ? 'line-through' : ''
+                          }`}>
+                            {strategy.strategy}
+                          </p>
+                          {strategy.priority && (
+                            <p className="text-[10px] text-gray-500 mt-1">
+                              Priority: {strategy.priority}/10 • {strategy.strategy_type}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   ))}
