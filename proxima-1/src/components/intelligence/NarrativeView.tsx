@@ -783,7 +783,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
       {/* Predictions */}
       {predictions.length > 0 && (
       <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Predictive Insights</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">Look Out For</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {predictions.map((prediction) => (
             <motion.div
