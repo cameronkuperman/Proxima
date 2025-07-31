@@ -1,108 +1,168 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { healthScoreAPI, HealthScoreWithComparison } from '@/lib/api/health-score';
+import { supabase } from '@/lib/supabase';
+import { HealthScoreResponse } from '@/types/health-score';
 
 interface UseHealthScoreReturn {
-  scoreData: HealthScoreWithComparison | null;
-  loading: boolean;
+  scoreData: HealthScoreResponse | null;
+  isLoading: boolean;
   error: string | null;
-  refreshScore: () => Promise<void>;
+  fetchHealthScore: (forceRefresh?: boolean) => Promise<void>;
   isRefreshing: boolean;
+}
+
+// Helper function for authenticated API calls
+async function authenticatedFetch(url: string, options: RequestInit = {}) {
+  console.log('🏥 Health Score Fetch:', {
+    url,
+    method: options.method || 'GET',
+    timestamp: new Date().toISOString()
+  });
+
+  // Get the current session token
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  
+  if (sessionError) {
+    console.error('❌ Failed to get session:', sessionError);
+    throw new Error('Authentication error');
+  }
+
+  if (!session) {
+    console.error('❌ No active session found');
+    throw new Error('Not authenticated');
+  }
+
+  console.log('🎫 Session found for health score');
+
+  // Add auth headers
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${session.access_token}`,
+    ...options.headers,
+  };
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
+
+    console.log('📥 Health Score Response:', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+
+    // Clone response to read body for logging
+    const responseClone = response.clone();
+    try {
+      const responseData = await responseClone.text();
+      console.log('📄 Response body:', responseData.substring(0, 500) + (responseData.length > 500 ? '...' : ''));
+    } catch (e) {
+      console.log('📄 Could not read response body');
+    }
+
+    return response;
+  } catch (error) {
+    console.error('🚨 Health Score Fetch error:', {
+      url,
+      error: error instanceof Error ? error.message : error,
+      type: error instanceof TypeError ? 'Network/CORS error' : 'Other error'
+    });
+    throw error;
+  }
 }
 
 export function useHealthScore(): UseHealthScoreReturn {
   const { user } = useAuth();
-  const [scoreData, setScoreData] = useState<HealthScoreWithComparison | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [scoreData, setScoreData] = useState<HealthScoreResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchHealthScore();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
 
   const fetchHealthScore = async (forceRefresh = false) => {
     if (!user?.id) {
-      setLoading(false);
+      console.warn('⚠️ No user ID available for health score');
       return;
     }
 
+    // Set appropriate loading state
+    if (forceRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError(null);
+
+    console.log('🔍 Fetching health score:', {
+      userId: user.id,
+      forceRefresh
+    });
+
     try {
-      setError(null);
-      
-      if (forceRefresh) {
-        setIsRefreshing(true);
-        const data = await healthScoreAPI.refreshHealthScore(user.id);
-        setScoreData(data);
-      } else {
-        setLoading(true);
-        const data = await healthScoreAPI.getHealthScore(user.id);
-        setScoreData(data);
+      const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
+      const url = forceRefresh 
+        ? `${API_URL}/api/health-score/${user.id}?force_refresh=true`
+        : `${API_URL}/api/health-score/${user.id}`;
+
+      const response = await authenticatedFetch(url);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Health score fetch failed:', response.status, errorText);
+        
+        if (response.status === 404) {
+          throw new Error('Health score endpoint not found. Please check if the backend is deployed.');
+        } else if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        } else if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        } else {
+          throw new Error(`Failed to fetch health score: ${errorText}`);
+        }
       }
+
+      const data: HealthScoreResponse = await response.json();
+      console.log('✅ Health score data:', data);
+
+      // Validate the response structure
+      if (typeof data.score !== 'number' || !Array.isArray(data.actions)) {
+        console.error('❌ Invalid health score response structure:', data);
+        throw new Error('Invalid response from server');
+      }
+
+      setScoreData(data);
+      setError(null);
     } catch (err) {
-      console.error('Error fetching health score:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch health score');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch health score';
+      console.error('❌ Error fetching health score:', errorMessage);
+      setError(errorMessage);
       
-      // Set fallback data
-      setScoreData({
-        score: 80,
-        actions: [
-          { icon: '💧', text: 'Stay hydrated throughout the day' },
-          { icon: '🏃', text: 'Get 30 minutes of physical activity' },
-          { icon: '🧘', text: 'Practice stress reduction techniques' }
-        ],
-        reasoning: 'Unable to calculate personalized score',
-        generated_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        cached: false
-      });
+      // Don't clear existing data on error if we're just refreshing
+      if (!forceRefresh) {
+        setScoreData(null);
+      }
     } finally {
-      setLoading(false);
+      setIsLoading(false);
       setIsRefreshing(false);
     }
   };
 
-  const refreshScore = async () => {
-    await fetchHealthScore(true);
-  };
-
-  useEffect(() => {
-    fetchHealthScore();
-  }, [user?.id]);
-
-  // Check if we should show "new score available" notification
-  useEffect(() => {
-    if (!scoreData) return;
-
-    const checkForNewScore = () => {
-      const now = new Date();
-      const generatedAt = new Date(scoreData.generated_at);
-      const daysSinceGenerated = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60 * 24);
-
-      // If it's been more than 7 days, we might have a new score
-      if (daysSinceGenerated >= 7) {
-        // The backend generates new scores on Mondays
-        const today = now.getDay();
-        if (today === 1) { // Monday
-          // Check if we need to fetch a new score
-          const lastMondayMidnight = new Date(now);
-          lastMondayMidnight.setHours(0, 0, 0, 0);
-          
-          if (generatedAt < lastMondayMidnight) {
-            fetchHealthScore();
-          }
-        }
-      }
-    };
-
-    // Check on mount and set up interval
-    checkForNewScore();
-    const interval = setInterval(checkForNewScore, 60 * 60 * 1000); // Check every hour
-
-    return () => clearInterval(interval);
-  }, [scoreData]);
-
   return {
     scoreData,
-    loading,
+    isLoading,
     error,
-    refreshScore,
+    fetchHealthScore,
     isRefreshing
   };
 }
