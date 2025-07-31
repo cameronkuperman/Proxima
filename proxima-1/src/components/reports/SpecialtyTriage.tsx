@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { reportApi } from '@/lib/api/reports';
 import { SpecialtyType } from '@/types/reports';
+import { useState, useEffect } from 'react';
+import { Calendar, Clock, FileText, ChevronUp } from 'lucide-react';
 
 interface TriageResult {
   primary_specialty: SpecialtyType;
@@ -36,11 +38,31 @@ interface TriageResult {
   recommended_timing: string;
 }
 
+interface QuickScan {
+  id: string;
+  created_at: string;
+  body_part: string;
+  urgency_level: string;
+  symptoms?: string[];
+  summary?: string;
+}
+
+interface DeepDive {
+  id: string;
+  created_at: string;
+  body_part: string;
+  status: string;
+  symptoms?: string[];
+  analysis_complete?: boolean;
+}
+
 interface SpecialtyTriageProps {
   userId?: string;
   onSpecialtySelected: (specialty: SpecialtyType, triageResult: TriageResult) => void;
   initialConcern?: string;
   symptoms?: string[];
+  quickScans?: QuickScan[];
+  deepDives?: DeepDive[];
 }
 
 const specialtyInfo = {
@@ -114,16 +136,21 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
   userId,
   onSpecialtySelected,
   initialConcern = '',
-  symptoms = []
+  symptoms = [],
+  quickScans = [],
+  deepDives = []
 }) => {
   const [primaryConcern, setPrimaryConcern] = useState(initialConcern);
+  const [selectedQuickScans, setSelectedQuickScans] = useState<string[]>([]);
+  const [selectedDeepDives, setSelectedDeepDives] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState({ quickScans: true, deepDives: true });
 
   const runTriage = async () => {
-    if (!primaryConcern.trim() && symptoms.length === 0) {
-      setError('Please describe your health concern');
+    if (!primaryConcern.trim() && symptoms.length === 0 && selectedQuickScans.length === 0 && selectedDeepDives.length === 0) {
+      setError('Please describe your health concern or select previous analyses');
       return;
     }
 
@@ -136,7 +163,9 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
-          primary_concern: primaryConcern,
+          quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
+          deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
+          primary_concern: primaryConcern || undefined,
           symptoms: symptoms.length > 0 ? symptoms : undefined,
           urgency: 'routine' // Let AI determine actual urgency
         })
@@ -159,6 +188,29 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleScan = (scanId: string, type: 'quick' | 'deep') => {
+    if (type === 'quick') {
+      setSelectedQuickScans(prev => 
+        prev.includes(scanId) 
+          ? prev.filter(id => id !== scanId)
+          : [...prev, scanId]
+      );
+    } else {
+      setSelectedDeepDives(prev => 
+        prev.includes(scanId) 
+          ? prev.filter(id => id !== scanId)
+          : [...prev, scanId]
+      );
+    }
+  };
+
+  const toggleSection = (section: 'quickScans' | 'deepDives') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   const SpecialtyCard = ({ 
@@ -276,60 +328,234 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
 
       {/* Input Section */}
       {!triageResult && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-        >
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Describe your main health concern
-          </label>
-          <textarea
-            value={primaryConcern}
-            onChange={(e) => setPrimaryConcern(e.target.value)}
-            placeholder="Example: I've been having chest pain when walking up stairs..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-            rows={4}
-          />
-          
-          {symptoms.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-600 mb-2">Additional symptoms detected:</p>
-              <div className="flex flex-wrap gap-2">
-                {symptoms.map((symptom, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
-                    {symptom}
-                  </span>
-                ))}
-              </div>
-            </div>
+        <div className="space-y-6">
+          {/* Quick Scan Selection */}
+          {quickScans.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            >
+              <button
+                onClick={() => toggleSection('quickScans')}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Activity className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-gray-900">Select Quick Scans to Include</h3>
+                  <span className="text-sm text-gray-500">({selectedQuickScans.length} selected)</span>
+                </div>
+                {expandedSections.quickScans ? (
+                  <ChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                )}
+              </button>
+              
+              <AnimatePresence>
+                {expandedSections.quickScans && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-gray-100"
+                  >
+                    <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+                      {quickScans.map(scan => {
+                        const isSelected = selectedQuickScans.includes(scan.id);
+                        const urgencyColor = {
+                          'low': 'bg-green-100 text-green-800',
+                          'medium': 'bg-yellow-100 text-yellow-800',
+                          'high': 'bg-red-100 text-red-800'
+                        }[scan.urgency_level] || 'bg-gray-100 text-gray-800';
+                        
+                        return (
+                          <label
+                            key={scan.id}
+                            className={`
+                              flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+                              ${isSelected ? 'bg-blue-50 border-2 border-blue-300' : 'hover:bg-gray-50 border-2 border-transparent'}
+                            `}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleScan(scan.id, 'quick')}
+                              className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">
+                                  {new Date(scan.created_at).toLocaleDateString()}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${urgencyColor}`}>
+                                  {scan.urgency_level}
+                                </span>
+                              </div>
+                              <p className="font-medium text-gray-900">{scan.body_part}</p>
+                              {scan.summary && (
+                                <p className="text-sm text-gray-600 mt-1">{scan.summary}</p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           )}
-          
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
+
+          {/* Deep Dive Selection */}
+          {deepDives.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            >
+              <button
+                onClick={() => toggleSection('deepDives')}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  <h3 className="font-semibold text-gray-900">Select Deep Dives to Include</h3>
+                  <span className="text-sm text-gray-500">({selectedDeepDives.length} selected)</span>
+                </div>
+                {expandedSections.deepDives ? (
+                  <ChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                )}
+              </button>
+              
+              <AnimatePresence>
+                {expandedSections.deepDives && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-gray-100"
+                  >
+                    <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+                      {deepDives.map(dive => {
+                        const isSelected = selectedDeepDives.includes(dive.id);
+                        const statusColor = {
+                          'completed': 'bg-green-100 text-green-800',
+                          'in_progress': 'bg-yellow-100 text-yellow-800',
+                          'failed': 'bg-red-100 text-red-800'
+                        }[dive.status] || 'bg-gray-100 text-gray-800';
+                        
+                        return (
+                          <label
+                            key={dive.id}
+                            className={`
+                              flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+                              ${isSelected ? 'bg-purple-50 border-2 border-purple-300' : 'hover:bg-gray-50 border-2 border-transparent'}
+                            `}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleScan(dive.id, 'deep')}
+                              className="mt-1 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">
+                                  {new Date(dive.created_at).toLocaleDateString()}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
+                                  {dive.status}
+                                </span>
+                              </div>
+                              <p className="font-medium text-gray-900">{dive.body_part}</p>
+                              {dive.symptoms && dive.symptoms.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {dive.symptoms.slice(0, 3).map((symptom, idx) => (
+                                    <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                      {symptom}
+                                    </span>
+                                  ))}
+                                  {dive.symptoms.length > 3 && (
+                                    <span className="text-xs text-gray-500">+{dive.symptoms.length - 3} more</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           )}
-          
-          <button
-            onClick={runTriage}
-            disabled={isLoading}
-            className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+
+          {/* Additional Context */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Analyzing your symptoms...
-              </>
-            ) : (
-              <>
-                Get Specialist Recommendation
-                <ArrowRight className="w-4 h-4" />
-              </>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Additional Information (Optional)
+            </label>
+            <textarea
+              value={primaryConcern}
+              onChange={(e) => setPrimaryConcern(e.target.value)}
+              placeholder="Any other details you'd like to add about your symptoms or concerns..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              rows={4}
+            />
+            
+            {symptoms.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-2">Additional symptoms detected:</p>
+                <div className="flex flex-wrap gap-2">
+                  {symptoms.map((symptom, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
+                      {symptom}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
-          </button>
-        </motion.div>
+            
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+            
+            <button
+              onClick={runTriage}
+              disabled={isLoading || (selectedQuickScans.length === 0 && selectedDeepDives.length === 0 && !primaryConcern.trim())}
+              className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Analyzing your health data...
+                </>
+              ) : (
+                <>
+                  Get Specialist Recommendation
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </motion.div>
+        </div>
       )}
 
       {/* Triage Results */}
@@ -431,6 +657,8 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
                 onClick={() => {
                   setTriageResult(null);
                   setPrimaryConcern('');
+                  setSelectedQuickScans([]);
+                  setSelectedDeepDives([]);
                 }}
                 className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >

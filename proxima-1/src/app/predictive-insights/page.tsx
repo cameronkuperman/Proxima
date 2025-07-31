@@ -10,10 +10,17 @@ import {
   AlertTriangle, TrendingUp, Sparkles, ChevronRight,
   Droplets, Moon, Sun, Leaf, Activity, Eye, HelpCircle,
   Coffee, Wind, CloudRain, Pill, ThermometerSun, Waves,
-  TreePine, Flower2, Sunrise, Network, BookOpen, RefreshCw
+  TreePine, Flower2, Sunrise, Network, BookOpen, RefreshCw,
+  CheckCircle, Info, Battery, Sparkle
 } from 'lucide-react';
 import HealthConstellation from '@/components/HealthConstellation';
-import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
+import { 
+  useAIBodyPatterns,
+  useAIPatternQuestions,
+  useAIImmediatePredictions,
+  useAISeasonalPredictions,
+  useAILongtermPredictions
+} from '@/hooks/ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,21 +31,53 @@ export default function PredictiveInsightsPage() {
   const [selectedPrediction, setSelectedPrediction] = useState<string | null>(null);
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
   
-  // Use weekly AI predictions hook
-  const { 
-    allPredictions,
-    patternQuestions,
-    bodyPatterns,
-    isLoading,
-    isGenerating,
-    status,
-    regeneratePredictions
-  } = useWeeklyAIPredictions();
+  // Use individual AI prediction hooks
+  const bodyPatternsData = useAIBodyPatterns();
+  const patternQuestionsData = useAIPatternQuestions();
+  const immediatePredictionsData = useAIImmediatePredictions();
+  const seasonalPredictionsData = useAISeasonalPredictions();
+  const longtermPredictionsData = useAILongtermPredictions();
 
-  const getTabPredictions = () => {
-    if (!allPredictions || !Array.isArray(allPredictions)) return [];
-    return allPredictions.filter(p => p.type === activeTab);
+  // Get active tab data
+  const getActiveTabData = () => {
+    switch (activeTab) {
+      case 'immediate':
+        return {
+          predictions: immediatePredictionsData.predictions,
+          isLoading: immediatePredictionsData.isLoading,
+          isRefreshing: immediatePredictionsData.isRefreshing,
+          dataQualityScore: immediatePredictionsData.dataQualityScore,
+          status: immediatePredictionsData.status,
+          refresh: immediatePredictionsData.refresh,
+          error: immediatePredictionsData.error
+        };
+      case 'seasonal':
+        return {
+          predictions: seasonalPredictionsData.predictions,
+          isLoading: seasonalPredictionsData.isLoading,
+          isRefreshing: seasonalPredictionsData.isRefreshing,
+          dataQualityScore: seasonalPredictionsData.dataQualityScore,
+          status: seasonalPredictionsData.status,
+          refresh: seasonalPredictionsData.refresh,
+          error: seasonalPredictionsData.error,
+          currentSeason: seasonalPredictionsData.currentSeason,
+          nextTransition: seasonalPredictionsData.nextSeasonTransition
+        };
+      case 'longterm':
+        return {
+          assessments: longtermPredictionsData.assessments,
+          isLoading: longtermPredictionsData.isLoading,
+          isRefreshing: longtermPredictionsData.isRefreshing,
+          status: longtermPredictionsData.status,
+          refresh: longtermPredictionsData.refresh,
+          error: longtermPredictionsData.error,
+          overallTrajectory: longtermPredictionsData.overallTrajectory,
+          keyFocusAreas: longtermPredictionsData.keyFocusAreas
+        };
+    }
   };
+
+  const activeTabData = getActiveTabData();
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -59,18 +98,42 @@ export default function PredictiveInsightsPage() {
       'allergy': <Flower2 className="w-6 h-6" />,
       'cardiovascular': <Heart className="w-6 h-6" />,
       'seasonal': <Leaf className="w-6 h-6" />,
+      'physical': <Heart className="w-6 h-6" />,
       'other': <Activity className="w-6 h-6" />
     };
     return icons[category] || icons.other;
   };
 
-  const handleRegenerate = async () => {
-    const result = await regeneratePredictions();
-    if (result?.success) {
-      // Success handled in hook
-    } else if (result?.message) {
-      // Show error message (e.g., rate limited)
-      console.error(result.message);
+  const getPatternQuestionIcon = (icon: string | undefined, category: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      'brain': <Brain className="w-5 h-5" />,
+      'moon': <Moon className="w-5 h-5" />,
+      'battery': <Battery className="w-5 h-5" />,
+      'heart': <Heart className="w-5 h-5" />,
+      'sparkles': <Sparkles className="w-5 h-5" />
+    };
+    
+    // Use provided icon or fall back to category-based icon
+    const iconKey = icon || patternQuestionsData.getQuestionIcon({ icon, category } as any);
+    return iconMap[iconKey] || <Activity className="w-5 h-5" />;
+  };
+
+  const handleRefreshAll = async () => {
+    // Refresh all data
+    await Promise.all([
+      bodyPatternsData.refresh(),
+      patternQuestionsData.refresh(),
+      immediatePredictionsData.refresh(),
+      seasonalPredictionsData.refresh(),
+      longtermPredictionsData.refresh()
+    ]);
+  };
+
+  const handleRefreshTab = async () => {
+    if (activeTab === 'longterm') {
+      await longtermPredictionsData.refresh();
+    } else {
+      await activeTabData.refresh?.();
     }
   };
 
@@ -136,27 +199,25 @@ export default function PredictiveInsightsPage() {
               </div>
             </div>
 
-            {/* Status Message */}
-            {status === 'needs_initial' && (
-              <div className="text-center py-8">
-                <p className="text-gray-400 mb-4">Generating your personalized predictions...</p>
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-600 border-t-transparent mx-auto"></div>
-              </div>
-            )}
-
-            {/* Regenerate Button */}
-            {status === 'success' && !isGenerating && (
-              <div className="flex justify-center mb-6">
-                <button
-                  onClick={handleRegenerate}
-                  disabled={isGenerating}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm text-gray-400 hover:text-white transition-all"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                  {isGenerating ? 'Regenerating...' : 'Refresh Predictions'}
-                </button>
-              </div>
-            )}
+            {/* Global Refresh Button */}
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={handleRefreshAll}
+                disabled={bodyPatternsData.isRefreshing || patternQuestionsData.isRefreshing || 
+                         immediatePredictionsData.isRefreshing || seasonalPredictionsData.isRefreshing || 
+                         longtermPredictionsData.isRefreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm text-gray-400 hover:text-white transition-all"
+              >
+                <RefreshCw className={`w-4 h-4 ${
+                  bodyPatternsData.isRefreshing || patternQuestionsData.isRefreshing || 
+                  immediatePredictionsData.isRefreshing || seasonalPredictionsData.isRefreshing || 
+                  longtermPredictionsData.isRefreshing ? 'animate-spin' : ''
+                }`} />
+                {bodyPatternsData.isRefreshing || patternQuestionsData.isRefreshing || 
+                 immediatePredictionsData.isRefreshing || seasonalPredictionsData.isRefreshing || 
+                 longtermPredictionsData.isRefreshing ? 'Refreshing...' : 'Refresh All Predictions'}
+              </button>
+            </div>
 
             {/* Tab Navigation */}
             <div className="flex justify-center mb-8">
@@ -197,6 +258,22 @@ export default function PredictiveInsightsPage() {
               </div>
             </div>
 
+            {/* Data Quality Warning */}
+            {activeTabData.dataQualityScore !== undefined && 
+             activeTabData.dataQualityScore < 30 && 
+             !activeTabData.isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 backdrop-blur-[20px] bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4"
+              >
+                <p className="text-yellow-300 text-sm flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  We need more data for accurate predictions. Keep tracking your health to improve accuracy!
+                </p>
+              </motion.div>
+            )}
+
             {/* Predictions Grid */}
             <AnimatePresence mode="wait">
               <motion.div
@@ -216,11 +293,92 @@ export default function PredictiveInsightsPage() {
                      activeTab === 'seasonal' ? 'Next 3 Months' : 
                      'Long-term Outlook'}
                     <span className="text-sm text-gray-400 font-normal ml-auto">
-                      {isLoading || isGenerating ? 'Loading...' : `${getTabPredictions().length} predictions`}
+                      {activeTabData.isLoading ? 'Loading...' : 
+                       activeTab === 'longterm' ? `${activeTabData.assessments?.length || 0} assessments` :
+                       `${activeTabData.predictions?.length || 0} predictions`}
                     </span>
+                    {activeTabData.isRefreshing && (
+                      <RefreshCw className="w-4 h-4 animate-spin text-gray-400 ml-2" />
+                    )}
                   </h2>
                   
-                  {(isLoading || isGenerating) ? (
+                  {/* Seasonal Info */}
+                  {activeTab === 'seasonal' && activeTabData.currentSeason && (
+                    <div className="mb-6 p-4 bg-white/[0.02] rounded-lg border border-white/[0.05]">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-400">Current Season</p>
+                          <p className="text-lg text-white capitalize">{seasonalPredictionsData.formatSeason(activeTabData.currentSeason)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-400">Next Transition</p>
+                          <p className="text-lg text-white">{seasonalPredictionsData.formatTransitionDate(activeTabData.nextTransition)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Long-term Overall Trajectory */}
+                  {activeTab === 'longterm' && activeTabData.overallTrajectory && !activeTabData.isLoading && (
+                    <div className="mb-6 p-4 bg-white/[0.02] rounded-lg border border-white/[0.05]">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-400">Overall Health Trajectory</p>
+                          <p className="text-lg text-white">{longtermPredictionsData.formatTrajectory(activeTabData.overallTrajectory)}</p>
+                        </div>
+                        {activeTabData.keyFocusAreas && activeTabData.keyFocusAreas.length > 0 && (
+                          <div>
+                            <p className="text-sm text-gray-400">Key Focus Areas</p>
+                            <div className="flex gap-2 mt-1">
+                              {activeTabData.keyFocusAreas.map((area, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded text-sm">
+                                  {area.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTabData.error || (activeTab !== 'longterm' && immediatePredictionsData.error) || 
+                   (activeTab === 'seasonal' && seasonalPredictionsData.error) || 
+                   (activeTab === 'longterm' && longtermPredictionsData.error) ? (
+                    <div className="text-center py-12">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 mb-4">
+                        <AlertTriangle className="w-8 h-8 text-red-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-white mb-2">
+                        Failed to load predictions
+                      </h3>
+                      <p className="text-gray-400 mb-4">
+                        Something went wrong. Please try again.
+                      </p>
+                      <button
+                        onClick={handleRefreshTab}
+                        className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm text-gray-400 hover:text-white transition-all"
+                      >
+                        <RefreshCw className="w-4 h-4 inline mr-2" />
+                        Retry
+                      </button>
+                    </div>
+                  ) : activeTabData.status === 'insufficient_data' ? (
+                    <div className="text-center py-12">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-500/10 mb-4">
+                        <Activity className="w-8 h-8 text-yellow-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-white mb-2">
+                        More Data Needed
+                      </h3>
+                      <p className="text-gray-400 mb-4 max-w-md mx-auto">
+                        We need at least {activeTab === 'longterm' ? '30 days' : '7 days'} of health data to generate accurate {activeTab} predictions.
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Current data quality: {activeTabData.dataQualityScore || 0}%
+                      </p>
+                    </div>
+                  ) : activeTabData.isLoading ? (
                     <div className="space-y-4">
                       {[1, 2, 3].map((i) => (
                         <div key={i} className="animate-pulse">
@@ -237,7 +395,7 @@ export default function PredictiveInsightsPage() {
                         </div>
                       ))}
                     </div>
-                  ) : getTabPredictions().length === 0 ? (
+                  ) : (activeTab === 'longterm' ? activeTabData.assessments?.length === 0 : activeTabData.predictions?.length === 0) ? (
                     <div className="text-center py-12">
                       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-800 mb-4">
                         <Activity className="w-8 h-8 text-gray-600" />
@@ -249,31 +407,150 @@ export default function PredictiveInsightsPage() {
                         Keep logging your health data. As we learn your patterns, predictions will appear here.
                       </p>
                     </div>
-                  ) : (
+                  ) : activeTab === 'longterm' ? (
+                    // Long-term assessments view
                     <div className="space-y-6">
-                      {getTabPredictions().map((prediction) => (
+                      {activeTabData.assessments?.map((assessment) => (
+                        <motion.div
+                          key={assessment.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          whileHover={{ scale: 1.01 }}
+                          className={`backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-indigo-600/10 border border-purple-500/20 rounded-xl p-6 cursor-pointer transition-all`}
+                          onClick={() => setSelectedPrediction(
+                            selectedPrediction === assessment.id ? null : assessment.id
+                          )}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className={`p-3 rounded-lg ${longtermPredictionsData.getRiskLevelBg(assessment.trajectory.current_path.risk_level)}`}>
+                              <Eye className={`w-6 h-6 ${longtermPredictionsData.getRiskLevelColor(assessment.trajectory.current_path.risk_level)}`} />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-xl font-semibold text-white mb-2">
+                                {assessment.condition}
+                              </h3>
+                              <p className="text-gray-300 mb-2">{assessment.current_status}</p>
+                              <div className="flex items-center gap-4 text-sm">
+                                <span className="text-gray-400">Current risk:</span>
+                                <span className={`font-medium ${longtermPredictionsData.getRiskLevelColor(assessment.trajectory.current_path.risk_level)}`}>
+                                  {assessment.trajectory.current_path.risk_level}
+                                </span>
+                                <span className="text-gray-400">|</span>
+                                <span className="text-gray-400">Confidence:</span>
+                                <span className={`font-medium ${
+                                  assessment.confidence > 80 ? 'text-green-400' : 'text-yellow-400'
+                                }`}>
+                                  {assessment.confidence}%
+                                </span>
+                              </div>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
+                              selectedPrediction === assessment.id ? 'rotate-90' : ''
+                            }`} />
+                          </div>
+
+                          <AnimatePresence>
+                            {selectedPrediction === assessment.id && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="mt-6 pt-6 border-t border-white/[0.1]"
+                              >
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                  <div>
+                                    <h4 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                                      <TrendingUp className="w-5 h-5 text-yellow-400" />
+                                      Current Path
+                                    </h4>
+                                    <p className="text-gray-300 mb-2">{assessment.trajectory.current_path.description}</p>
+                                    <p className="text-sm text-gray-400">{assessment.trajectory.current_path.projected_outcome}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                                      <Shield className="w-5 h-5 text-green-400" />
+                                      Optimized Path
+                                    </h4>
+                                    <p className="text-gray-300 mb-2">{assessment.trajectory.optimized_path.description}</p>
+                                    <div className="space-y-1">
+                                      {assessment.trajectory.optimized_path.requirements.map((req, idx) => (
+                                        <p key={idx} className="text-sm text-gray-400">• {req}</p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="mb-4">
+                                  <h4 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                                    <AlertTriangle className="w-5 h-5 text-orange-400" />
+                                    Risk Factors
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {assessment.risk_factors.map((factor, idx) => (
+                                      <span key={idx} className="px-3 py-1 bg-orange-500/10 text-orange-300 rounded-full text-sm">
+                                        {factor}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                                  <Shield className="w-5 h-5 text-green-400" />
+                                  Prevention Strategy
+                                </h4>
+                                <div className="space-y-3">
+                                  {assessment.prevention_strategy.map((strategy, idx) => (
+                                    <div key={idx} className="flex items-start gap-3">
+                                      <div className="w-6 h-6 rounded-full bg-white/[0.05] flex items-center justify-center text-xs text-gray-400">
+                                        {idx + 1}
+                                      </div>
+                                      <p className="text-gray-300">{strategy}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                {assessment.data_basis && (
+                                  <div className="mt-4 p-3 bg-white/[0.02] rounded-lg">
+                                    <p className="text-sm text-gray-400">Based on: {assessment.data_basis}</p>
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    // Regular predictions view (immediate/seasonal)
+                    <div className="space-y-6">
+                      {activeTabData.predictions?.map((prediction) => (
                         <motion.div
                           key={prediction.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           whileHover={{ scale: 1.01 }}
-                          className={`backdrop-blur-[20px] bg-gradient-to-r ${prediction.gradient || 'from-gray-500/20 to-slate-500/20'} border ${getSeverityColor(prediction.severity)} rounded-xl p-6 cursor-pointer transition-all`}
+                          className={`backdrop-blur-[20px] bg-gradient-to-r ${prediction.gradient || 'from-gray-500/20 to-slate-500/20'} border ${getSeverityColor(prediction.severity || 'info')} rounded-xl p-6 cursor-pointer transition-all`}
                           onClick={() => setSelectedPrediction(
                             selectedPrediction === prediction.id ? null : prediction.id
                           )}
                         >
                         <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg bg-white/[0.05] ${getSeverityColor(prediction.severity)}`}>
-                            {getCategoryIcon(prediction.category)}
+                          <div className={`p-3 rounded-lg bg-white/[0.05] ${getSeverityColor('severity' in prediction ? prediction.severity : 'info')}`}>
+                            {getCategoryIcon('category' in prediction ? prediction.category : '')}
                           </div>
                           <div className="flex-1">
                             <h3 className="text-xl font-semibold text-white mb-2">
                               {prediction.title}
                             </h3>
-                            <p className="text-gray-300 mb-2">{prediction.description}</p>
+                            <p className="text-gray-300 mb-2">{prediction.subtitle || ('description' in prediction ? prediction.description : '')}</p>
                             <p className="text-sm text-gray-400 mb-3">
                               Pattern: {prediction.pattern}
                             </p>
+                            {'trigger_combo' in prediction && prediction.trigger_combo && (
+                              <p className="text-sm text-gray-400 mb-3">
+                                Trigger: {prediction.trigger_combo}
+                              </p>
+                            )}
                             <div className="flex items-center gap-4 text-sm">
                               <span className="text-gray-400">
                                 AI confidence level
@@ -281,7 +558,9 @@ export default function PredictiveInsightsPage() {
                               <span className={`font-medium ${
                                 prediction.confidence > 80 ? 'text-green-400' : 'text-yellow-400'
                               }`}>
-                                {prediction.confidence}% accuracy
+                                {'historical_accuracy' in prediction && prediction.historical_accuracy ? 
+                                 prediction.historical_accuracy : 
+                                 `${prediction.confidence}% accuracy`}
                               </span>
                             </div>
                           </div>
@@ -304,7 +583,7 @@ export default function PredictiveInsightsPage() {
                                 Prevention Protocol
                               </h4>
                               <div className="space-y-3">
-                                {prediction.preventionProtocols.map((protocol, idx) => (
+                                {(prediction.prevention_protocol || ('preventionProtocols' in prediction ? prediction.preventionProtocols : []) || []).map((protocol, idx) => (
                                   <div key={idx} className="flex items-start gap-3">
                                     <div className="w-6 h-6 rounded-full bg-white/[0.05] flex items-center justify-center text-xs text-gray-400">
                                       {idx + 1}
@@ -313,16 +592,28 @@ export default function PredictiveInsightsPage() {
                                   </div>
                                 ))}
                               </div>
-                              {prediction.reasoning && (
+                              {'reasoning' in prediction && prediction.reasoning && (
                                 <div className="mt-4 p-3 bg-white/[0.02] rounded-lg">
                                   <p className="text-sm text-gray-400">AI Reasoning: {prediction.reasoning}</p>
                                 </div>
                               )}
-                              {prediction.dataPoints && prediction.dataPoints.length > 0 && (
+                              {/* Seasonal specific fields */}
+                              {'timeframe' in prediction && prediction.timeframe && prediction.type === 'seasonal' && (
+                                <div className="mt-4 p-3 bg-blue-500/10 rounded-lg">
+                                  <p className="text-sm text-blue-300">
+                                    <Clock className="w-4 h-4 inline mr-1" />
+                                    Timeframe: {prediction.timeframe}
+                                  </p>
+                                  {'historical_context' in prediction && prediction.historical_context && (
+                                    <p className="text-sm text-gray-400 mt-1">{prediction.historical_context}</p>
+                                  )}
+                                </div>
+                              )}
+                              {'dataPoints' in prediction && prediction.dataPoints && prediction.dataPoints.length > 0 && (
                                 <div className="mt-4">
                                   <h5 className="text-sm text-gray-400 mb-2">Based on:</h5>
                                   <ul className="space-y-1">
-                                    {prediction.dataPoints.slice(0, 3).map((point, idx) => (
+                                    {prediction.dataPoints.slice(0, 3).map((point: string, idx: number) => (
                                       <li key={idx} className="text-sm text-gray-500">• {point}</li>
                                     ))}
                                   </ul>
@@ -340,7 +631,39 @@ export default function PredictiveInsightsPage() {
             </AnimatePresence>
 
             {/* AI-Generated Body Patterns */}
-            {!isLoading && !isGenerating && bodyPatterns && (
+            {bodyPatternsData.error ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 backdrop-blur-[20px] bg-red-500/10 border border-red-500/20 rounded-2xl p-6"
+              >
+                <p className="text-red-300 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  Failed to load body patterns. Please try refreshing.
+                </p>
+                <button
+                  onClick={() => bodyPatternsData.refresh()}
+                  className="mt-4 px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm text-gray-400 hover:text-white transition-all"
+                >
+                  Retry
+                </button>
+              </motion.div>
+            ) : bodyPatternsData.status === 'insufficient_data' ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 backdrop-blur-[20px] bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-6"
+              >
+                <h3 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
+                  <Activity className="w-6 h-6 text-yellow-400" />
+                  Your Body's Unique Patterns
+                </h3>
+                <p className="text-yellow-300 flex items-center gap-2">
+                  <Info className="w-5 h-5" />
+                  We need more health data to identify your patterns. Keep tracking!
+                </p>
+              </motion.div>
+            ) : !bodyPatternsData.isLoading && bodyPatternsData.bodyPatterns && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -350,13 +673,21 @@ export default function PredictiveInsightsPage() {
                 <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
                   <Activity className="w-6 h-6 text-purple-400" />
                   Your Body's Unique Patterns
+                  {bodyPatternsData.patternMetadata && (
+                    <span className="text-sm text-gray-400 font-normal ml-auto">
+                      Confidence: {bodyPatternsData.patternMetadata.confidence_level}
+                    </span>
+                  )}
+                  {bodyPatternsData.isRefreshing && (
+                    <RefreshCw className="w-4 h-4 animate-spin text-gray-400 ml-2" />
+                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-gray-400 mb-3">You tend to...</h4>
                     <ul className="space-y-2 text-gray-300">
-                      {bodyPatterns?.tendencies && bodyPatterns.tendencies.length > 0 ? (
-                        bodyPatterns.tendencies.map((tendency, idx) => (
+                      {bodyPatternsData.tendencies.length > 0 ? (
+                        bodyPatternsData.tendencies.map((tendency, idx) => (
                           <li key={idx} className="flex items-start gap-2">
                             <span className="text-purple-400 mt-1">•</span>
                             {tendency}
@@ -370,8 +701,8 @@ export default function PredictiveInsightsPage() {
                   <div>
                     <h4 className="text-gray-400 mb-3">Your body responds well to...</h4>
                     <ul className="space-y-2 text-gray-300">
-                      {bodyPatterns?.positiveResponses && bodyPatterns.positiveResponses.length > 0 ? (
-                        bodyPatterns.positiveResponses.map((response, idx) => (
+                      {bodyPatternsData.positiveResponses.length > 0 ? (
+                        bodyPatternsData.positiveResponses.map((response, idx) => (
                           <li key={idx} className="flex items-start gap-2">
                             <span className="text-green-400 mt-1">•</span>
                             {response}
@@ -383,11 +714,50 @@ export default function PredictiveInsightsPage() {
                     </ul>
                   </div>
                 </div>
+                {bodyPatternsData.patternMetadata && (
+                  <div className="mt-4 pt-4 border-t border-white/[0.1] flex items-center gap-4 text-sm text-gray-400">
+                    <span>{bodyPatternsData.patternMetadata.total_patterns_analyzed} patterns analyzed</span>
+                    <span>•</span>
+                    <span>{bodyPatternsData.patternMetadata.data_span_days} days of data</span>
+                  </div>
+                )}
               </motion.div>
             )}
 
             {/* AI-Generated Pattern Explorer */}
-            {!isLoading && !isGenerating && patternQuestions && patternQuestions.length > 0 && (
+            {patternQuestionsData.error ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="backdrop-blur-[20px] bg-red-500/10 border border-red-500/20 rounded-2xl p-6"
+              >
+                <p className="text-red-300 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  Failed to load pattern questions. Please try refreshing.
+                </p>
+                <button
+                  onClick={() => patternQuestionsData.refresh()}
+                  className="mt-4 px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] rounded-lg text-sm text-gray-400 hover:text-white transition-all"
+                >
+                  Retry
+                </button>
+              </motion.div>
+            ) : patternQuestionsData.status === 'insufficient_data' ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="backdrop-blur-[20px] bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-6"
+              >
+                <h3 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
+                  <HelpCircle className="w-6 h-6 text-yellow-400" />
+                  Questions About Your Patterns
+                </h3>
+                <p className="text-yellow-300 flex items-center gap-2">
+                  <Info className="w-5 h-5" />
+                  We're still learning about your patterns. Continue tracking to unlock insights!
+                </p>
+              </motion.div>
+            ) : !patternQuestionsData.isLoading && patternQuestionsData.questions.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -397,10 +767,16 @@ export default function PredictiveInsightsPage() {
                 <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
                   <HelpCircle className="w-6 h-6 text-purple-400" />
                   Questions About Your Patterns
+                  <span className="text-sm text-gray-400 font-normal ml-auto">
+                    {patternQuestionsData.totalQuestions} questions generated
+                  </span>
+                  {patternQuestionsData.isRefreshing && (
+                    <RefreshCw className="w-4 h-4 animate-spin text-gray-400 ml-2" />
+                  )}
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                  {patternQuestions.slice(0, 4).map((pattern) => (
+                  {patternQuestionsData.questions.slice(0, 4).map((pattern) => (
                   <motion.button
                     key={pattern.id}
                     whileHover={{ scale: 1.02 }}
@@ -420,13 +796,9 @@ export default function PredictiveInsightsPage() {
                         pattern.category === 'physical' ? 'bg-green-500/20 text-green-400' :
                         'bg-gray-500/20 text-gray-400'
                       }`}>
-                        {pattern.category === 'mood' ? <Brain className="w-5 h-5" /> :
-                         pattern.category === 'sleep' ? <Moon className="w-5 h-5" /> :
-                         pattern.category === 'energy' ? <Sparkles className="w-5 h-5" /> :
-                         pattern.category === 'physical' ? <Zap className="w-5 h-5" /> :
-                         <Activity className="w-5 h-5" />}
+                        {getPatternQuestionIcon(pattern.icon, pattern.category)}
                       </div>
-                      <span className="text-white font-medium">{pattern.question}</span>
+                      <span className="text-white font-medium flex-1">{pattern.question}</span>
                       <ChevronRight className={`w-4 h-4 text-gray-400 ml-auto transition-transform ${
                         selectedPattern === pattern.id ? 'rotate-90' : ''
                       }`} />
@@ -444,9 +816,9 @@ export default function PredictiveInsightsPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    {patternQuestions.filter(p => p.id === selectedPattern).map(pattern => (
+                    {patternQuestionsData.questions.filter(p => p.id === selectedPattern).map(pattern => (
                       <div key={pattern.id} className="bg-white/[0.03] rounded-2xl p-6 border border-white/[0.05]">
-                        <p className="text-lg text-white mb-4">{pattern.answer}</p>
+                        <p className="text-lg text-white mb-4">{pattern.brief_answer}</p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
@@ -455,7 +827,7 @@ export default function PredictiveInsightsPage() {
                               Deep Dive
                             </h4>
                             <ul className="space-y-2">
-                              {pattern.deepDive.map((insight, idx) => (
+                              {pattern.deep_dive.detailed_insights.map((insight, idx) => (
                                 <li key={idx} className="text-gray-300 text-sm flex items-start gap-2">
                                   <span className="text-purple-400 mt-1">•</span>
                                   {insight}
@@ -470,7 +842,7 @@ export default function PredictiveInsightsPage() {
                               Connected Patterns
                             </h4>
                             <div className="space-y-2">
-                              {pattern.connections.map((connection, idx) => (
+                              {pattern.deep_dive.connected_patterns.map((connection, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full bg-blue-400/50" />
                                   <span className="text-gray-300 text-sm">{connection}</span>
@@ -479,6 +851,35 @@ export default function PredictiveInsightsPage() {
                             </div>
                           </div>
                         </div>
+                        
+                        {pattern.deep_dive.actionable_advice.length > 0 && (
+                          <div className="mt-6 pt-6 border-t border-white/[0.1]">
+                            <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-green-400" />
+                              What You Can Do
+                            </h4>
+                            <div className="space-y-2">
+                              {pattern.deep_dive.actionable_advice.map((advice, idx) => (
+                                <div key={idx} className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                                  <span className="text-gray-300 text-sm">{advice}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {pattern.relevance_score > 0 && (
+                          <div className="mt-4 flex items-center gap-4 text-sm text-gray-400">
+                            <span>Relevance: {pattern.relevance_score}%</span>
+                            {pattern.based_on.length > 0 && (
+                              <>
+                                <span>•</span>
+                                <span>Based on: {pattern.based_on.join(', ')}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </motion.div>

@@ -42,6 +42,24 @@ export const reportApi = {
       specialty
     });
   },
+  
+  // Specialty triage
+  async runSpecialtyTriage(params: {
+    user_id?: string;
+    quick_scan_ids?: string[];
+    deep_dive_ids?: string[];
+    primary_concern?: string;
+    symptoms?: string[];
+    urgency?: string;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/report/specialty-triage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    if (!res.ok) throw new Error('Failed to run triage');
+    return res.json();
+  },
 
   // Time-based reports
   async generate30DayReport(userId: string): Promise<MedicalReport> {
