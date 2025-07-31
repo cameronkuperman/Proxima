@@ -16,6 +16,7 @@ import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, 
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
 import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
+import { useHealthScore } from '@/hooks/useHealthScore';
 import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
 import ActiveTrackingCard from '@/components/tracking/ActiveTrackingCard';
 import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal';
@@ -127,7 +128,9 @@ function DashboardContent() {
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
   const [reportsMenuOpen, setReportsMenuOpen] = useState(false);
-  const [healthScore] = useState(92);
+  // Dynamic health score with weekly comparison
+  const { scoreData, loading: healthScoreLoading, refreshScore } = useHealthScore();
+  const healthScore = scoreData?.score || 80;
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -486,12 +489,18 @@ function DashboardContent() {
 
   const { percentage: completionPercentage, missingLifestyle, missingEmergency } = calculateProfileCompletion();
 
-  // Calculate ambient health color based on health score
+  // Keep ambient health color consistent (not based on score)
   useEffect(() => {
-    if (healthScore >= 80) setAmbientHealth('good');
-    else if (healthScore >= 60) setAmbientHealth('moderate');
-    else setAmbientHealth('poor');
-  }, [healthScore]);
+    setAmbientHealth('good'); // Always keep a consistent ambient color
+  }, []);
+
+  // Get health score gradient color
+  const getHealthScoreGradient = () => {
+    if (healthScore >= 90) return 'from-green-400 to-emerald-400';
+    if (healthScore >= 75) return 'from-blue-400 to-cyan-400';
+    if (healthScore >= 60) return 'from-yellow-400 to-orange-400';
+    return 'from-orange-400 to-red-400';
+  };
 
   const getAmbientGradient = () => {
     switch(ambientHealth) {
@@ -807,12 +816,29 @@ function DashboardContent() {
                   transition={{ delay: 0.5, type: "spring" }}
                   className="flex items-center gap-3"
                 >
-                  <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
-                    {healthScore}
+                  <div className={`text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${getHealthScoreGradient()}`}>
+                    {healthScoreLoading ? (
+                      <div className="w-12 h-12 bg-gray-700 rounded animate-pulse" />
+                    ) : (
+                      healthScore
+                    )}
                   </div>
                   <div className="text-sm text-gray-400">
                     <p className="font-medium">Health Score</p>
-                    <p className="text-xs text-green-400">↑ 3 from last week</p>
+                    {scoreData && scoreData.previousScore !== undefined && (
+                      <p className={`text-xs ${
+                        scoreData.trend === 'up' ? 'text-green-400' : 
+                        scoreData.trend === 'down' ? 'text-red-400' : 
+                        'text-gray-400'
+                      }`}>
+                        {scoreData.trend === 'up' && `↑ ${scoreData.difference} from last week`}
+                        {scoreData.trend === 'down' && `↓ ${Math.abs(scoreData.difference!)} from last week`}
+                        {scoreData.trend === 'same' && 'Same as last week'}
+                      </p>
+                    )}
+                    {scoreData && !scoreData.previousScore && (
+                      <p className="text-xs text-gray-500">First week tracked</p>
+                    )}
                   </div>
                 </motion.div>
               </div>
@@ -1446,31 +1472,68 @@ function DashboardContent() {
               </div>
             </motion.div>
 
-            {/* Health Tips Widget */}
+            {/* Health Tips Widget - Dynamic Actions from API */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.5 }}
               className="grid grid-cols-1 lg:grid-cols-3 gap-4"
             >
-              {[
-                { icon: <Sparkles className="w-6 h-6 text-blue-400" />, tip: 'Increase water intake by 500ml today', color: 'from-blue-600/20 to-cyan-600/20' },
-                { icon: <BrainCircuit className="w-6 h-6 text-purple-400" />, tip: '10-minute meditation before bed', color: 'from-purple-600/20 to-pink-600/20' },
-                { icon: <Utensils className="w-6 h-6 text-green-400" />, tip: 'Take a 15-minute walk after lunch', color: 'from-green-600/20 to-emerald-600/20' },
-              ].map((tip, index) => (
-                <motion.div
-                  key={index}
-                  whileHover={{ scale: 1.02 }}
-                  className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tip.color} flex items-center justify-center`}>
-                      {tip.icon}
+              {scoreData?.actions ? (
+                scoreData.actions.map((action, index) => {
+                  // Map colors based on index
+                  const colors = [
+                    'from-blue-600/20 to-cyan-600/20',
+                    'from-purple-600/20 to-pink-600/20',
+                    'from-green-600/20 to-emerald-600/20'
+                  ];
+                  
+                  return (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02 }}
+                      className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${colors[index % colors.length]} flex items-center justify-center text-2xl`}>
+                          {action.icon}
+                        </div>
+                        <p className="text-sm text-gray-300">{action.text}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })
+              ) : healthScoreLoading ? (
+                // Loading state for actions
+                [...Array(3)].map((_, index) => (
+                  <div key={index} className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gray-800 animate-pulse" />
+                      <div className="flex-1 h-4 bg-gray-800 rounded animate-pulse" />
                     </div>
-                    <p className="text-sm text-gray-300">{tip.tip}</p>
                   </div>
-                </motion.div>
-              ))}
+                ))
+              ) : (
+                // Fallback to static tips if no data
+                [
+                  { icon: '💧', tip: 'Stay hydrated throughout the day', color: 'from-blue-600/20 to-cyan-600/20' },
+                  { icon: '🧘', tip: 'Practice stress reduction techniques', color: 'from-purple-600/20 to-pink-600/20' },
+                  { icon: '🏃', tip: 'Get 30 minutes of physical activity', color: 'from-green-600/20 to-emerald-600/20' },
+                ].map((tip, index) => (
+                  <motion.div
+                    key={index}
+                    whileHover={{ scale: 1.02 }}
+                    className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tip.color} flex items-center justify-center text-2xl`}>
+                        {tip.icon}
+                      </div>
+                      <p className="text-sm text-gray-300">{tip.tip}</p>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </motion.div>
           </motion.div>
         </div>

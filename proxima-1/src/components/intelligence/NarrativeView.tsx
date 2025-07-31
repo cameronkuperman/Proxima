@@ -7,6 +7,7 @@ import { storyNotesService, StoryNote } from '@/lib/story-notes';
 import { RefreshCw, Calendar, Info, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHealthAnalysis, useExportPDF, useShareWithDoctor } from '@/hooks/useHealthIntelligence';
+import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
 import { format, startOfWeek } from 'date-fns';
 import { toast } from 'sonner';
 import { ShareModal } from '@/components/modals/ShareModal';
@@ -74,6 +75,15 @@ export default function NarrativeView() {
   
   // Backend integration hooks
   const { data: analysisData, isLoading: isAnalysisLoading, error: analysisError } = useHealthAnalysis();
+  
+  // Use weekly AI predictions for pattern questions
+  const { 
+    patternQuestions: weeklyPatternQuestions,
+    bodyPatterns: weeklyBodyPatterns,
+    allPredictions: weeklyPredictions,
+    dashboardAlert,
+    dataQualityScore
+  } = useWeeklyAIPredictions();
   const { exportPDF, isExporting } = useExportPDF();
   const { share: shareWithDoctor, isSharing } = useShareWithDoctor();
   const [shareLink, setShareLink] = useState<string | null>(null);
@@ -107,71 +117,53 @@ export default function NarrativeView() {
   ];
 
 
-  const shadowPatterns = analysisData?.shadow_patterns || [
-    {
-      id: '1',
-      pattern: 'Exercise',
-      lastSeen: 'unusual - averaged 4x/week last month',
-      significance: 'medium'
-    },
-    {
-      id: '2',
-      pattern: 'Work stress',
-      lastSeen: 'was prominent in last 3 stories',
-      significance: 'high'
-    },
-    {
-      id: '3',
-      pattern: 'Sleep quality',
-      lastSeen: 'first time missing in 8 weeks',
-      significance: 'high'
-    }
-  ];
+  // Combine shadow patterns from health intelligence with body patterns from weekly predictions
+  const shadowPatterns = analysisData?.shadow_patterns || [];
+  
+  // Convert body patterns to shadow pattern format if needed
+  const bodyPatternsAsShadow = weeklyBodyPatterns ? [
+    ...(weeklyBodyPatterns.tendencies || []).map((tendency, idx) => ({
+      id: `tendency-${idx}`,
+      pattern_name: tendency,
+      last_seen_description: 'Recent pattern',
+      significance: 'medium' as const
+    })),
+    ...(weeklyBodyPatterns.positive_responses || weeklyBodyPatterns.positiveResponses || []).map((response, idx) => ({
+      id: `response-${idx}`,
+      pattern_name: response,
+      last_seen_description: 'Positive response pattern',
+      significance: 'high' as const
+    }))
+  ] : [];
+  
+  // Use shadow patterns if available, otherwise show body patterns
+  const patternsToShow = shadowPatterns.length > 0 ? shadowPatterns : bodyPatternsAsShadow;
 
-  const healthStrategies = analysisData?.strategies || [
-    {
-      id: '1',
-      strategy: 'Track afternoon energy to understand the 3pm crashes',
-      type: 'discovery'
-    },
-    {
-      id: '2',
-      strategy: 'Test if morning protein changes your headache pattern',
-      type: 'pattern'
-    },
-    {
-      id: '3',
-      strategy: 'Document mood during migraines for pattern insights',
-      type: 'discovery'
-    },
-    {
-      id: '4',
-      strategy: 'Monitor hydration levels before and after symptoms',
-      type: 'prevention'
-    },
-    {
-      id: '5',
-      strategy: 'Compare sleep quality on symptom vs symptom-free days',
-      type: 'pattern'
-    }
-  ];
+  // Combine strategies from health intelligence with pattern questions from weekly predictions
+  const baseStrategies = analysisData?.strategies || [];
+  
+  // Convert pattern questions to strategies if no strategies available
+  const patternStrategies = weeklyPatternQuestions && baseStrategies.length === 0
+    ? weeklyPatternQuestions.slice(0, 5).map(q => ({
+        id: q.id,
+        strategy: q.question,
+        strategy_type: 'discovery' as const
+      }))
+    : [];
+  
+  const healthStrategies = baseStrategies.length > 0 ? baseStrategies : patternStrategies;
 
-  const predictions = analysisData?.predictions || [
-    {
-      id: '1',
-      event: 'Migraine',
-      probability: 72,
-      timeframe: 'Next 48 hours',
-      preventable: true
-    },
-    {
-      id: '2',
-      event: 'Sleep disruption',
-      probability: 45,
-      timeframe: 'Tonight',
-      preventable: true
-    }
-  ];
+  // Use weekly predictions if available
+  const predictions = weeklyPredictions && weeklyPredictions.length > 0 
+    ? weeklyPredictions.filter(p => p.type === 'immediate').slice(0, 4).map(p => ({
+        id: p.id,
+        event_description: p.title,
+        probability: p.confidence,
+        timeframe: p.timeframe || 'Next 7 days',
+        preventable: true,
+        reasoning: p.reasoning
+      }))
+    : analysisData?.predictions || [];
 
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [note, setNote] = useState('');
@@ -683,6 +675,45 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         </div>
         )}
 
+      {/* Dashboard Alert if available */}
+      {story && dashboardAlert && dataQualityScore >= 30 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`backdrop-blur-[20px] border rounded-xl p-6 ${
+            dashboardAlert.severity === 'critical' 
+              ? 'bg-red-500/10 border-red-500/20' 
+              : dashboardAlert.severity === 'warning'
+              ? 'bg-yellow-500/10 border-yellow-500/20'
+              : 'bg-blue-500/10 border-blue-500/20'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className={`text-lg font-semibold mb-2 ${
+                dashboardAlert.severity === 'critical' 
+                  ? 'text-red-400' 
+                  : dashboardAlert.severity === 'warning'
+                  ? 'text-yellow-400'
+                  : 'text-blue-400'
+              }`}>
+                {dashboardAlert.title}
+              </h3>
+              <p className="text-gray-300 mb-3">{dashboardAlert.description}</p>
+              {dashboardAlert.preventionTip && (
+                <p className="text-sm text-gray-400">
+                  <span className="font-medium">Prevention tip:</span> {dashboardAlert.preventionTip}
+                </p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">AI Confidence</p>
+              <p className="text-sm font-medium text-white">{dashboardAlert.confidence}%</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Key Insights */}
       {story && (
       <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
@@ -825,26 +856,30 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                   </div>
                 </div>
                 <div className="space-y-2.5">
-                  {shadowPatterns.map((pattern) => (
-                    <motion.div
-                      key={pattern.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="group"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-300">{pattern.pattern_name || pattern.pattern}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{pattern.last_seen_description || pattern.lastSeen}</p>
+                  {patternsToShow.length > 0 ? (
+                    patternsToShow.map((pattern) => (
+                      <motion.div
+                        key={pattern.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="group"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-300">{pattern.pattern_name || pattern.pattern}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{pattern.last_seen_description || pattern.lastSeen}</p>
+                          </div>
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                            pattern.significance === 'high' ? 'bg-orange-400/60' :
+                            pattern.significance === 'medium' ? 'bg-yellow-400/60' :
+                            'bg-gray-400/60'
+                          }`} />
                         </div>
-                        <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
-                          pattern.significance === 'high' ? 'bg-orange-400/60' :
-                          pattern.significance === 'medium' ? 'bg-yellow-400/60' :
-                          'bg-gray-400/60'
-                        }`} />
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-500">No patterns detected yet. Keep logging your health data!</p>
+                  )}
                 </div>
               </div>
 

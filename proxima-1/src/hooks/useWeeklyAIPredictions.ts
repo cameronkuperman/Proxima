@@ -10,40 +10,66 @@ interface WeeklyPredictions {
     description: string;
     timeframe: string;
     confidence: number;
-    actionUrl: string;
     preventionTip?: string;
+    actionUrl: string;
+    generated_at?: string;
   };
   predictions: Array<{
     id: string;
     type: 'immediate' | 'seasonal' | 'longterm';
-    severity: 'info' | 'warning' | 'alert';
     title: string;
-    description: string;
+    subtitle?: string;
     pattern: string;
+    trigger_combo?: string;
+    historical_accuracy?: string;
     confidence: number;
-    preventionProtocols: string[];
-    category: string;
+    gradient?: string;
+    prevention_protocol: string[];
+    // Legacy fields for backwards compatibility
+    severity?: 'info' | 'warning' | 'alert';
+    description?: string;
+    preventionProtocols?: string[];
+    category?: string;
     reasoning?: string;
     dataPoints?: string[];
-    gradient?: string;
+    // Seasonal/longterm specific
+    timeframe?: string;
+    historical_context?: string;
   }>;
   pattern_questions: Array<{
     id: string;
     question: string;
-    category: 'sleep' | 'energy' | 'mood' | 'physical' | 'other';
-    answer: string;
-    deepDive: string[];
-    connections: string[];
-    relevanceScore: number;
-    basedOn: string[];
+    category: 'mood' | 'sleep' | 'energy' | 'physical';
+    icon?: string;
+    brief_answer: string;
+    deep_dive: {
+      detailed_insights: string[];
+      connected_patterns: string[];
+      actionable_advice: string[];
+    };
+    relevance_score: number;
+    based_on: string[];
+    // Legacy fields
+    answer?: string;
+    deepDive?: string[];
+    connections?: string[];
+    relevanceScore?: number;
+    basedOn?: string[];
   }>;
   body_patterns: {
     tendencies: string[];
-    positiveResponses: string[];
+    positive_responses: string[];
+    // Legacy field
+    positiveResponses?: string[];
+    pattern_metadata?: {
+      total_patterns_analyzed: number;
+      confidence_level: 'low' | 'medium' | 'high';
+      data_span_days: number;
+    };
   };
   generated_at: string;
   data_quality_score: number;
-  is_current: boolean;
+  is_current?: boolean;
   viewed_at?: string;
 }
 
@@ -153,6 +179,7 @@ export function useWeeklyAIPredictions() {
   const allPredictions = predictions?.predictions || [];
   const patternQuestions = predictions?.pattern_questions || [];
   const bodyPatterns = predictions?.body_patterns || null;
+  const dataQualityScore = predictions?.data_quality_score || 0;
 
   return {
     // Full predictions object
@@ -163,6 +190,7 @@ export function useWeeklyAIPredictions() {
     allPredictions,
     patternQuestions,
     bodyPatterns,
+    dataQualityScore,
     
     // Status
     isLoading,
