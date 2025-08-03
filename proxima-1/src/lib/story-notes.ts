@@ -131,4 +131,3 @@ export const storyNotesService = {
   }
 };
 
-export type { CreateNoteData };

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { reportService } from '@/services/reportService';
 import { ReportAnalysisRequest, SpecialtyType } from '@/types/reports';
 import { useAuth } from '@/contexts/AuthContext';
 import { SpecialtyTriage } from './reports/SpecialtyTriage';
+import { Activity, FileText, Calendar, ChevronUp, ChevronDown, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ReportGeneratorProps {
   userId?: string;
@@ -35,6 +37,67 @@ export function ReportGenerator({
   const [reportType, setReportType] = useState<'symptom' | 'time' | 'specialist'>('symptom');
   const [symptomFocus, setSymptomFocus] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState<SpecialtyType>('cardiology');
+  
+  // Selection state
+  const [availableQuickScans, setAvailableQuickScans] = useState<any[]>([]);
+  const [availableDeepDives, setAvailableDeepDives] = useState<any[]>([]);
+  const [selectedQuickScans, setSelectedQuickScans] = useState<string[]>([]);
+  const [selectedDeepDives, setSelectedDeepDives] = useState<string[]>([]);
+  const [expandedSections, setExpandedSections] = useState({ quickScans: true, deepDives: true });
+  const [loadingData, setLoadingData] = useState(false);
+  
+  // Fetch available data
+  useEffect(() => {
+    if (userId && reportType === 'specialist') {
+      fetchAvailableData();
+    }
+  }, [userId, reportType]);
+  
+  const fetchAvailableData = async () => {
+    setLoadingData(true);
+    try {
+      // Fetch quick scans
+      const quickScansRes = await fetch(`${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/quick-scans?user_id=${userId}`);
+      if (quickScansRes.ok) {
+        const scans = await quickScansRes.json();
+        setAvailableQuickScans(scans.filter((scan: any) => scan.status === 'completed'));
+      }
+      
+      // Fetch deep dives
+      const deepDivesRes = await fetch(`${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/deep-dives?user_id=${userId}`);
+      if (deepDivesRes.ok) {
+        const dives = await deepDivesRes.json();
+        setAvailableDeepDives(dives.filter((dive: any) => dive.analysis_complete));
+      }
+    } catch (err) {
+      console.error('Error fetching available data:', err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+  
+  const toggleScan = (scanId: string, type: 'quick' | 'deep') => {
+    if (type === 'quick') {
+      setSelectedQuickScans(prev => 
+        prev.includes(scanId) 
+          ? prev.filter(id => id !== scanId)
+          : [...prev, scanId]
+      );
+    } else {
+      setSelectedDeepDives(prev => 
+        prev.includes(scanId) 
+          ? prev.filter(id => id !== scanId)
+          : [...prev, scanId]
+      );
+    }
+  };
+  
+  const toggleSection = (section: 'quickScans' | 'deepDives') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const handleGenerateSymptomReport = async () => {
     setLoading(true);
@@ -98,7 +161,17 @@ export function ReportGenerator({
     }
   };
 
-  const handleGenerateSpecialistReport = async () => {
+  const handleGenerateSpecialistReport = async (specialtyOverride?: SpecialtyType) => {
+    const specialtyToUse = specialtyOverride || selectedSpecialty;
+    
+    console.log('=== SPECIALIST REPORT GENERATION DEBUG ===');
+    console.log('Specialty Override:', specialtyOverride);
+    console.log('Selected Specialty State:', selectedSpecialty);
+    console.log('Specialty to Use:', specialtyToUse);
+    console.log('Selected Quick Scans:', selectedQuickScans);
+    console.log('Selected Deep Dives:', selectedDeepDives);
+    console.log('User ID:', userId);
+    
     setLoading(true);
     setError(null);
     setStep('analyzing');
@@ -110,27 +183,37 @@ export function ReportGenerator({
         context: {
           purpose: 'specialist_referral',
           target_audience: 'specialist',
+          specialty: specialtyToUse, // Add specialty to context
         },
         available_data: {
-          quick_scan_ids: quickScanIds,
-          deep_dive_ids: deepDiveIds,
+          quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : quickScanIds,
+          deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : deepDiveIds,
           photo_session_ids: photoSessionIds,
         }
       });
 
+      console.log('Analysis Result:', analysis);
       setStep('generating');
 
-      // Generate specialist report
+      // Generate specialist report with selected IDs
+      console.log('Generating report for specialty:', specialtyToUse);
       const report = await reportService.generateSpecialistReport(
-        selectedSpecialty,
+        specialtyToUse,
         analysis.analysis_id,
-        userId
+        userId,
+        {
+          quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
+          deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
+          photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : undefined
+        }
       );
 
+      console.log('Generated Report:', report);
       setGeneratedReport(report);
       setStep('complete');
       onComplete?.(report);
     } catch (err) {
+      console.error('Report Generation Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate report');
       setStep('select');
     } finally {
@@ -245,13 +328,186 @@ export function ReportGenerator({
           {reportType === 'specialist' && (
             <div className="space-y-4">
               <p className="text-gray-600">
-                Let's find the right specialist for your needs based on your symptoms.
+                Select the health analyses you want to include in the specialist report.
               </p>
+              
+              {/* Quick Scan Selection */}
+              {availableQuickScans.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                >
+                  <button
+                    onClick={() => toggleSection('quickScans')}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Activity className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-semibold text-gray-900">Select Quick Scans</h3>
+                      <span className="text-sm text-gray-500">({selectedQuickScans.length} selected)</span>
+                    </div>
+                    {expandedSections.quickScans ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedSections.quickScans && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: 'auto' }}
+                        exit={{ height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="border-t border-gray-100"
+                      >
+                        <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+                          {availableQuickScans.map(scan => {
+                            const isSelected = selectedQuickScans.includes(scan.id);
+                            const urgencyColor = {
+                              'low': 'bg-green-100 text-green-800',
+                              'medium': 'bg-yellow-100 text-yellow-800',
+                              'high': 'bg-red-100 text-red-800'
+                            }[scan.urgency_level] || 'bg-gray-100 text-gray-800';
+                            
+                            return (
+                              <label
+                                key={scan.id}
+                                className={`
+                                  flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+                                  ${isSelected ? 'bg-blue-50 border-2 border-blue-300' : 'hover:bg-gray-50 border-2 border-transparent'}
+                                `}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleScan(scan.id, 'quick')}
+                                  className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Calendar className="w-4 h-4 text-gray-500" />
+                                    <span className="text-sm text-gray-600">
+                                      {new Date(scan.created_at).toLocaleDateString()}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${urgencyColor}`}>
+                                      {scan.urgency_level}
+                                    </span>
+                                  </div>
+                                  <p className="font-medium text-gray-900">{scan.body_part}</p>
+                                  {scan.summary && (
+                                    <p className="text-sm text-gray-600 mt-1">{scan.summary}</p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+              
+              {/* Deep Dive Selection */}
+              {availableDeepDives.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                >
+                  <button
+                    onClick={() => toggleSection('deepDives')}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-purple-600" />
+                      <h3 className="font-semibold text-gray-900">Select Deep Dives</h3>
+                      <span className="text-sm text-gray-500">({selectedDeepDives.length} selected)</span>
+                    </div>
+                    {expandedSections.deepDives ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedSections.deepDives && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: 'auto' }}
+                        exit={{ height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="border-t border-gray-100"
+                      >
+                        <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+                          {availableDeepDives.map(dive => {
+                            const isSelected = selectedDeepDives.includes(dive.id);
+                            
+                            return (
+                              <label
+                                key={dive.id}
+                                className={`
+                                  flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+                                  ${isSelected ? 'bg-purple-50 border-2 border-purple-300' : 'hover:bg-gray-50 border-2 border-transparent'}
+                                `}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleScan(dive.id, 'deep')}
+                                  className="mt-1 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Calendar className="w-4 h-4 text-gray-500" />
+                                    <span className="text-sm text-gray-600">
+                                      {new Date(dive.created_at).toLocaleDateString()}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      completed
+                                    </span>
+                                  </div>
+                                  <p className="font-medium text-gray-900">{dive.body_part}</p>
+                                  {dive.final_summary && (
+                                    <p className="text-sm text-gray-600 mt-1">{dive.final_summary}</p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+              
+              {loadingData && (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-sm text-gray-600 mt-2">Loading your health data...</p>
+                </div>
+              )}
+              
+              {!loadingData && availableQuickScans.length === 0 && availableDeepDives.length === 0 && (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <p className="text-gray-600">No completed analyses found.</p>
+                  <p className="text-sm text-gray-500 mt-1">Complete some Quick Scans or Deep Dives first.</p>
+                </div>
+              )}
+              
               <button
                 onClick={() => setStep('triage')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={selectedQuickScans.length === 0 && selectedDeepDives.length === 0}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Find the Right Specialist
+                <CheckCircle className="w-5 h-5" />
+                Continue to Specialist Selection
               </button>
             </div>
           )}
@@ -261,10 +517,21 @@ export function ReportGenerator({
       {step === 'triage' && (
         <SpecialtyTriage
           userId={userId}
-          onSpecialtySelected={(specialty, triage) => {
+          quickScans={availableQuickScans.filter(scan => selectedQuickScans.includes(scan.id))}
+          deepDives={availableDeepDives.filter(dive => selectedDeepDives.includes(dive.id))}
+          onSpecialtySelected={(specialty, triage, selectedIds) => {
+            console.log('=== SPECIALTY SELECTED ===');
+            console.log('Specialty:', specialty);
+            console.log('Triage Result:', triage);
+            console.log('Selected IDs:', selectedIds);
+            
             setSelectedSpecialty(specialty);
             setTriageResult(triage);
-            handleGenerateSpecialistReport();
+            setSelectedQuickScans(selectedIds.quick_scan_ids);
+            setSelectedDeepDives(selectedIds.deep_dive_ids);
+            
+            // Pass specialty directly to avoid state race condition
+            handleGenerateSpecialistReport(specialty);
           }}
         />
       )}

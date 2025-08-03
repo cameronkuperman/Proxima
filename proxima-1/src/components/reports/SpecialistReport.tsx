@@ -31,12 +31,16 @@ import {
   Cookie,
   BrainCircuit,
   Gauge,
-  Clock
+  Clock,
+  Users
 } from 'lucide-react';
 import { SymptomTimeline } from './SymptomTimeline';
 import { ClinicalScales } from './ClinicalScales';
 import { TreatmentPlan } from './TreatmentPlan';
 import { ActionableSummary } from './ActionableSummary';
+import { DiagnosticPriorities } from './DiagnosticPriorities';
+import { CareCoordination } from './CareCoordination';
+import { DataQualityNotes } from './DataQualityNotes';
 
 interface SpecialistReportProps {
   report: any;
@@ -110,8 +114,19 @@ const specialtyConfig = {
 };
 
 export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) => {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['actionable', 'summary', 'clinical']));
+  // Start with all sections expanded
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set([
+    'actionable', 'summary', 'clinical', 'specialty', 'diagnostics', 
+    'tests', 'treatment', 'billing', 'coordination', 'quality'
+  ]));
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  
+  console.log('=== SPECIALIST REPORT COMPONENT ===');
+  console.log('Full Report:', report);
+  console.log('Report Type:', report.report_type);
+  console.log('Report Data:', report.report_data);
+  console.log('Report Specialty from report:', report.specialty);
+  console.log('Report Data Keys:', Object.keys(report.report_data || {}));
   
   const data = report.report_data;
   
@@ -120,6 +135,15 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
     const specialties = Object.keys(specialtyConfig);
     for (const specialty of specialties) {
       if (data[`${specialty}_specific`]) {
+        console.log(`Found ${specialty}_specific in data`);
+        return specialty;
+      }
+      if (data[`${specialty}_assessment`]) {
+        console.log(`Found ${specialty}_assessment in data`);
+        return specialty;
+      }
+      if (data[`${specialty}_specific_findings`]) {
+        console.log(`Found ${specialty}_specific_findings in data`);
         return specialty;
       }
     }
@@ -132,9 +156,14 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
   };
   
   const specialty = detectSpecialty();
+  console.log('Detected Specialty:', specialty);
+  
   const config = specialtyConfig[specialty as keyof typeof specialtyConfig];
   const Icon = config.icon;
   const specialtyData = data[`${specialty}_specific`] || {};
+  
+  console.log('Specialty Data:', specialtyData);
+  console.log('Config:', config);
   
   const toggleSection = (section: string) => {
     setExpandedSections(prev => {
@@ -702,85 +731,22 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
         </Section>
       )}
 
-      {/* Recommended Tests - Enhanced */}
-      {(data?.diagnostic_priorities || specialtyData.recommended_tests || data?.recommendations?.diagnostic_tests) && (
+      {/* Diagnostic Priorities - New Component */}
+      {data?.diagnostic_priorities && (
+        <Section id="diagnostics" title="Diagnostic Recommendations" icon={TestTube}>
+          <DiagnosticPriorities
+            immediate={data.diagnostic_priorities.immediate}
+            shortTerm={data.diagnostic_priorities.short_term}
+            contingent={data.diagnostic_priorities.contingent}
+          />
+        </Section>
+      )}
+      
+      {/* Legacy Recommended Tests */}
+      {!data?.diagnostic_priorities && (specialtyData.recommended_tests || data?.recommendations?.diagnostic_tests) && (
         <Section id="tests" title="Recommended Diagnostic Tests" icon={TestTube}>
           <div className="space-y-4">
-            {/* Immediate Tests */}
-            {data.diagnostic_priorities?.immediate && data.diagnostic_priorities.immediate.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
-                  Immediate Tests Required
-                </h3>
-                <div className="space-y-2">
-                  {data.diagnostic_priorities.immediate.map((test: any, idx: number) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.1 }}
-                      className="bg-red-50 border border-red-200 rounded-lg p-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium text-red-900">{test.test}</h4>
-                          <p className="text-sm text-red-700 mt-1">{test.rationale}</p>
-                        </div>
-                        <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                          {test.timing}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Short-term Tests */}
-            {data.diagnostic_priorities?.short_term && data.diagnostic_priorities.short_term.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-yellow-900 mb-3">Short-term Tests</h3>
-                <div className="space-y-2">
-                  {data.diagnostic_priorities.short_term.map((test: any, idx: number) => (
-                    <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium text-yellow-900">{test.test}</h4>
-                          <p className="text-sm text-yellow-700 mt-1">{test.rationale}</p>
-                        </div>
-                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                          {test.timing}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Contingent Tests */}
-            {data.diagnostic_priorities?.contingent && data.diagnostic_priorities.contingent.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Contingent Tests</h3>
-                <div className="space-y-2">
-                  {data.diagnostic_priorities.contingent.map((test: any, idx: number) => (
-                    <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{test.test}</h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          <strong>If:</strong> {test.condition}
-                        </p>
-                        <p className="text-sm text-gray-700 mt-1">{test.rationale}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Legacy recommended tests */}
-            {!data.diagnostic_priorities && specialtyData.recommended_tests?.immediate && (
+            {specialtyData.recommended_tests?.immediate && (
               <div>
                 <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
                   <AlertCircle className="w-5 h-5" />
@@ -803,7 +769,7 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
               </div>
             )}
             
-            {!data.diagnostic_priorities && specialtyData.recommended_tests?.follow_up && (
+            {specialtyData.recommended_tests?.follow_up && (
               <div>
                 <h3 className="font-semibold text-gray-900 mb-3">Follow-up Tests</h3>
                 <div className="space-y-2">
@@ -826,7 +792,11 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
           <TreatmentPlan
             specialty={specialty}
             medications={data.treatment_recommendations?.immediate_medical_therapy || []}
+            immediateTherapy={data.treatment_recommendations?.immediate_medical_therapy || []}
+            symptomManagement={data.treatment_recommendations?.symptom_management}
             lifestyleInterventions={data.treatment_recommendations?.lifestyle_interventions || {}}
+            behavioralInterventions={data.treatment_recommendations?.behavioral_interventions}
+            nonPharmacologic={data.treatment_recommendations?.non_pharmacologic}
             preventiveMeasures={data.treatment_recommendations?.preventive_measures || []}
             immediateActions={data.recommendations?.immediate_actions || []}
             monitoringPlan={data.follow_up_plan?.monitoring_parameters || []}
@@ -893,8 +863,21 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
         </Section>
       )}
 
-      {/* Follow-up Plan */}
-      {data?.follow_up_plan && (
+      {/* Care Coordination - New Component */}
+      {data?.care_coordination && (
+        <Section id="care-coordination" title="Care Coordination" icon={Users}>
+          <CareCoordination
+            referralUrgency={data.care_coordination.referral_urgency}
+            preVisitPreparation={data.care_coordination.pre_visit_preparation}
+            followUpPlan={data.care_coordination.follow_up_plan}
+            recommendedReferrals={data.specialist_coordination?.recommended_referrals}
+            careGaps={data.specialist_coordination?.care_gaps}
+          />
+        </Section>
+      )}
+      
+      {/* Legacy Follow-up Plan */}
+      {!data?.care_coordination && data?.follow_up_plan && (
         <Section id="follow-up" title="Follow-up Plan" icon={Calendar}>
           <div className="space-y-4">
             {data.follow_up_plan.timing && (
@@ -938,36 +921,16 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
         </Section>
       )}
 
-      {/* Data Quality Notes */}
+      {/* Data Quality Notes - New Component */}
       {data?.data_quality_notes && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
-        >
-          <h4 className="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
-            <Info className="w-5 h-5" />
-            Data Quality Assessment
-          </h4>
-          <div className="space-y-2 text-sm">
-            <p className="text-yellow-800">
-              <strong>Completeness:</strong> {data.data_quality_notes.completeness}
-            </p>
-            <p className="text-yellow-800">
-              <strong>Consistency:</strong> {data.data_quality_notes.consistency}
-            </p>
-            {data.data_quality_notes.gaps && data.data_quality_notes.gaps.length > 0 && (
-              <div>
-                <strong className="text-yellow-800">Information Gaps:</strong>
-                <ul className="list-disc list-inside text-yellow-700 mt-1">
-                  {data.data_quality_notes.gaps.map((gap: string, idx: number) => (
-                    <li key={idx}>{gap}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </motion.div>
+        <Section id="data-quality" title="Data Quality Assessment" icon={Info}>
+          <DataQualityNotes
+            completeness={data.data_quality_notes.completeness}
+            consistency={data.data_quality_notes.consistency}
+            gaps={data.data_quality_notes.gaps}
+            confidence={report.confidence_score}
+          />
+        </Section>
       )}
 
       {/* Confidence Score */}

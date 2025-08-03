@@ -17,6 +17,9 @@ export interface SpecialistReportRequest {
   analysis_id: string;
   user_id?: string;
   specialty?: string;
+  quick_scan_ids?: string[];
+  deep_dive_ids?: string[];
+  photo_session_ids?: string[];
 }
 
 export interface TimePeriodReportRequest {
@@ -92,6 +95,18 @@ export interface ClinicalScale {
   grade?: string;
   interpretation?: string;
   breakdown?: Record<string, any>;
+  confidence?: number;
+  confidence_level?: 'high' | 'medium' | 'low';
+  reasoning?: string;
+  missing_data?: string[];
+  // Additional fields for specific scales
+  severity?: string;
+  severity_category?: string;
+  annual_stroke_risk?: string;
+  treatment_recommendation?: string;
+  risk_level?: string;
+  suicide_risk?: string;
+  protective_factors?: string[];
 }
 
 export interface EnhancedReportData {

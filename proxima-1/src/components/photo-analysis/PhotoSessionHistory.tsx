@@ -2,19 +2,21 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Camera, FileText, TrendingUp, ChevronRight, Lock } from 'lucide-react';
+import { Clock, Camera, FileText, TrendingUp, TrendingDown, ChevronRight, Lock, Bell, AlertCircle } from 'lucide-react';
 import { PhotoSession } from '@/types/photo-analysis';
 
 interface PhotoSessionHistoryProps {
   sessions: PhotoSession[];
   onSelectSession: (session: PhotoSession) => void;
   showContinueButton?: boolean;
+  reminders?: { [sessionId: string]: { next_reminder_date: string; status: string } };
 }
 
 export default function PhotoSessionHistory({
   sessions,
   onSelectSession,
-  showContinueButton = false
+  showContinueButton = false,
+  reminders = {}
 }: PhotoSessionHistoryProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -27,6 +29,33 @@ export default function PhotoSessionHistory({
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return date.toLocaleDateString();
+  };
+
+  const isOverdueForFollowUp = (session: PhotoSession) => {
+    const sessionId = session.id || session.session_id;
+    if (!sessionId || !reminders[sessionId]) return false;
+    
+    const reminder = reminders[sessionId];
+    if (reminder.status !== 'active') return false;
+    
+    const nextReminderDate = new Date(reminder.next_reminder_date);
+    return nextReminderDate < new Date();
+  };
+
+  const getDaysSinceLastPhoto = (lastPhotoDate?: string) => {
+    if (!lastPhotoDate) return null;
+    const date = new Date(lastPhotoDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Mock trend data - in real app this would come from the session
+  const getTrend = (session: PhotoSession) => {
+    // This would actually come from the backend
+    const trends = ['improving', 'stable', 'worsening'];
+    const index = Math.floor(Math.random() * 3);
+    return trends[index] as 'improving' | 'stable' | 'worsening';
   };
 
   if (sessions.length === 0) {
@@ -57,8 +86,25 @@ export default function PhotoSessionHistory({
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => onSelectSession(session)}
-            className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all group"
+            className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all group relative"
           >
+            {/* Status Indicators */}
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              {/* Reminder indicator */}
+              {reminders[session.id || session.session_id || '']?.status === 'active' && (
+                <div className="p-1.5 rounded-full bg-orange-500/20" title="Reminder active">
+                  <Bell className="w-3.5 h-3.5 text-orange-400" />
+                </div>
+              )}
+              
+              {/* Overdue indicator */}
+              {isOverdueForFollowUp(session) && (
+                <div className="p-1.5 rounded-full bg-amber-500/20 animate-pulse" title="Follow-up overdue">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                </div>
+              )}
+            </div>
+
             {/* Thumbnail or placeholder */}
             <div className="aspect-video rounded-lg bg-gray-800 mb-4 overflow-hidden relative">
               {session.thumbnail_url ? (
@@ -120,6 +166,27 @@ export default function PhotoSessionHistory({
             {session.latest_summary && (
               <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05] mb-4">
                 <p className="text-xs text-gray-300 italic">"{session.latest_summary}"</p>
+              </div>
+            )}
+
+            {/* Trend indicator */}
+            {session.photo_count && session.photo_count > 1 && (
+              <div className="mb-4">
+                {(() => {
+                  const trend = getTrend(session);
+                  return (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${
+                      trend === 'improving' ? 'bg-green-500/20 text-green-400' :
+                      trend === 'worsening' ? 'bg-red-500/20 text-red-400' :
+                      'bg-yellow-500/20 text-yellow-400'
+                    }`}>
+                      {trend === 'improving' && <TrendingUp className="w-3 h-3" />}
+                      {trend === 'worsening' && <TrendingDown className="w-3 h-3" />}
+                      {trend === 'stable' && <span className="w-3 h-0.5 bg-current rounded" />}
+                      <span className="capitalize">{trend}</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

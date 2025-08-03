@@ -138,7 +138,7 @@ interface HealthIntelligence {
   insights: HealthInsight[];
   predictions: HealthPrediction[];
   shadowPatterns: ShadowPattern[];
-  strategies: HealthStrategy[];
+  strategies: StrategicMove[];
   isLoading: boolean;
   isGenerating: boolean;
   generatingInsights: boolean;
@@ -366,10 +366,12 @@ export function useHealthIntelligence() {
       setInsights([
         {
           id: 'mock-1',
+          user_id: 'mock-user',
           insight_type: 'positive',
           title: 'Sleep Quality Improved',
           description: 'Your sleep patterns show improvement this week',
           confidence: 85,
+          week_of: new Date().toISOString().split('T')[0],
           created_at: new Date().toISOString()
         }
       ]);
@@ -623,8 +625,8 @@ export function useHealthIntelligence() {
       }
       
       // Update refresh limits if provided in metadata
-      if (data.metadata?.refresh_limits) {
-        setRefreshLimits(data.metadata.refresh_limits);
+      if ((data.metadata as any)?.refresh_limits) {
+        setRefreshLimits((data.metadata as any).refresh_limits);
       }
     } catch (error) {
       console.error('Error generating insights:', error);
@@ -696,8 +698,8 @@ export function useHealthIntelligence() {
       }
       
       // Update refresh limits if provided in metadata
-      if (data.metadata?.refresh_limits) {
-        setRefreshLimits(data.metadata.refresh_limits);
+      if ((data.metadata as any)?.refresh_limits) {
+        setRefreshLimits((data.metadata as any).refresh_limits);
       }
     } catch (error) {
       console.error('Error generating shadow patterns:', error);
@@ -733,7 +735,7 @@ export function useHealthIntelligence() {
       
       // Handle different response statuses
       if (data.status === 'error') {
-        setError(data.metadata?.error || 'Failed to generate intelligence');
+        setError((data.metadata as any)?.error || 'Failed to generate intelligence');
         return;
       }
       

@@ -21,8 +21,8 @@ import {
 } from 'lucide-react';
 import { reportApi } from '@/lib/api/reports';
 import { SpecialtyType } from '@/types/reports';
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, FileText, ChevronUp } from 'lucide-react';
+import { useEffect } from 'react';
+import { Calendar, Clock, FileText, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface TriageResult {
   primary_specialty: SpecialtyType;
@@ -58,7 +58,10 @@ interface DeepDive {
 
 interface SpecialtyTriageProps {
   userId?: string;
-  onSpecialtySelected: (specialty: SpecialtyType, triageResult: TriageResult) => void;
+  onSpecialtySelected: (specialty: SpecialtyType, triageResult: TriageResult, selectedIds: {
+    quick_scan_ids: string[];
+    deep_dive_ids: string[];
+  }) => void;
   initialConcern?: string;
   symptoms?: string[];
   quickScans?: QuickScan[];
@@ -157,25 +160,44 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
     setIsLoading(true);
     setError(null);
 
+    console.log('=== RUNNING SPECIALTY TRIAGE ===');
+    console.log('Primary Concern:', primaryConcern);
+    console.log('Symptoms:', symptoms);
+    console.log('Selected Quick Scans:', selectedQuickScans);
+    console.log('Selected Deep Dives:', selectedDeepDives);
+    console.log('User ID:', userId);
+
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/report/specialty-triage`, {
+      const triageUrl = `${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/report/specialty-triage`;
+      console.log('Triage URL:', triageUrl);
+      
+      const requestBody = {
+        user_id: userId,
+        quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
+        deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
+        primary_concern: primaryConcern || undefined,
+        symptoms: symptoms.length > 0 ? symptoms : undefined,
+        urgency: 'routine' // Let AI determine actual urgency
+      };
+      console.log('Request Body:', requestBody);
+
+      const response = await fetch(triageUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
-          deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
-          primary_concern: primaryConcern || undefined,
-          symptoms: symptoms.length > 0 ? symptoms : undefined,
-          urgency: 'routine' // Let AI determine actual urgency
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('Response Status:', response.status);
+      console.log('Response OK:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to run triage');
+        const errorText = await response.text();
+        console.error('Triage Error Response:', errorText);
+        throw new Error(`Failed to run triage: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Triage Response Data:', data);
       
       if (data.status === 'success' && data.triage_result) {
         setTriageResult(data.triage_result);
@@ -183,8 +205,18 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
         throw new Error('Invalid response from triage service');
       }
     } catch (err) {
-      setError('Unable to analyze your symptoms. Please try again.');
       console.error('Triage error:', err);
+      setError('Unable to analyze your symptoms. Please try again.');
+      
+      // Fallback: Set a default triage result for testing
+      console.warn('Using fallback triage result for testing');
+      setTriageResult({
+        primary_specialty: 'primary-care' as SpecialtyType,
+        confidence: 0.7,
+        reasoning: 'Unable to determine specialty - defaulting to primary care',
+        urgency: 'routine' as const,
+        recommended_timing: 'Schedule at your convenience'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +322,18 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
               
               {isPrimary && (
                 <button
-                  onClick={() => onSpecialtySelected(specialty as SpecialtyType, triageResult!)}
+                  onClick={() => {
+                    console.log('=== SPECIALTY CARD BUTTON CLICKED ===');
+                    console.log('Specialty:', specialty);
+                    console.log('Selected Quick Scans:', selectedQuickScans);
+                    console.log('Selected Deep Dives:', selectedDeepDives);
+                    console.log('Triage Result:', triageResult);
+                    
+                    onSpecialtySelected(specialty as SpecialtyType, triageResult!, {
+                      quick_scan_ids: selectedQuickScans,
+                      deep_dive_ids: selectedDeepDives
+                    });
+                  }}
                   className={`
                     w-full mt-4 px-4 py-3 rounded-lg font-medium
                     bg-gradient-to-r from-${info.color}-600 to-${info.color}-700
@@ -665,7 +708,16 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
                 Start Over
               </button>
               <button
-                onClick={() => onSpecialtySelected('primary-care' as SpecialtyType, triageResult)}
+                onClick={() => {
+                  console.log('=== PRIMARY CARE BUTTON CLICKED ===');
+                  console.log('Selected Quick Scans:', selectedQuickScans);
+                  console.log('Selected Deep Dives:', selectedDeepDives);
+                  
+                  onSpecialtySelected('primary-care' as SpecialtyType, triageResult, {
+                    quick_scan_ids: selectedQuickScans,
+                    deep_dive_ids: selectedDeepDives
+                  });
+                }}
                 className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors"
               >
                 Generate Primary Care Report Instead

@@ -142,6 +142,76 @@ export default function HistoryModal({
     onClose();
   };
 
+  const renderDeepDivePreview = () => {
+    if (!data) return null;
+    
+    const analysis = data.final_analysis;
+    return (
+      <div className="space-y-4">
+        {/* Body Part */}
+        <div className="flex items-center gap-2 text-gray-300">
+          <MapPin className="w-4 h-4" />
+          <span className="text-sm">{data.body_part}</span>
+        </div>
+
+        {/* Primary Condition */}
+        {analysis?.primaryCondition && (
+          <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
+            <h4 className="text-sm font-medium text-gray-400 mb-2">Primary Assessment</h4>
+            <p className="text-white font-medium">{analysis.primaryCondition}</p>
+            {analysis.confidence && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="flex-1 bg-white/[0.05] rounded-full h-2 overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${analysis.confidence}%` }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  />
+                </div>
+                <span className="text-xs text-gray-400">{analysis.confidence}%</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Urgency */}
+        {analysis?.urgency && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+            analysis.urgency === 'high' ? 'bg-red-500/20 text-red-400' :
+            analysis.urgency === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+            'bg-green-500/20 text-green-400'
+          }`}>
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm font-medium capitalize">{analysis.urgency} Urgency</span>
+          </div>
+        )}
+
+        {/* Questions Asked */}
+        {data.questions && data.questions.length > 0 && (
+          <div className="text-sm text-gray-400">
+            <span className="font-medium">{data.questions.length}</span> follow-up questions answered
+          </div>
+        )}
+
+        {/* Key Recommendations */}
+        {analysis?.recommendations?.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-400">Key Recommendations</h4>
+            <ul className="space-y-1">
+              {analysis.recommendations.slice(0, 3).map((rec: string, idx: number) => (
+                <li key={idx} className="text-sm text-gray-300 flex items-start gap-2">
+                  <span className="text-indigo-400 mt-0.5">•</span>
+                  <span>{rec}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderQuickScanPreview = () => {
     if (!data) return null;
     
@@ -210,20 +280,7 @@ export default function HistoryModal({
       case 'quick_scan':
         return renderQuickScanPreview();
       case 'deep_dive':
-        return (
-          <div className="space-y-4">
-            <p className="text-gray-300">
-              Deep dive analysis for {data?.body_part || 'health concern'}
-            </p>
-            {data?.final_analysis && (
-              <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
-                <p className="text-sm text-gray-300 line-clamp-3">
-                  {data.final_analysis.summary || 'Analysis completed'}
-                </p>
-              </div>
-            )}
-          </div>
-        );
+        return renderDeepDivePreview();
       case 'photo_analysis':
         return (
           <div className="space-y-4">

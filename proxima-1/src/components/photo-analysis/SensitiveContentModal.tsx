@@ -2,12 +2,12 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Shield, Clock, AlertCircle } from 'lucide-react';
+import { Lock, Shield, Clock, AlertCircle, Database } from 'lucide-react';
 
 interface SensitiveContentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onDecision: (decision: 'analyze_once' | 'analyze_24h' | 'cancel') => void;
+  onDecision: (decision: 'analyze_once' | 'analyze_24h' | 'store_normal' | 'cancel') => void;
 }
 
 export default function SensitiveContentModal({
@@ -90,8 +90,8 @@ export default function SensitiveContentModal({
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-white font-medium mb-1">Analyze Once (No Storage)</h4>
-                    <p className="text-sm text-gray-400">Get immediate analysis without saving the photo</p>
+                    <h4 className="text-white font-medium mb-1">Analyze Without Storing</h4>
+                    <p className="text-sm text-gray-400">Get immediate analysis, photo deleted instantly</p>
                   </div>
                   <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/30 transition-colors">
                     <Shield className="w-5 h-5 text-amber-400" />
@@ -103,15 +103,32 @@ export default function SensitiveContentModal({
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => onDecision('analyze_24h')}
-                className="w-full p-4 rounded-lg bg-white/[0.03] border border-white/[0.05] hover:border-amber-500/50 transition-all text-left group"
+                className="w-full p-4 rounded-lg bg-white/[0.03] border border-white/[0.05] hover:border-blue-500/50 transition-all text-left group"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-white font-medium mb-1">Analyze & Keep Results (24 hours)</h4>
-                    <p className="text-sm text-gray-400">Analysis available for 24 hours, photo not stored</p>
+                    <h4 className="text-white font-medium mb-1">Store Temporarily & Delete After Analysis</h4>
+                    <p className="text-sm text-gray-400">Photo stored for analysis, automatically deleted after 24 hours</p>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/30 transition-colors">
-                    <Clock className="w-5 h-5 text-amber-400" />
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                    <Clock className="w-5 h-5 text-blue-400" />
+                  </div>
+                </div>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => onDecision('store_normal')}
+                className="w-full p-4 rounded-lg bg-white/[0.03] border border-white/[0.05] hover:border-green-500/50 transition-all text-left group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-white font-medium mb-1">Store Normally for Tracking</h4>
+                    <p className="text-sm text-gray-400">Keep photo for long-term progress tracking (with privacy indicator)</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/30 transition-colors">
+                    <Database className="w-5 h-5 text-green-400" />
                   </div>
                 </div>
               </motion.button>

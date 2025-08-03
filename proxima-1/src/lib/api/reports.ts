@@ -34,12 +34,17 @@ export const reportApi = {
   async generateSpecialistReport(
     specialty: SpecialtyType,
     analysisId: string,
-    userId?: string
+    userId?: string,
+    selectedIds?: {
+      quick_scan_ids?: string[];
+      deep_dive_ids?: string[];
+      photo_session_ids?: string[];
+    }
   ): Promise<MedicalReport> {
     return this.generateReport(`/api/report/${specialty}`, {
       analysis_id: analysisId,
       user_id: userId,
-      specialty
+      ...(selectedIds || {})
     });
   },
   

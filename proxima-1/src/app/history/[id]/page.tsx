@@ -160,6 +160,217 @@ export default function HistoryPage() {
     }
   };
 
+  const renderDeepDiveDetails = () => {
+    if (!fullData) return null;
+    
+    const analysis = fullData.final_analysis;
+    const formData = fullData.form_data;
+    
+    return (
+      <div className="space-y-8">
+        {/* Summary Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]"
+        >
+          <h3 className="text-xl font-semibold text-white mb-4">Deep Dive Analysis Summary</h3>
+          
+          {/* Primary Condition */}
+          {analysis?.primaryCondition && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-400 mb-2">Primary Assessment</h4>
+              <p className="text-lg text-white font-medium">{analysis.primaryCondition}</p>
+              {analysis.likelihood && (
+                <p className="text-sm text-gray-400 mt-1">Likelihood: {analysis.likelihood}</p>
+              )}
+            </div>
+          )}
+
+          {/* Confidence Score */}
+          {analysis?.confidence && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-400">Confidence Level</span>
+                <span className="text-sm text-white">{analysis.confidence}%</span>
+              </div>
+              <div className="bg-white/[0.05] rounded-full h-3 overflow-hidden">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${analysis.confidence}%` }}
+                  transition={{ duration: 0.8 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Urgency Level */}
+          {analysis?.urgency && (
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
+              analysis.urgency === 'high' ? 'bg-red-500/20 text-red-400' :
+              analysis.urgency === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-green-500/20 text-green-400'
+            }`}>
+              <AlertTriangle className="w-4 h-4" />
+              <span className="font-medium capitalize">{analysis.urgency} Urgency</span>
+            </div>
+          )}
+
+          {/* Questions Asked */}
+          {fullData.questions && fullData.questions.length > 0 && (
+            <div className="mt-4 text-sm text-gray-400">
+              <Brain className="w-4 h-4 inline mr-1" />
+              {fullData.questions.length} follow-up questions completed
+            </div>
+          )}
+        </motion.div>
+
+        {/* Symptoms Reported */}
+        {formData && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]"
+          >
+            <h3 className="text-xl font-semibold text-white mb-4">Symptoms Reported</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formData.symptoms && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Main Symptoms</p>
+                  <p className="text-white">{formData.symptoms}</p>
+                </div>
+              )}
+              {formData.painLevel && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Pain Level</p>
+                  <p className="text-white">{formData.painLevel}/10</p>
+                </div>
+              )}
+              {formData.duration && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Duration</p>
+                  <p className="text-white">{formData.duration}</p>
+                </div>
+              )}
+              {formData.frequency && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Frequency</p>
+                  <p className="text-white">{formData.frequency}</p>
+                </div>
+              )}
+              {formData.triggerEvent && (
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-400 mb-1">Trigger Event</p>
+                  <p className="text-white">{formData.triggerEvent}</p>
+                </div>
+              )}
+              {formData.painType && formData.painType.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Pain Type</p>
+                  <p className="text-white">{formData.painType.join(', ')}</p>
+                </div>
+              )}
+              {formData.dailyImpact && formData.dailyImpact.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Daily Impact</p>
+                  <p className="text-white">{formData.dailyImpact.join(', ')}</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Recommendations */}
+        {analysis?.recommendations && analysis.recommendations.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]"
+          >
+            <h3 className="text-xl font-semibold text-white mb-4">Recommendations</h3>
+            <ul className="space-y-3">
+              {analysis.recommendations.map((rec: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="text-indigo-400 mt-0.5">•</span>
+                  <span className="text-gray-300">{rec}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+
+        {/* Self Care */}
+        {analysis?.selfCare && analysis.selfCare.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]"
+          >
+            <h3 className="text-xl font-semibold text-white mb-4">Self-Care Instructions</h3>
+            <ul className="space-y-3">
+              {analysis.selfCare.map((care: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="text-green-400 mt-0.5">•</span>
+                  <span className="text-gray-300">{care}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+
+        {/* Red Flags */}
+        {analysis?.redFlags && analysis.redFlags.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-red-500/10 border border-red-500/20 rounded-xl p-6"
+          >
+            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+              Warning Signs
+            </h3>
+            <ul className="space-y-2">
+              {analysis.redFlags.map((flag: string, idx: number) => (
+                <li key={idx} className="text-red-300">{flag}</li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+
+        {/* Timeline & Follow-up */}
+        {(analysis?.timeline || analysis?.followUp) && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]"
+          >
+            <h3 className="text-xl font-semibold text-white mb-4">Timeline & Follow-up</h3>
+            <div className="space-y-4">
+              {analysis.timeline && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Expected Timeline</p>
+                  <p className="text-white">{analysis.timeline}</p>
+                </div>
+              )}
+              {analysis.followUp && (
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Follow-up Recommendation</p>
+                  <p className="text-white">{analysis.followUp}</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </div>
+    );
+  };
+
   const renderQuickScanDetails = () => {
     if (!fullData) return null;
     
@@ -302,11 +513,7 @@ export default function HistoryPage() {
       case 'quick_scan':
         return renderQuickScanDetails();
       case 'deep_dive':
-        return (
-          <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
-            <p className="text-gray-300">Deep dive details coming soon...</p>
-          </div>
-        );
+        return renderDeepDiveDetails();
       case 'photo_analysis':
         return (
           <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">

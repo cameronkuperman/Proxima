@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Camera, Upload, Clock, TrendingUp, ArrowLeft, Plus, X, AlertCircle, Check, Download, Share2, ChevronRight } from 'lucide-react';
+import { Camera, Upload, Clock, TrendingUp, ArrowLeft, Plus, X, AlertCircle, Check, Download, Share2, ChevronRight, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 import PhotoUploadZone from '@/components/photo-analysis/PhotoUploadZone';
@@ -11,6 +11,9 @@ import PhotoAnalysisResults from '@/components/photo-analysis/PhotoAnalysisResul
 import PhotoSessionHistory from '@/components/photo-analysis/PhotoSessionHistory';
 import SensitiveContentModal from '@/components/photo-analysis/SensitiveContentModal';
 import PhotoQualityModal from '@/components/photo-analysis/PhotoQualityModal';
+import ReminderOptIn from '@/components/photo-analysis/ReminderOptIn';
+import PrivacyInfoModal from '@/components/photo-analysis/PrivacyInfoModal';
+import ErrorModal from '@/components/photo-analysis/ErrorModal';
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis';
 import { PhotoSession, PhotoCategory, AnalysisResult } from '@/types/photo-analysis';
 
@@ -27,8 +30,18 @@ export default function PhotoAnalysisPage() {
     analyzePhotos,
     createSession,
     continueSession,
-    exportSession
+    exportSession,
+    addFollowUpPhotos,
+    configureReminder,
+    getMonitoringSuggestions
   } = usePhotoAnalysis();
+
+  // Listen for privacy info event
+  React.useEffect(() => {
+    const handleShowPrivacyInfo = () => setShowPrivacyInfo(true);
+    window.addEventListener('showPrivacyInfo', handleShowPrivacyInfo);
+    return () => window.removeEventListener('showPrivacyInfo', handleShowPrivacyInfo);
+  }, []);
 
   const [mode, setMode] = useState<'new' | 'continue' | 'history'>('new');
   const [uploadedPhotos, setUploadedPhotos] = useState<File[]>([]);
@@ -38,6 +51,9 @@ export default function PhotoAnalysisPage() {
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [sensitivePhotos, setSensitivePhotos] = useState<string[]>([]);
   const [unclearPhotos, setUnclearPhotos] = useState<string[]>([]);
+  const [showReminderOptIn, setShowReminderOptIn] = useState(false);
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
+  const [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
 
   // Tab navigation
   const tabs = [
@@ -156,17 +172,32 @@ export default function PhotoAnalysisPage() {
   };
 
   // Handle sensitive content decision
-  const handleSensitiveDecision = async (decision: 'analyze_once' | 'analyze_24h' | 'cancel') => {
+  const handleSensitiveDecision = async (decision: 'analyze_once' | 'analyze_24h' | 'store_normal' | 'cancel') => {
     setShowSensitiveModal(false);
     
     if (decision === 'cancel') {
       // Remove sensitive photos
       setSensitivePhotos([]);
+      setUploadedPhotos([]);
       return;
     }
     
-    // Proceed with temporary analysis
-    const context = "Analyze this medical condition";
+    if (decision === 'store_normal') {
+      // User wants to store normally - proceed with regular analysis
+      const context = (document.getElementById('analysis-context') as HTMLTextAreaElement)?.value || 'Please analyze this medical condition';
+      const analysis = await analyzePhotos({
+        session_id: activeSession?.id || '',
+        photo_ids: sensitivePhotos,
+        context,
+        temporary_analysis: false
+      });
+      
+      setAnalysisResult(analysis);
+      return;
+    }
+    
+    // For analyze_once or analyze_24h, use temporary analysis
+    const context = (document.getElementById('analysis-context') as HTMLTextAreaElement)?.value || 'Please analyze this medical condition';
     const analysis = await analyzePhotos({
       session_id: activeSession?.id || '',
       photo_ids: sensitivePhotos,
@@ -318,17 +349,122 @@ export default function PhotoAnalysisPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
-                  <PhotoSessionHistory
-                    sessions={sessions.filter(s => s.photo_count && s.photo_count > 0)}
-                    onSelectSession={(session) => {
-                      const sessionId = session.id || session.session_id;
-                      if (sessionId) {
-                        continueSession(sessionId);
-                        setMode('new');
-                      }
-                    }}
-                    showContinueButton={true}
-                  />
+                  {activeSession ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Follow-up Upload Section */}
+                      <div>
+                        <h2 className="text-2xl font-semibold text-white mb-4">
+                          Add Follow-up Photos
+                        </h2>
+                        <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 mb-4">
+                          <h3 className="text-lg font-medium text-white mb-2">
+                            {activeSession.condition_name}
+                          </h3>
+                          <p className="text-sm text-gray-400 mb-4">
+                            Last photo: {activeSession.last_photo_at ? new Date(activeSession.last_photo_at).toLocaleDateString() : 'N/A'}
+                          </p>
+                          <p className="text-sm text-gray-300 mb-4">
+                            {activeSession.description}
+                          </p>
+                        </div>
+                        <PhotoUploadZone
+                          onUpload={handleFileUpload}
+                          uploadedPhotos={uploadedPhotos}
+                          onRemovePhoto={removePhoto}
+                          maxPhotos={5}
+                          isAnalyzing={isAnalyzing}
+                        />
+                      </div>
+
+                      {/* Follow-up Context */}
+                      <div>
+                        <h2 className="text-2xl font-semibold text-white mb-4">Update on Condition</h2>
+                        <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+                          <textarea
+                            id="follow-up-notes"
+                            placeholder="Any changes since last time? How are you feeling? Any new symptoms?"
+                            rows={4}
+                            className="w-full px-4 py-3 rounded-lg bg-white/[0.03] text-white border border-white/[0.05] focus:border-orange-500 focus:outline-none resize-none mb-4"
+                          />
+                          
+                          <div className="flex items-center gap-3 mb-6">
+                            <input
+                              type="checkbox"
+                              id="auto-compare"
+                              defaultChecked
+                              className="w-4 h-4 rounded border-gray-600 bg-white/[0.03] text-orange-500 focus:ring-orange-500"
+                            />
+                            <label htmlFor="auto-compare" className="text-sm text-gray-300">
+                              Automatically compare with previous photos
+                            </label>
+                          </div>
+                          
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={async () => {
+                              if (uploadedPhotos.length === 0) return;
+                              
+                              setIsAnalyzing(true);
+                              try {
+                                const notes = (document.getElementById('follow-up-notes') as HTMLTextAreaElement).value;
+                                const autoCompare = (document.getElementById('auto-compare') as HTMLInputElement).checked;
+                                
+                                const followUpResult = await addFollowUpPhotos(
+                                  activeSession.id || activeSession.session_id || '',
+                                  uploadedPhotos,
+                                  {
+                                    auto_compare: autoCompare,
+                                    notes: notes || undefined
+                                  }
+                                );
+                                
+                                // Analyze the new photos
+                                const analysis = await analyzePhotos({
+                                  session_id: activeSession.id || activeSession.session_id || '',
+                                  photo_ids: followUpResult.uploaded_photos.map(p => p.id),
+                                  context: notes || 'Follow-up photos for tracking progress'
+                                });
+                                
+                                setAnalysisResult(analysis);
+                                setMode('new');
+                              } catch (error) {
+                                console.error('Follow-up error:', error);
+                                alert('Failed to upload follow-up photos');
+                              } finally {
+                                setIsAnalyzing(false);
+                              }
+                            }}
+                            disabled={uploadedPhotos.length === 0 || isAnalyzing}
+                            className="w-full py-3 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            {isAnalyzing ? 'Analyzing...' : 'Analyze Follow-up Photos'}
+                          </motion.button>
+                        </div>
+                        
+                        <button
+                          onClick={() => {
+                            setMode('history');
+                            setUploadedPhotos([]);
+                          }}
+                          className="w-full mt-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                        >
+                          Choose Different Session
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <PhotoSessionHistory
+                      sessions={sessions.filter(s => s.photo_count && s.photo_count > 0)}
+                      onSelectSession={(session) => {
+                        if (session.id) {
+                          continueSession(session.id);
+                          setUploadedPhotos([]);
+                        }
+                      }}
+                      showContinueButton={true}
+                    />
+                  )}
                 </motion.div>
               )}
 
@@ -356,11 +492,19 @@ export default function PhotoAnalysisPage() {
                 >
                   <PhotoAnalysisResults
                     analysis={analysisResult}
+                    sessionId={activeSession?.id || activeSession?.session_id}
                     onNewAnalysis={() => {
                       setAnalysisResult(null);
                       setUploadedPhotos([]);
+                      setMode('new');
                     }}
                     onExport={() => exportSession(analysisResult.analysis_id)}
+                    onEnableReminders={() => {
+                      if (analysisResult.analysis.trackable_metrics && analysisResult.analysis.trackable_metrics.length > 0) {
+                        setCurrentAnalysisId(analysisResult.analysis_id);
+                        setShowReminderOptIn(true);
+                      }
+                    }}
                   />
                 </motion.div>
               )}
@@ -384,6 +528,35 @@ export default function PhotoAnalysisPage() {
             // Remove unclear photos from uploaded
             setUploadedPhotos(prev => prev.filter((_, i) => !unclearPhotos.includes(String(i))));
           }}
+        />
+
+        <ReminderOptIn
+          isOpen={showReminderOptIn}
+          onClose={() => setShowReminderOptIn(false)}
+          analysisId={currentAnalysisId || ''}
+          sessionId={activeSession?.id || activeSession?.session_id || ''}
+          trackableMetrics={analysisResult?.analysis.trackable_metrics}
+          suggestion={analysisResult?.analysis.trackable_metrics && analysisResult.analysis.trackable_metrics.length > 0 ? {
+            benefits_from_tracking: true,
+            suggested_interval_days: 30,
+            reasoning: `Regular monitoring recommended for ${analysisResult.analysis.primary_assessment}`,
+            priority: 'routine'
+          } : undefined}
+          onConfigure={async (config) => {
+            try {
+              await configureReminder(config);
+              setShowReminderOptIn(false);
+              // TODO: Show success toast
+            } catch (error) {
+              console.error('Failed to configure reminder:', error);
+              // TODO: Show error toast
+            }
+          }}
+        />
+
+        <PrivacyInfoModal
+          isOpen={showPrivacyInfo}
+          onClose={() => setShowPrivacyInfo(false)}
         />
       </div>
     </UnifiedAuthGuard>

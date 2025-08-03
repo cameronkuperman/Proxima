@@ -9,12 +9,16 @@ interface PhotoAnalysisResultsProps {
   analysis: AnalysisResult;
   onNewAnalysis: () => void;
   onExport: () => void;
+  onEnableReminders?: () => void;
+  sessionId?: string;
 }
 
 export default function PhotoAnalysisResults({
   analysis,
   onNewAnalysis,
-  onExport
+  onExport,
+  onEnableReminders,
+  sessionId
 }: PhotoAnalysisResultsProps) {
   const getSeverityColor = (confidence: number) => {
     if (confidence >= 80) return 'from-green-500 to-emerald-500';
@@ -244,9 +248,11 @@ export default function PhotoAnalysisResults({
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="mt-4 px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium"
+              onClick={onEnableReminders}
+              className="mt-4 px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium flex items-center gap-2 mx-auto"
             >
-              Start Tracking These Metrics
+              <Calendar className="w-4 h-4" />
+              Enable Follow-up Reminders
             </motion.button>
           </div>
         )}

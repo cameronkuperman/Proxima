@@ -131,13 +131,19 @@ const USE_MOCK_DATA = false;
 export const reportService = {
   // Step 1: Analyze what type of report to generate using proper structure
   async analyzeReport(request: ReportAnalyzeRequest): Promise<ReportAnalyzeResponse> {
-    console.log('Analyzing report with proper structure:', request);
+    console.log('=== ANALYZE REPORT REQUEST ===');
+    console.log('Full Request:', JSON.stringify(request, null, 2));
+    console.log('User ID:', request.user_id);
+    console.log('Context:', request.context);
+    console.log('Available Data:', request.available_data);
     
     const response = await fetch(`${API_BASE_URL}/api/report/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
+
+    console.log('Analyze Response Status:', response.status);
 
     if (!response.ok) {
       const errorData = await response.text();
@@ -332,11 +338,63 @@ export const reportService = {
   // Direct specialist report generation
   async generateSpecialistReport(
     specialty: 'cardiology' | 'neurology' | 'psychiatry' | 'dermatology' | 
-    'gastroenterology' | 'endocrinology' | 'pulmonology',
+    'gastroenterology' | 'endocrinology' | 'pulmonology' | 'primary-care',
     analysisId: string,
-    userId?: string
+    userId?: string,
+    selectedIds?: {
+      quick_scan_ids?: string[];
+      deep_dive_ids?: string[];
+      photo_session_ids?: string[];
+    }
   ): Promise<MedicalReport> {
-    return this.generateReport(analysisId, 'specialist_focused', userId);
+    const endpoint = `/api/report/${specialty}`;
+    const requestBody: any = {
+      analysis_id: analysisId,
+      user_id: userId,
+      ...(selectedIds || {})
+    };
+
+    console.log('=== SPECIALIST REPORT API CALL ===');
+    console.log('Specialty:', specialty);
+    console.log('Endpoint:', endpoint);
+    console.log('Full URL:', `${API_BASE_URL}${endpoint}`);
+    console.log('Request Body:', JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log('Response Status:', response.status);
+    console.log('Response OK:', response.ok);
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Specialist report error:', errorData);
+      throw new Error(`Failed to generate ${specialty} report: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Specialist Report Response:', result);
+    
+    // Ensure proper structure
+    if (!result.report_id || !result.report_type || !result.report_data) {
+      console.warn('Backend returned incomplete report structure, wrapping...');
+      return {
+        report_id: `report-${Date.now()}`,
+        report_type: 'specialist_focused',
+        generated_at: new Date().toISOString(),
+        report_data: result,
+        confidence_score: result.confidence_score || 85,
+        model_used: result.model_used || 'unknown',
+        user_id: userId,
+        analysis_id: analysisId,
+        status: 'success'
+      };
+    }
+    
+    return result;
   },
 
   // Time-based reports

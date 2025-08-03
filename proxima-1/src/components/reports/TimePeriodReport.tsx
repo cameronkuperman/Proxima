@@ -26,7 +26,10 @@ import {
   Download,
   ArrowUp,
   ArrowDown,
-  Minus
+  Minus,
+  Pill,
+  Gauge,
+  AlertTriangle
 } from 'lucide-react';
 import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2';
 import {
@@ -97,13 +100,24 @@ export const TimePeriodReport: React.FC<TimePeriodReportProps> = ({ report }) =>
       improvement: data?.trend_analysis?.overall_improvement || 0
     };
     
+    // Enhanced metrics from new backend structure
+    const enhanced = {
+      photoAnalyses: byType.photo_analyses || 0,
+      generalAssessments: byType.general_assessments || 0,
+      flashAssessments: byType.flash_assessments || 0,
+      healthStories: byType.health_stories || 0,
+      medicationAdherence: data?.medication_insights?.adherence_rate || 0,
+      dataQualityScore: data?.data_quality_metrics?.overall_score || 0
+    };
+    
     return {
       totalInteractions,
       quickScans: byType.quick_scans || 0,
       deepDives: byType.deep_dives || 0,
       photoSessions: byType.photo_sessions || 0,
       mostCommonSymptoms: stats.most_affected_areas || [],
-      trend
+      trend,
+      ...enhanced
     };
   }, [data]);
 
@@ -632,6 +646,146 @@ export const TimePeriodReport: React.FC<TimePeriodReportProps> = ({ report }) =>
         </Section>
       )}
 
+      {/* Multi-Source Analysis - New Backend Feature */}
+      {data?.multi_source_analysis && (
+        <Section id="multi-source" title="Multi-Source Health Insights" icon={Brain}>
+          <div className="space-y-6">
+            {data.multi_source_analysis.photo_symptom_correlation && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold text-purple-900 mb-3">Photo & Symptom Correlation</h3>
+                <p className="text-purple-700">{data.multi_source_analysis.photo_symptom_correlation}</p>
+              </div>
+            )}
+            
+            {data.multi_source_analysis.cross_modal_patterns && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Cross-Modal Patterns</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {data.multi_source_analysis.cross_modal_patterns.map((pattern: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
+                      <span className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        {idx + 1}
+                      </span>
+                      <p className="text-blue-800">{pattern}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+
+      {/* Medication Insights - New Backend Feature */}
+      {data?.medication_insights && (
+        <Section id="medications" title="Medication Insights" icon={Pill}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <MetricCard
+                title="Adherence Rate"
+                value={`${data.medication_insights.adherence_rate || 0}%`}
+                icon={CheckCircle}
+                color="green"
+              />
+              <MetricCard
+                title="Effectiveness Score"
+                value={`${data.medication_insights.effectiveness_score || 0}/10`}
+                icon={Target}
+                color="blue"
+              />
+              <MetricCard
+                title="Side Effects Reported"
+                value={data.medication_insights.side_effects_count || 0}
+                icon={AlertCircle}
+                color="yellow"
+              />
+            </div>
+            
+            {data.medication_insights.adherence_impact && (
+              <div className="bg-green-50 p-6 rounded-lg">
+                <h4 className="font-semibold text-green-900 mb-2">Adherence Impact</h4>
+                <p className="text-green-700">{data.medication_insights.adherence_impact}</p>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+
+      {/* Predictive Insights - New Backend Feature */}
+      {data?.predictive_insights && (
+        <Section id="predictive" title="Predictive Health Insights" icon={TrendingUp}>
+          <div className="space-y-6">
+            {data.predictive_insights.risk_projections && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Risk Projections</h3>
+                <div className="space-y-3">
+                  {Object.entries(data.predictive_insights.risk_projections).map(([condition, risk]: [string, any]) => (
+                    <div key={condition} className="bg-orange-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-orange-900 capitalize">{condition.replace(/_/g, ' ')}</h4>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          risk.level === 'low' ? 'bg-green-100 text-green-800' :
+                          risk.level === 'moderate' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {risk.level} risk
+                        </span>
+                      </div>
+                      <p className="text-sm text-orange-700">{risk.reasoning}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {data.predictive_insights.early_warning_signs && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-red-900 mb-3">Early Warning Signs</h3>
+                <ul className="space-y-2">
+                  {data.predictive_insights.early_warning_signs.map((sign: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-2 text-red-800">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      {sign}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+
+      {/* Quarterly Analysis - Annual Summary Specific */}
+      {isAnnual && data?.quarterly_analysis && (
+        <Section id="quarterly" title="Quarterly Health Analysis" icon={BarChart3}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {['Q1', 'Q2', 'Q3', 'Q4'].map((quarter) => {
+              const qData = data.quarterly_analysis[quarter];
+              if (!qData) return null;
+              return (
+                <div key={quarter} className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-xl">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">{quarter} {new Date().getFullYear()}</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-600">Health Score</p>
+                      <p className="text-2xl font-bold text-purple-700">{qData.health_score}/10</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Main Concern</p>
+                      <p className="font-medium text-gray-900">{qData.primary_concern}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Interactions</p>
+                      <p className="font-medium text-gray-900">{qData.interaction_count}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
+
       {/* Year in Review - Annual Summary Specific */}
       {isAnnual && data?.year_in_review && (
         <Section id="review" title="Year in Review" icon={Calendar}>
@@ -730,10 +884,75 @@ export const TimePeriodReport: React.FC<TimePeriodReportProps> = ({ report }) =>
         </Section>
       )}
 
+      {/* Data Quality Metrics - New Backend Feature */}
+      {data?.data_quality_metrics && (
+        <Section id="data-quality" title="Data Quality & Tracking Consistency" icon={Gauge}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <MetricCard
+                title="Overall Data Quality"
+                value={`${data.data_quality_metrics.overall_score || 0}%`}
+                icon={Gauge}
+                color="purple"
+              />
+              <MetricCard
+                title="Tracking Consistency"
+                value={`${data.data_quality_metrics.consistency_score || 0}%`}
+                icon={Activity}
+                color="blue"
+              />
+              <MetricCard
+                title="Data Completeness"
+                value={`${data.data_quality_metrics.completeness_score || 0}%`}
+                icon={CheckCircle}
+                color="green"
+              />
+            </div>
+            
+            {data.data_quality_metrics.improvement_suggestions && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">How to Improve Your Data Quality</h3>
+                <div className="space-y-2">
+                  {data.data_quality_metrics.improvement_suggestions.map((suggestion: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg">
+                      <TrendingUp className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                      <span className="text-purple-900">{suggestion}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+
       {/* Recommendations */}
       {data?.recommendations && (
         <Section id="recommendations" title="Recommendations for Next Period" icon={Target}>
           <div className="space-y-6">
+            {/* Data-Driven Recommendations - New */}
+            {data.recommendations.data_driven && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl mb-6">
+                <h3 className="text-lg font-semibold text-purple-900 mb-3">AI-Powered Recommendations</h3>
+                <div className="space-y-3">
+                  {data.recommendations.data_driven.map((rec: any, idx: number) => (
+                    <div key={idx} className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <Zap className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-purple-900">{rec.title}</h4>
+                          <p className="text-sm text-purple-700 mt-1">{rec.description}</p>
+                          {rec.expected_outcome && (
+                            <p className="text-xs text-purple-600 mt-2">Expected outcome: {rec.expected_outcome}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {data.recommendations.monitoring_priorities && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Monitoring Priorities</h3>

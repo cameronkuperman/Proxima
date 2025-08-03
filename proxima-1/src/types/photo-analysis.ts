@@ -73,3 +73,88 @@ export interface SessionExport {
   format: 'pdf' | 'json';
   includes_photos: boolean;
 }
+
+export interface ReminderConfig {
+  reminder_id?: string;
+  session_id: string;
+  analysis_id: string;
+  enabled: boolean;
+  interval_days: number;
+  reminder_method: 'email' | 'sms' | 'in_app' | 'none';
+  reminder_text?: string;
+  contact_info?: {
+    email?: string;
+    phone?: string;
+  };
+  next_reminder_date?: string;
+  status?: 'active' | 'paused' | 'completed';
+  ai_reasoning?: string;
+}
+
+export interface FollowUpSuggestion {
+  benefits_from_tracking: boolean;
+  suggested_interval_days: number;
+  reasoning: string;
+  priority: 'routine' | 'important' | 'urgent';
+}
+
+export interface FollowUpUploadResponse {
+  uploaded_photos: PhotoUpload[];
+  comparison_results?: {
+    compared_with: string[];
+    days_since_last: number;
+    analysis: {
+      trend: 'stable' | 'improving' | 'worsening';
+      changes: any;
+      confidence: number;
+      summary: string;
+    };
+  };
+  follow_up_suggestion?: FollowUpSuggestion;
+}
+
+export interface MonitoringSuggestion {
+  monitoring_plan: {
+    recommended_interval_days: number;
+    interval_type: 'fixed' | 'decreasing' | 'conditional';
+    reasoning: string;
+    schedule: {
+      check_number: number;
+      days_from_now: number;
+      purpose: string;
+    }[];
+    red_flags_to_watch: string[];
+    when_to_see_doctor: string;
+  };
+  confidence: number;
+  based_on_conditions: string[];
+}
+
+export interface TimelineEvent {
+  date: string;
+  type: 'photo_upload' | 'follow_up' | 'scheduled_reminder';
+  photos?: PhotoUpload[];
+  analysis_summary?: string;
+  comparison?: {
+    days_since_previous: number;
+    trend: 'stable' | 'improving' | 'worsening';
+    summary: string;
+  };
+  status?: 'completed' | 'upcoming';
+  message?: string;
+}
+
+export interface SessionTimeline {
+  session: PhotoSession;
+  timeline_events: TimelineEvent[];
+  next_action?: {
+    type: 'photo_follow_up' | 'review_results';
+    date: string;
+    days_until: number;
+  };
+  overall_trend?: {
+    direction: 'stable' | 'improving' | 'worsening';
+    total_duration_days: number;
+    number_of_checks: number;
+  };
+}

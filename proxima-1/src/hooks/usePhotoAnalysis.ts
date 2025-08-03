@@ -6,7 +6,11 @@ import {
   PhotoSession, 
   AnalysisResult, 
   UploadResponse,
-  PhotoCategory 
+  PhotoCategory,
+  FollowUpUploadResponse,
+  ReminderConfig,
+  MonitoringSuggestion,
+  SessionTimeline
 } from '@/types/photo-analysis';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
@@ -197,6 +201,103 @@ export function usePhotoAnalysis() {
     window.open(data.export_url, '_blank');
   };
 
+  // Add follow-up photos to session
+  const addFollowUpPhotos = async (
+    sessionId: string, 
+    photos: File[], 
+    options?: {
+      auto_compare?: boolean;
+      notes?: string;
+      compare_with_photo_ids?: string[];
+    }
+  ): Promise<FollowUpUploadResponse> => {
+    const formData = new FormData();
+    photos.forEach(photo => formData.append('photos', photo));
+    if (options?.auto_compare !== undefined) {
+      formData.append('auto_compare', String(options.auto_compare));
+    }
+    if (options?.notes) {
+      formData.append('notes', options.notes);
+    }
+    if (options?.compare_with_photo_ids) {
+      formData.append('compare_with_photo_ids', JSON.stringify(options.compare_with_photo_ids));
+    }
+
+    const response = await fetch(`${API_URL}/api/photo-analysis/session/${sessionId}/follow-up`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) throw new Error('Follow-up upload failed');
+    return response.json();
+  };
+
+  // Configure reminder for session
+  const configureReminder = async (config: ReminderConfig): Promise<ReminderConfig> => {
+    const response = await fetch(`${API_URL}/api/photo-analysis/reminders/configure`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+
+    if (!response.ok) throw new Error('Reminder configuration failed');
+    return response.json();
+  };
+
+  // Get monitoring suggestions
+  const getMonitoringSuggestions = async (
+    analysisId: string,
+    contextInfo?: {
+      is_first_analysis?: boolean;
+      user_concerns?: string;
+      duration?: string;
+    }
+  ): Promise<MonitoringSuggestion> => {
+    const response = await fetch(`${API_URL}/api/photo-analysis/monitoring/suggest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        analysis_id: analysisId,
+        condition_context: contextInfo
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to get monitoring suggestions');
+    return response.json();
+  };
+
+  // Get session timeline
+  const getSessionTimeline = async (sessionId: string): Promise<SessionTimeline> => {
+    const response = await fetch(`${API_URL}/api/photo-analysis/session/${sessionId}/timeline`);
+    
+    if (!response.ok) throw new Error('Failed to fetch timeline');
+    return response.json();
+  };
+
+  // Update reminder settings
+  const updateReminder = async (
+    reminderId: string,
+    updates: Partial<ReminderConfig>
+  ): Promise<ReminderConfig> => {
+    const response = await fetch(`${API_URL}/api/photo-analysis/reminders/${reminderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+
+    if (!response.ok) throw new Error('Failed to update reminder');
+    return response.json();
+  };
+
+  // Delete reminder
+  const deleteReminder = async (reminderId: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/api/photo-analysis/reminders/${reminderId}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) throw new Error('Failed to delete reminder');
+  };
+
   return {
     sessions,
     activeSession,
@@ -208,6 +309,13 @@ export function usePhotoAnalysis() {
     continueSession,
     exportSession,
     categorizePhoto,
-    refetchSessions: fetchSessions
+    refetchSessions: fetchSessions,
+    // New methods
+    addFollowUpPhotos,
+    configureReminder,
+    getMonitoringSuggestions,
+    getSessionTimeline,
+    updateReminder,
+    deleteReminder
   };
 }

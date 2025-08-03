@@ -529,14 +529,14 @@ export default function PredictiveInsightsPage() {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           whileHover={{ scale: 1.01 }}
-                          className={`backdrop-blur-[20px] bg-gradient-to-r ${prediction.gradient || 'from-gray-500/20 to-slate-500/20'} border ${getSeverityColor(prediction.severity || 'info')} rounded-xl p-6 cursor-pointer transition-all`}
+                          className={`backdrop-blur-[20px] bg-gradient-to-r ${prediction.gradient || 'from-gray-500/20 to-slate-500/20'} border ${getSeverityColor(('severity' in prediction ? prediction.severity : null) || 'info')} rounded-xl p-6 cursor-pointer transition-all`}
                           onClick={() => setSelectedPrediction(
                             selectedPrediction === prediction.id ? null : prediction.id
                           )}
                         >
                         <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg bg-white/[0.05] ${getSeverityColor('severity' in prediction ? prediction.severity : 'info')}`}>
-                            {getCategoryIcon('category' in prediction ? prediction.category : '')}
+                          <div className={`p-3 rounded-lg bg-white/[0.05] ${getSeverityColor(('severity' in prediction && prediction.severity) ? prediction.severity : 'info')}`}>
+                            {getCategoryIcon(('category' in prediction && prediction.category) ? prediction.category : 'general')}
                           </div>
                           <div className="flex-1">
                             <h3 className="text-xl font-semibold text-white mb-2">

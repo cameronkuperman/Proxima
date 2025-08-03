@@ -12,7 +12,7 @@ import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 export const dynamic = 'force-dynamic';
 import UnifiedFAB from '@/components/UnifiedFAB';
 import { useTutorial } from '@/contexts/TutorialContext';
-import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp } from 'lucide-react';
+import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp, PersonStanding } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
 import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
@@ -24,6 +24,7 @@ import LogDataModal from '@/components/tracking/LogDataModal';
 import TrackingChart from '@/components/tracking/TrackingChart';
 import { DashboardItem } from '@/services/trackingService';
 import HistoryModal from '@/components/HistoryModal';
+import AssessmentModal from '@/components/modals/AssessmentModal';
 import { formatDistanceToNow } from 'date-fns';
 import { reportsService, GeneratedReport } from '@/services/reportsService';
 import { healthStoryService } from '@/lib/health-story';
@@ -129,12 +130,13 @@ function DashboardContent() {
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
   const [reportsMenuOpen, setReportsMenuOpen] = useState(false);
   // Dynamic health score with weekly comparison
-  const { scoreData, loading: healthScoreLoading, refreshScore } = useHealthScore();
+  const { scoreData, isLoading: healthScoreLoading, fetchHealthScore: refreshScore } = useHealthScore();
   const healthScore = scoreData?.score || 80;
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [quickScanLoading, setQuickScanLoading] = useState(false);
+  const [assessmentModalOpen, setAssessmentModalOpen] = useState<'body' | 'general' | null>(null);
   const [showQuickReportChat, setShowQuickReportChat] = useState(false);
   
   // Weekly AI Dashboard Alert
@@ -825,18 +827,18 @@ function DashboardContent() {
                   </div>
                   <div className="text-sm text-gray-400">
                     <p className="font-medium">Health Score</p>
-                    {scoreData && scoreData.previousScore !== undefined && (
+                    {scoreData && scoreData.previous_score !== undefined && (
                       <p className={`text-xs ${
                         scoreData.trend === 'up' ? 'text-green-400' : 
                         scoreData.trend === 'down' ? 'text-red-400' : 
                         'text-gray-400'
                       }`}>
-                        {scoreData.trend === 'up' && `↑ ${scoreData.difference} from last week`}
-                        {scoreData.trend === 'down' && `↓ ${Math.abs(scoreData.difference!)} from last week`}
+                        {scoreData.trend === 'up' && `↑ ${scoreData.score - (scoreData.previous_score || 0)} from last week`}
+                        {scoreData.trend === 'down' && `↓ ${Math.abs(scoreData.score - (scoreData.previous_score || 0))} from last week`}
                         {scoreData.trend === 'same' && 'Same as last week'}
                       </p>
                     )}
-                    {scoreData && !scoreData.previousScore && (
+                    {scoreData && !scoreData.previous_score && (
                       <p className="text-xs text-gray-500">First week tracked</p>
                     )}
                   </div>
@@ -934,117 +936,50 @@ function DashboardContent() {
                 </button>
               </motion.div>
 
-              {/* Quick Scan Card */}
+              {/* 3D Body Visualization Card */}
               <motion.div
-                data-tour="quick-scan-card"
-                whileHover={{ scale: quickScanLoading ? 1 : 1.02 }}
-                className={`backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden ${
-                  quickScanLoading ? 'pointer-events-none' : ''
-                }`}
-                onClick={() => {
-                  if (!quickScanLoading) {
-                    setQuickScanLoading(true);
-                    router.push('/scan?mode=quick');
-                  }
-                }}
+                data-tour="body-visualization-card"
+                whileHover={{ scale: 1.02 }}
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
+                onClick={() => setAssessmentModalOpen('body')}
               >
-                {/* Loading overlay with shimmer effect */}
-                <AnimatePresence>
-                  {quickScanLoading && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 z-10 flex items-center justify-center"
-                    >
-                      {/* Background blur */}
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-                      
-                      {/* Shimmer effect */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
-                        animate={{ x: [-400, 400] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                      />
-                      
-                      {/* Pulse circles */}
-                      <div className="relative">
-                        <motion.div
-                          className="absolute inset-0 w-24 h-24 bg-emerald-500/20 rounded-full"
-                          animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                        />
-                        <motion.div
-                          className="absolute inset-0 w-24 h-24 bg-emerald-500/30 rounded-full"
-                          animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
-                          transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
-                        />
-                        <motion.div
-                          className="w-24 h-24 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center justify-center"
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        >
-                          <Zap className="w-10 h-10 text-white" />
-                        </motion.div>
-                      </div>
-                      
-                      {/* Loading text */}
-                      <motion.p
-                        className="absolute bottom-6 text-white font-medium"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                      >
-                        Initializing Quick Scan...
-                      </motion.p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                
-                {/* Normal content */}
-                <div className={`transition-all duration-300 ${quickScanLoading ? 'opacity-30' : ''}`}>
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-600/20 to-green-600/20 flex items-center justify-center mb-4 group-hover:from-emerald-600/30 group-hover:to-green-600/30 transition-all">
-                    <Zap className="w-6 h-6 text-emerald-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Quick Scan</h3>
-                  <p className="text-gray-400 text-sm mb-2">Get instant AI-powered health insights</p>
-                  <motion.p 
-                    className="text-xs text-gray-500"
-                    initial={{ opacity: 0.5 }}
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    Last used: {lastActivityTimes.quickScan}
-                  </motion.p>
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 flex items-center justify-center mb-4 group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all">
+                  <PersonStanding className="w-6 h-6 text-purple-400" />
                 </div>
+                <h3 className="text-xl font-semibold text-white mb-2">3D Body Visualization</h3>
+                <p className="text-gray-400 text-sm mb-2">Click exactly where it hurts on our interactive model</p>
+                <p className="text-xs text-gray-500">
+                  Best for: Pain, injuries, rashes, visible symptoms
+                </p>
               </motion.div>
 
-              {/* Deep Dive Card */}
+              {/* General Assessment Card */}
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
-                onClick={() => router.push('/scan?mode=deep')}
+                onClick={() => setAssessmentModalOpen('general')}
               >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-indigo-600/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:from-indigo-600/30 group-hover:to-purple-600/30 transition-all">
-                  <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
+                  <ClipboardList className="w-6 h-6 text-blue-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Deep Dive</h3>
-                <p className="text-gray-400 text-sm mb-2">Advanced analysis with follow-up questions</p>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-indigo-400">2-3 min</span>
-                  <span className="text-gray-500">•</span>
-                  <span className="text-gray-500">Premium</span>
-                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">General Assessment</h3>
+                <p className="text-gray-400 text-sm mb-2">Describe how you're feeling overall</p>
+                <p className="text-xs text-gray-500">
+                  Best for: Fatigue, fever, mental health, multiple symptoms
+                </p>
               </motion.div>
 
               {/* Photo Analysis Card */}
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
                 onClick={() => router.push('/photo-analysis')}
               >
+                {/* Ultra-thin reminder indicator */}
+                {lastActivityTimes.photoAnalysis === 'Follow-up due' && (
+                  <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Follow-up photo recommended" />
+                )}
+                
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:from-pink-600/30 group-hover:to-purple-600/30 transition-all">
                   <Camera className="w-6 h-6 text-pink-400" />
                 </div>
@@ -1668,6 +1603,13 @@ function DashboardContent() {
             metadata={selectedHistoryItem.metadata}
           />
         )}
+
+        {/* Assessment Modal */}
+        <AssessmentModal
+          isOpen={assessmentModalOpen !== null}
+          onClose={() => setAssessmentModalOpen(null)}
+          type={assessmentModalOpen || 'body'}
+        />
 
         {/* Unified FAB */}
         <UnifiedFAB />

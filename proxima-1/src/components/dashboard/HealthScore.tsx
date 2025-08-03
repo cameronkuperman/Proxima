@@ -6,13 +6,13 @@ import { RefreshCw, AlertCircle, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function HealthScore() {
-  const { scoreData, isLoading, error, fetchHealthScore, isRefreshing } = useHealthScore();
+  const { scoreData, isLoading, error, fetchHealthScore, isRefreshing, isGenerating } = useHealthScore();
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return '#10B981'; // green
     if (score >= 75) return '#3B82F6'; // blue  
     if (score >= 60) return '#F59E0B'; // yellow
-    return '#EF4444'; // red
+    return '#F97316'; // orange
   };
 
   const getScoreCategory = (score: number) => {
@@ -22,19 +22,54 @@ export default function HealthScore() {
     return 'Needs Attention';
   };
 
+  const getTrendIcon = (trend: 'up' | 'down' | 'same' | null) => {
+    if (!trend) return null;
+    if (trend === 'up') return '↑';
+    if (trend === 'down') return '↓';
+    return '→';
+  };
+
+  const getTrendColor = (trend: 'up' | 'down' | 'same' | null) => {
+    if (!trend) return 'text-gray-400';
+    if (trend === 'up') return 'text-green-400';
+    if (trend === 'down') return 'text-red-400';
+    return 'text-gray-400';
+  };
+
   if (isLoading && !scoreData) {
     return (
       <div className="backdrop-blur-[20px] bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-pulse space-y-4 w-full">
-            <div className="h-32 w-32 bg-white/[0.05] rounded-full mx-auto"></div>
-            <div className="h-4 bg-white/[0.05] rounded w-2/3 mx-auto"></div>
-            <div className="space-y-2">
-              <div className="h-12 bg-white/[0.05] rounded"></div>
-              <div className="h-12 bg-white/[0.05] rounded"></div>
-              <div className="h-12 bg-white/[0.05] rounded"></div>
+          {isGenerating ? (
+            <div className="text-center space-y-4">
+              <motion.div
+                className="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+              <div>
+                <p className="text-white font-medium">Generating your health score...</p>
+                <p className="text-gray-400 text-sm mt-1">Analyzing your health data</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="animate-pulse space-y-4 w-full">
+              <div className="h-32 w-32 bg-white/[0.05] rounded-full mx-auto"></div>
+              <div className="h-4 bg-white/[0.05] rounded w-2/3 mx-auto"></div>
+              <div className="space-y-2">
+                <div className="h-12 bg-white/[0.05] rounded"></div>
+                <div className="h-12 bg-white/[0.05] rounded"></div>
+                <div className="h-12 bg-white/[0.05] rounded"></div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -130,16 +165,37 @@ export default function HealthScore() {
           </div>
         </motion.div>
 
-        {/* Score Category */}
-        <motion.div
-          className="text-lg font-medium"
-          style={{ color: scoreColor }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-        >
-          {scoreCategory}
-        </motion.div>
+        {/* Score Category & Trend */}
+        <div className="space-y-2">
+          <motion.div
+            className="text-lg font-medium"
+            style={{ color: scoreColor }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+          >
+            {scoreCategory}
+          </motion.div>
+
+          {/* Week-over-week trend */}
+          {scoreData.previous_score !== null && scoreData.trend && (
+            <motion.div
+              className="flex items-center justify-center gap-2 text-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.75 }}
+            >
+              <span className={getTrendColor(scoreData.trend)}>
+                {getTrendIcon(scoreData.trend)}
+              </span>
+              <span className="text-gray-400">
+                {scoreData.trend === 'up' && `+${scoreData.score - scoreData.previous_score} from last week`}
+                {scoreData.trend === 'down' && `${scoreData.score - scoreData.previous_score} from last week`}
+                {scoreData.trend === 'same' && 'Same as last week'}
+              </span>
+            </motion.div>
+          )}
+        </div>
 
         {/* Reasoning */}
         {scoreData.reasoning && (
@@ -188,19 +244,24 @@ export default function HealthScore() {
       </div>
 
       {/* Footer Info */}
-      <div className="mt-6 pt-4 border-t border-white/[0.05] flex items-center justify-between text-xs">
-        <div className="text-gray-500">
-          {scoreData.cached && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Cached result
-            </span>
-          )}
-        </div>
-        {scoreData.expires_at && (
+      <div className="mt-6 pt-4 border-t border-white/[0.05] space-y-2">
+        <div className="flex items-center justify-between text-xs">
           <div className="text-gray-500">
-            Next update: {new Date(scoreData.expires_at).toLocaleTimeString()}
+            {scoreData.cached && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Cached result
+              </span>
+            )}
           </div>
+          <div className="text-gray-500">
+            Week of {new Date(scoreData.week_of).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </div>
+        </div>
+        {!scoreData.previous_score && (
+          <p className="text-xs text-center text-gray-500 italic">
+            First week tracked - check back next week for trends!
+          </p>
         )}
       </div>
     </div>

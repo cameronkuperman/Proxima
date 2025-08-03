@@ -79,11 +79,13 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
     const generateTrackingSuggestion = async () => {
       // Only generate tracking for Quick Scan, not Deep Dive
       if (mode === 'quick' && scanData.scan_id && !isGeneratingTracking) {
+        console.log('[QuickScanResults] Generating tracking suggestion for quick scan:', scanData.scan_id)
         setIsGeneratingTracking(true)
         try {
           const { data: { user } } = await supabase.auth.getUser()
           
           if (user) {
+            console.log('[QuickScanResults] Calling generateSuggestion for quick_scan')
             await generateSuggestion('quick_scan', scanData.scan_id, user.id)
             // Small delay to ensure the suggestion is loaded
             setTimeout(() => {
@@ -97,12 +99,14 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
         }
       } else if (mode === 'deep' && scanData.scan_id && !isGeneratingTracking) {
         // For Deep Dive, try to generate tracking with deep_dive type
+        console.log('[QuickScanResults] Generating tracking suggestion for deep dive:', scanData.scan_id)
         setIsGeneratingTracking(true)
         try {
           const { data: { user } } = await supabase.auth.getUser()
           
           if (user) {
             // Use deep_dive type for Deep Dive results
+            console.log('[QuickScanResults] Calling generateSuggestion for deep_dive')
             await generateSuggestion('deep_dive', scanData.scan_id, user.id)
             setTimeout(() => {
               setShowTrackingSuggestion(true)
@@ -114,6 +118,8 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
           // Don't show error to user for Deep Dive tracking failures
           setIsGeneratingTracking(false)
         }
+      } else {
+        console.log('[QuickScanResults] Skipping tracking generation:', { mode, scan_id: scanData.scan_id, isGeneratingTracking })
       }
     }
     

@@ -793,7 +793,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
               className="p-4 bg-white/[0.02] border border-white/[0.05] rounded-lg"
             >
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-white">{prediction.event_description || prediction.event}</h4>
+                <h4 className="font-medium text-white">{prediction.event_description}</h4>
                 {prediction.preventable && (
                   <span className="text-xs px-2 py-1 bg-green-500/10 text-green-400 rounded-full">
                     Preventable
@@ -830,16 +830,8 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
         <div className="flex justify-end gap-3">
           <button 
             onClick={async () => {
-              const result = await exportPDF([story.id], {
-                includeAnalysis: true,
-                includeNotes: !!storyNote
-              });
-              if (result?.pdf_url) {
-                window.open(result.pdf_url, '_blank');
-                toast.success('PDF exported successfully');
-              } else {
-                toast.error('Failed to export PDF');
-              }
+              await exportPDF();
+              toast.info('PDF export is not yet implemented');
             }}
             disabled={isExporting}
             className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -848,14 +840,8 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
           </button>
           <button 
             onClick={async () => {
-              const result = await shareWithDoctor([story.id]);
-              if (result?.share_link) {
-                setShareLink(result.share_link);
-                setShowShareModal(true);
-                toast.success('Share link created');
-              } else {
-                toast.error('Failed to create share link');
-              }
+              await shareWithDoctor();
+              toast.info('Share with doctor is not yet implemented');
             }}
             disabled={isSharing}
             className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -898,8 +884,8 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="text-sm text-gray-300">{pattern.pattern_name || pattern.pattern}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{pattern.last_seen_description || pattern.lastSeen}</p>
+                            <p className="text-sm text-gray-300">{pattern.pattern_name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{pattern.last_seen_description}</p>
                           </div>
                           <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
                             pattern.significance === 'high' ? 'bg-orange-400/60' :
@@ -950,7 +936,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
                       className={`group cursor-pointer ${
-                        strategy.completion_status === 'completed' ? 'opacity-60' : ''
+                        'completion_status' in strategy && strategy.completion_status === 'completed' ? 'opacity-60' : ''
                       }`}
                     >
                       <div className="flex items-start gap-2">
@@ -958,7 +944,7 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
-                              const newStatus = strategy.completion_status === 'completed' ? 'pending' : 'completed';
+                              const newStatus = ('completion_status' in strategy && strategy.completion_status === 'completed') ? 'pending' : 'completed';
                               await updateStrategyStatus(strategy.id, newStatus);
                               toast.success(`Strategy marked as ${newStatus}`);
                             } catch (error) {
@@ -966,22 +952,22 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
                             }
                           }}
                           className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all ${
-                            strategy.completion_status === 'completed' 
+                            'completion_status' in strategy && strategy.completion_status === 'completed' 
                               ? 'bg-green-500 border-green-500' 
                               : 'border-gray-600 hover:border-gray-400'
                           }`}
                         >
-                          {strategy.completion_status === 'completed' && (
+                          {'completion_status' in strategy && strategy.completion_status === 'completed' && (
                             <Check className="w-3 h-3 text-white" />
                           )}
                         </button>
                         <div className="flex-1">
                           <p className={`text-xs text-gray-300 group-hover:text-white transition-colors leading-relaxed ${
-                            strategy.completion_status === 'completed' ? 'line-through' : ''
+                            'completion_status' in strategy && strategy.completion_status === 'completed' ? 'line-through' : ''
                           }`}>
                             {strategy.strategy}
                           </p>
-                          {strategy.priority && (
+                          {'priority' in strategy && strategy.priority && (
                             <p className="text-[10px] text-gray-500 mt-1">
                               Priority: {strategy.priority}/10 • {strategy.strategy_type}
                             </p>

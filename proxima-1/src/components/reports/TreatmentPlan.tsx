@@ -22,9 +22,24 @@ import {
 import { Medication } from '@/types/reports';
 
 interface TreatmentPlanProps {
-  specialty: string;
+  specialty?: string;
   medications?: Medication[];
+  immediateTherapy?: Medication[];
+  symptomManagement?: {
+    prn_medications?: string[];
+    activity_modification?: string;
+    monitoring?: string;
+  };
   lifestyleInterventions?: Record<string, string>;
+  behavioralInterventions?: {
+    immediate?: string[];
+    behavioral_activation?: string[];
+    coping_skills?: string[];
+  };
+  nonPharmacologic?: {
+    recommended?: string[];
+    physical_therapy?: string;
+  };
   preventiveMeasures?: string[];
   immediateActions?: string[];
   monitoringPlan?: string[];
@@ -45,7 +60,11 @@ const lifestyleIcons: Record<string, any> = {
 export const TreatmentPlan: React.FC<TreatmentPlanProps> = ({
   specialty,
   medications = [],
+  immediateTherapy = [],
+  symptomManagement,
   lifestyleInterventions = {},
+  behavioralInterventions,
+  nonPharmacologic,
   preventiveMeasures = [],
   immediateActions = [],
   monitoringPlan = [],
@@ -54,7 +73,10 @@ export const TreatmentPlan: React.FC<TreatmentPlanProps> = ({
   const [expandedMedications, setExpandedMedications] = useState<Set<number>>(new Set());
   const [expandedSections, setExpandedSections] = useState({
     medications: true,
+    symptomManagement: true,
     lifestyle: true,
+    behavioral: false,
+    nonPharmacologic: false,
     preventive: false,
     monitoring: false
   });
@@ -107,8 +129,8 @@ export const TreatmentPlan: React.FC<TreatmentPlanProps> = ({
         </motion.div>
       )}
 
-      {/* Medications Section */}
-      {medications.length > 0 && (
+      {/* Medications Section - Support both old and new structure */}
+      {(medications.length > 0 || immediateTherapy.length > 0) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -121,7 +143,7 @@ export const TreatmentPlan: React.FC<TreatmentPlanProps> = ({
             <div className="flex items-center gap-3">
               <Pill className="w-5 h-5 text-green-600" />
               <h3 className="font-bold text-gray-900">Medication Recommendations</h3>
-              <span className="text-sm text-gray-500">({medications.length})</span>
+              <span className="text-sm text-gray-500">({medications.length + immediateTherapy.length})</span>
             </div>
             {expandedSections.medications ? (
               <ChevronDown className="w-5 h-5 text-gray-500" />
@@ -140,7 +162,7 @@ export const TreatmentPlan: React.FC<TreatmentPlanProps> = ({
                 className="border-t border-gray-100"
               >
                 <div className="p-4 space-y-3">
-                  {medications.map((med, idx) => {
+                  {[...medications, ...immediateTherapy].map((med, idx) => {
                     const isExpanded = expandedMedications.has(idx);
                     
                     return (
@@ -210,6 +232,68 @@ export const TreatmentPlan: React.FC<TreatmentPlanProps> = ({
         </motion.div>
       )}
 
+      {/* Symptom Management Section */}
+      {symptomManagement && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+        >
+          <button
+            onClick={() => toggleSection('symptomManagement')}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-orange-600" />
+              <h3 className="font-bold text-gray-900">Symptom Management</h3>
+            </div>
+            {expandedSections.symptomManagement ? (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {expandedSections.symptomManagement && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="border-t border-gray-100"
+              >
+                <div className="p-4 bg-orange-50">
+                  {symptomManagement.prn_medications && symptomManagement.prn_medications.length > 0 && (
+                    <div className="mb-3">
+                      <p className="font-medium text-orange-900 mb-1">As-Needed Medications:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {symptomManagement.prn_medications.map((med, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">{med}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {symptomManagement.activity_modification && (
+                    <div className="mb-3">
+                      <p className="font-medium text-orange-900 mb-1">Activity Modifications:</p>
+                      <p className="text-sm text-gray-700">{symptomManagement.activity_modification}</p>
+                    </div>
+                  )}
+                  {symptomManagement.monitoring && (
+                    <div>
+                      <p className="font-medium text-orange-900 mb-1">Monitoring:</p>
+                      <p className="text-sm text-gray-700">{symptomManagement.monitoring}</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
       {/* Lifestyle Interventions */}
       {Object.keys(lifestyleInterventions).length > 0 && (
         <motion.div
@@ -265,6 +349,132 @@ export const TreatmentPlan: React.FC<TreatmentPlanProps> = ({
                       );
                     })}
                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Behavioral Interventions */}
+      {behavioralInterventions && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+        >
+          <button
+            onClick={() => toggleSection('behavioral')}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Brain className="w-5 h-5 text-blue-600" />
+              <h3 className="font-bold text-gray-900">Behavioral Interventions</h3>
+            </div>
+            {expandedSections.behavioral ? (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {expandedSections.behavioral && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="border-t border-gray-100"
+              >
+                <div className="p-4 bg-blue-50 space-y-3">
+                  {behavioralInterventions.immediate && behavioralInterventions.immediate.length > 0 && (
+                    <div>
+                      <p className="font-medium text-blue-900 mb-1">Immediate Actions:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {behavioralInterventions.immediate.map((action, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">{action}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {behavioralInterventions.behavioral_activation && behavioralInterventions.behavioral_activation.length > 0 && (
+                    <div>
+                      <p className="font-medium text-blue-900 mb-1">Behavioral Activation:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {behavioralInterventions.behavioral_activation.map((activity, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">{activity}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {behavioralInterventions.coping_skills && behavioralInterventions.coping_skills.length > 0 && (
+                    <div>
+                      <p className="font-medium text-blue-900 mb-1">Coping Strategies:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {behavioralInterventions.coping_skills.map((skill, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">{skill}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Non-Pharmacologic Treatments */}
+      {nonPharmacologic && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+        >
+          <button
+            onClick={() => toggleSection('nonPharmacologic')}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Activity className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-bold text-gray-900">Non-Pharmacologic Treatments</h3>
+            </div>
+            {expandedSections.nonPharmacologic ? (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {expandedSections.nonPharmacologic && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="border-t border-gray-100"
+              >
+                <div className="p-4 bg-indigo-50">
+                  {nonPharmacologic.recommended && nonPharmacologic.recommended.length > 0 && (
+                    <div className="mb-3">
+                      <p className="font-medium text-indigo-900 mb-1">Recommended Therapies:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {nonPharmacologic.recommended.map((therapy, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">{therapy}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {nonPharmacologic.physical_therapy && (
+                    <div>
+                      <p className="font-medium text-indigo-900 mb-1">Physical Therapy:</p>
+                      <p className="text-sm text-gray-700">{nonPharmacologic.physical_therapy}</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

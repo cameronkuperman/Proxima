@@ -3,11 +3,15 @@
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Zap, Brain } from 'lucide-react'
+import { ArrowLeft, Zap, Brain, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import UnifiedScanForm from '@/components/UnifiedScanForm'
+import GeneralAssessmentForm from '@/components/GeneralAssessmentForm'
 import QuickScanResults from '@/components/QuickScanResults'
 import DeepDiveChat from '@/components/DeepDiveChat'
+import GeneralDeepDiveChat from '@/components/GeneralDeepDiveChat'
+import FlashAssessmentResult from '@/components/results/FlashAssessmentResult'
+import GeneralAssessmentResult from '@/components/results/GeneralAssessmentResult'
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard'
 import { useQuickScan } from '@/hooks/useQuickScan'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,7 +22,8 @@ export const dynamic = 'force-dynamic'
 function ScanPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const mode = searchParams.get('mode') || 'quick'
+  const mode = searchParams.get('mode') as 'flash' | 'quick' | 'deep' || 'quick'
+  const source = searchParams.get('source') || 'body' // 'body' or 'general'
   const bodyPart = searchParams.get('bodyPart')
   const formDataParam = searchParams.get('formData')
   const fromScan = searchParams.get('fromScan')
@@ -78,11 +83,23 @@ function ScanPageContent() {
   }, [fromScan, continueSession, bodyPart, formDataParam, mode, targetConfidence])
 
   const handleFormComplete = async (data: any) => {
-    if (mode === 'quick') {
+    if (source === 'general' && data.result) {
+      // General assessment already has the result from API
+      setScanData({
+        ...data,
+        source: 'general'
+      })
+      setCurrentStep('analysis')
+    } else if (source === 'body' && (mode === 'quick' || mode === 'flash')) {
+      // Body scan - use existing performScan
       try {
-        const result = await performScan(data.bodyPart, data.formData)
+        const result = await performScan(
+          data.bodyPart, 
+          data.formData
+        )
         setScanData({
           ...data,
+          bodyPart: data.bodyPart,
           ...result,
           analysis: result.analysis,
           confidence: result.confidence,
@@ -95,7 +112,11 @@ function ScanPageContent() {
       }
     } else {
       // Deep dive mode - pass data directly
-      setScanData(data)
+      setScanData({
+        ...data,
+        source,
+        bodyPart: source === 'general' ? data.category || 'general' : data.bodyPart
+      })
       setCurrentStep('analysis')
     }
   }
@@ -124,7 +145,12 @@ function ScanPageContent() {
               </button>
               
               <div className="flex items-center gap-2">
-                {mode === 'quick' ? (
+                {mode === 'flash' ? (
+                  <>
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                    <span className="font-medium text-white">Flash Assessment</span>
+                  </>
+                ) : mode === 'quick' ? (
                   <>
                     <Zap className="w-5 h-5 text-emerald-400" />
                     <span className="font-medium text-white">Quick Scan</span>
@@ -138,7 +164,7 @@ function ScanPageContent() {
               </div>
 
               <div className="text-sm text-gray-400">
-                {mode === 'quick' ? '3-5 seconds' : '2-3 minutes'}
+                {mode === 'flash' ? '10 seconds' : mode === 'quick' ? '30-45 seconds' : '2-5 minutes'}
               </div>
             </div>
           </div>
@@ -162,12 +188,16 @@ function ScanPageContent() {
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", damping: 15 }}
                     className={`w-24 h-24 mx-auto mb-8 rounded-full flex items-center justify-center ${
-                      mode === 'quick' 
+                      mode === 'flash'
+                        ? 'bg-gradient-to-br from-amber-500/20 to-yellow-500/20'
+                        : mode === 'quick' 
                         ? 'bg-gradient-to-br from-emerald-500/20 to-green-500/20' 
                         : 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20'
                     }`}
                   >
-                    {mode === 'quick' ? (
+                    {mode === 'flash' ? (
+                      <Sparkles className="w-12 h-12 text-amber-400" />
+                    ) : mode === 'quick' ? (
                       <Zap className="w-12 h-12 text-emerald-400" />
                     ) : (
                       <Brain className="w-12 h-12 text-indigo-400" />
@@ -180,7 +210,7 @@ function ScanPageContent() {
                     transition={{ delay: 0.2 }}
                     className="text-4xl font-bold text-white mb-4"
                   >
-                    {mode === 'quick' ? 'Quick Scan' : 'Deep Dive Analysis'}
+                    {mode === 'flash' ? 'Flash Assessment' : mode === 'quick' ? 'Quick Scan' : 'Deep Dive Analysis'}
                   </motion.h1>
                   
                   <motion.p
@@ -189,7 +219,9 @@ function ScanPageContent() {
                     transition={{ delay: 0.3 }}
                     className="text-gray-400 text-lg"
                   >
-                    {mode === 'quick' 
+                    {mode === 'flash'
+                      ? 'Tell us what\'s happening in your own words'
+                      : mode === 'quick' 
                       ? 'Get instant AI-powered health insights'
                       : 'Comprehensive analysis with personalized follow-up questions'
                     }
@@ -207,11 +239,19 @@ function ScanPageContent() {
                 exit={{ opacity: 0, x: -100 }}
                 className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
               >
-                <UnifiedScanForm 
-                  mode={mode as 'quick' | 'deep'}
-                  onComplete={handleFormComplete}
-                  userGender={userGender}
-                />
+                {source === 'general' ? (
+                  <GeneralAssessmentForm
+                    mode={mode as 'flash' | 'quick' | 'deep'}
+                    onComplete={handleFormComplete}
+                    userGender={userGender}
+                  />
+                ) : (
+                  <UnifiedScanForm 
+                    mode={mode as 'quick' | 'deep'}
+                    onComplete={handleFormComplete}
+                    userGender={userGender}
+                  />
+                )}
               </motion.div>
             )}
 
@@ -224,24 +264,68 @@ function ScanPageContent() {
                 exit={{ opacity: 0, x: -100 }}
                 className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
               >
-                {mode === 'quick' ? (
+                {/* Flash Assessment Result */}
+                {mode === 'flash' && scanData.source === 'general' && scanData.result ? (
+                  <FlashAssessmentResult 
+                    result={scanData.result}
+                    userQuery={scanData.formData.symptoms}
+                    onNewAssessment={() => {
+                      setScanData(null)
+                      setCurrentStep('form')
+                    }}
+                  />
+                ) : 
+                /* General Assessment Result */
+                mode === 'quick' && scanData.source === 'general' && scanData.result ? (
+                  <GeneralAssessmentResult 
+                    result={scanData.result}
+                    category={scanData.category}
+                    formData={scanData.formData}
+                    onNewAssessment={() => {
+                      setScanData(null)
+                      setCurrentStep('form')
+                    }}
+                    onDeepDive={() => {
+                      // Switch to deep dive mode with existing data
+                      const params = new URLSearchParams({
+                        mode: 'deep',
+                        source: 'general',
+                        category: scanData.category,
+                        formData: encodeURIComponent(JSON.stringify(scanData.formData))
+                      })
+                      router.push(`/scan?${params.toString()}`)
+                    }}
+                  />
+                ) : 
+                /* Body Scan Results */
+                (mode === 'quick' || mode === 'flash') && scanData.source !== 'general' ? (
                   <QuickScanResults 
                     scanData={scanData}
                     onNewScan={() => {
                       setScanData(null)
                       setCurrentStep('form')
                     }}
-                    mode="quick"
+                    mode={mode === 'flash' ? 'quick' : mode}
                   />
-                ) : (
-                  <DeepDiveChat 
-                    scanData={scanData}
-                    onComplete={(finalAnalysis) => {
-                      // Show same results UI with deep dive data
-                      console.log('Deep Dive complete:', finalAnalysis)
-                    }}
-                  />
-                )}
+                ) : 
+                /* Deep Dive */
+                mode === 'deep' ? (
+                  scanData.source === 'general' ? (
+                    <GeneralDeepDiveChat 
+                      scanData={scanData}
+                      onComplete={(finalAnalysis) => {
+                        console.log('General Deep Dive complete:', finalAnalysis)
+                      }}
+                    />
+                  ) : (
+                    <DeepDiveChat 
+                      scanData={scanData}
+                      onComplete={(finalAnalysis) => {
+                        console.log('Deep Dive complete:', finalAnalysis)
+                      }}
+                    />
+                  )
+                ) : null}
               </motion.div>
             )}
           </AnimatePresence>

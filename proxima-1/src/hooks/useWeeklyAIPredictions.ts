@@ -90,6 +90,8 @@ export function useWeeklyAIPredictions() {
   }, [user?.id]);
 
   const fetchPredictions = async () => {
+    if (!user?.id) return;
+    
     try {
       setIsLoading(true);
       const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';

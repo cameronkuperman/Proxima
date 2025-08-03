@@ -56,9 +56,11 @@ export const useTrackingStore = create<TrackingStore>()(
 
       // Fetch dashboard data
       fetchDashboard: async (userId: string) => {
+        console.log('[TrackingStore] fetchDashboard called for user:', userId)
         set({ loading: true, error: null })
         try {
           const data = await trackingService.getDashboard(userId)
+          console.log('[TrackingStore] Dashboard items received:', data.dashboard_items)
           set({ 
             dashboardItems: data.dashboard_items,
             loading: false 
@@ -73,9 +75,11 @@ export const useTrackingStore = create<TrackingStore>()(
 
       // Generate tracking suggestion
       generateSuggestion: async (sourceType: 'quick_scan' | 'deep_dive', sourceId: string, userId: string) => {
+        console.log('[TrackingStore] generateSuggestion called:', { sourceType, sourceId, userId })
         set({ loading: true, error: null })
         try {
           const data = await trackingService.generateTrackingSuggestion(sourceType, sourceId, userId)
+          console.log('[TrackingStore] Tracking suggestion response:', data)
           if (data.status === 'success') {
             set({ 
               currentSuggestion: data.suggestion,
@@ -84,6 +88,7 @@ export const useTrackingStore = create<TrackingStore>()(
             })
           }
         } catch (error) {
+          console.error('[TrackingStore] Error generating suggestion:', error)
           set({ 
             error: error instanceof Error ? error.message : 'Failed to generate suggestion',
             loading: false 

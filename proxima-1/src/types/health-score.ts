@@ -5,10 +5,12 @@ export interface HealthScoreAction {
 
 export interface HealthScoreResponse {
   score: number;
+  previous_score: number | null;
+  trend: 'up' | 'down' | 'same' | null;
   actions: HealthScoreAction[];
   reasoning?: string;
   generated_at: string;
-  expires_at: string;
+  week_of: string;
   cached: boolean;
 }
 

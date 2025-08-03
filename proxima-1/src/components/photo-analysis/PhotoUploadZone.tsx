@@ -187,7 +187,7 @@ export default function PhotoUploadZone({
           <AlertCircle className="w-5 h-5 text-gray-400 mt-0.5" />
           <div className="text-xs text-gray-400">
             <p className="mb-1">Your photos are encrypted and stored securely. Only you and your authorized healthcare providers can access them.</p>
-            <p>Sensitive area photos can be analyzed without storage if preferred.</p>
+            <p>Sensitive area photos can be analyzed without storage if preferred. <button className="text-blue-400 hover:text-blue-300 underline" onClick={() => window.dispatchEvent(new CustomEvent('showPrivacyInfo'))}>Learn more</button></p>
           </div>
         </div>
       </motion.div>

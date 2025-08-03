@@ -15,6 +15,7 @@ interface DeepDiveChatProps {
     mode: 'deep'
     continueSession?: string
     targetConfidence?: number
+    fromScan?: string
   }
   onComplete: (finalAnalysis: any) => void
 }
@@ -493,9 +494,13 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       console.log('Auto-showing Deep Dive results')
       setShowReport(true)
       
-      // Generate tracking suggestion
-      if (result.deep_dive_id && user?.id) {
+      // Generate tracking suggestion only if not continuing from a quick scan
+      // (Quick scan already generated its own tracking suggestion)
+      if (result.deep_dive_id && user?.id && !scanData.fromScan) {
+        console.log('[DeepDiveChat] Generating tracking suggestion for deep dive:', result.deep_dive_id)
         await generateSuggestion('deep_dive', result.deep_dive_id, user.id)
+      } else if (scanData.fromScan) {
+        console.log('[DeepDiveChat] Skipping tracking suggestion - continuing from quick scan:', scanData.fromScan)
       }
       
       // Add final diagnosis message with proper null checking
