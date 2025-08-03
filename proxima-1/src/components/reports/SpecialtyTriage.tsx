@@ -144,8 +144,8 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
   deepDives = []
 }) => {
   const [primaryConcern, setPrimaryConcern] = useState(initialConcern);
-  const [selectedQuickScans, setSelectedQuickScans] = useState<string[]>([]);
-  const [selectedDeepDives, setSelectedDeepDives] = useState<string[]>([]);
+  const [selectedQuickScans, setSelectedQuickScans] = useState<string[]>(quickScans.map(scan => scan.id));
+  const [selectedDeepDives, setSelectedDeepDives] = useState<string[]>(deepDives.map(dive => dive.id));
   const [isLoading, setIsLoading] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
   const [error, setError] = useState<string | null>(null);

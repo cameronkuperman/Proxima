@@ -66,9 +66,9 @@ export default function GeneralDeepDiveResult({
   const [expandedReasoning, setExpandedReasoning] = useState(false)
   const [expandedCause, setExpandedCause] = useState<number | null>(null)
   
-  const categoryColor = categoryColors[result.category as keyof typeof categoryColors] || categoryColors.unsure
-  const sessionMinutes = Math.floor(result.session_duration_ms / 60000)
-  const sessionSeconds = Math.floor((result.session_duration_ms % 60000) / 1000)
+  const categoryColor = categoryColors[(result?.category || 'unsure') as keyof typeof categoryColors] || categoryColors.unsure
+  const sessionMinutes = Math.floor((result?.session_duration_ms || 0) / 60000)
+  const sessionSeconds = Math.floor(((result?.session_duration_ms || 0) % 60000) / 1000)
 
   const urgencyConfig = {
     low: { color: 'text-green-400', icon: CheckCircle },
@@ -76,7 +76,9 @@ export default function GeneralDeepDiveResult({
     high: { color: 'text-red-400', icon: AlertCircle }
   }
 
-  const UrgencyIcon = urgencyConfig[result.analysis.urgency].icon
+  // Safely get urgency with fallback
+  const urgency = result.analysis?.urgency || 'medium'
+  const UrgencyIcon = urgencyConfig[urgency as keyof typeof urgencyConfig]?.icon || AlertCircle
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -126,10 +128,10 @@ export default function GeneralDeepDiveResult({
       >
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">Primary Assessment</h3>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.05] ${urgencyConfig[result.analysis.urgency].color}`}>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.05] ${urgencyConfig[urgency as keyof typeof urgencyConfig]?.color || 'text-amber-400'}`}>
             <UrgencyIcon className="w-4 h-4" />
             <span className="text-sm font-medium">
-              {result.analysis.urgency.charAt(0).toUpperCase() + result.analysis.urgency.slice(1)} Priority
+              {urgency.charAt(0).toUpperCase() + urgency.slice(1)} Priority
             </span>
           </div>
         </div>

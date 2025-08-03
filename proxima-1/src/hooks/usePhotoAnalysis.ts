@@ -211,6 +211,18 @@ export function usePhotoAnalysis() {
       compare_with_photo_ids?: string[];
     }
   ): Promise<FollowUpUploadResponse> => {
+    // Debug logging
+    console.log('addFollowUpPhotos called with:', {
+      sessionId,
+      photosCount: photos.length,
+      options
+    });
+    
+    if (!sessionId) {
+      console.error('No sessionId provided to addFollowUpPhotos');
+      throw new Error('Session ID is required');
+    }
+    
     const formData = new FormData();
     photos.forEach(photo => formData.append('photos', photo));
     if (options?.auto_compare !== undefined) {
@@ -223,7 +235,10 @@ export function usePhotoAnalysis() {
       formData.append('compare_with_photo_ids', JSON.stringify(options.compare_with_photo_ids));
     }
 
-    const response = await fetch(`${API_URL}/api/photo-analysis/session/${sessionId}/follow-up`, {
+    const url = `${API_URL}/api/photo-analysis/session/${sessionId}/follow-up`;
+    console.log('Making follow-up request to:', url);
+    
+    const response = await fetch(url, {
       method: 'POST',
       body: formData
     });

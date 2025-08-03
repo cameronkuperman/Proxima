@@ -157,8 +157,24 @@ export const reportService = {
   },
 
   // Step 2: Generate the actual report using proper structure
-  async generateReport(analysisId: string, reportType: ReportType, userId?: string): Promise<MedicalReport> {
-    console.log('Generating report:', { analysisId, reportType, userId });
+  async generateReport(
+    analysisId: string, 
+    reportType: ReportType, 
+    userId?: string,
+    selectedIds?: {
+      quick_scan_ids?: string[];
+      deep_dive_ids?: string[];
+      flash_assessment_ids?: string[];
+      general_assessment_ids?: string[];
+      general_deepdive_ids?: string[];
+      photo_session_ids?: string[];
+    },
+    additionalParams?: {
+      symptom_focus?: string;
+      specialty?: string;
+    }
+  ): Promise<MedicalReport> {
+    console.log('Generating report:', { analysisId, reportType, userId, selectedIds, additionalParams });
     
     const endpoints: Record<ReportType, string> = {
       'comprehensive': '/api/report/comprehensive',
@@ -176,6 +192,37 @@ export const reportService = {
       analysis_id: analysisId,
       user_id: userId
     };
+    
+    // Add selected IDs if provided
+    if (selectedIds) {
+      if (selectedIds.quick_scan_ids?.length) {
+        requestBody.quick_scan_ids = selectedIds.quick_scan_ids;
+      }
+      if (selectedIds.deep_dive_ids?.length) {
+        requestBody.deep_dive_ids = selectedIds.deep_dive_ids;
+      }
+      if (selectedIds.flash_assessment_ids?.length) {
+        requestBody.flash_assessment_ids = selectedIds.flash_assessment_ids;
+      }
+      if (selectedIds.general_assessment_ids?.length) {
+        requestBody.general_assessment_ids = selectedIds.general_assessment_ids;
+      }
+      if (selectedIds.general_deepdive_ids?.length) {
+        requestBody.general_deepdive_ids = selectedIds.general_deepdive_ids;
+      }
+      if (selectedIds.photo_session_ids?.length) {
+        requestBody.photo_session_ids = selectedIds.photo_session_ids;
+      }
+    }
+    
+    // Add additional parameters based on report type
+    if (reportType === 'symptom_timeline' && additionalParams?.symptom_focus) {
+      requestBody.symptom_focus = additionalParams.symptom_focus;
+    }
+    
+    if (reportType === 'specialist_focused' && additionalParams?.specialty) {
+      requestBody.specialty = additionalParams.specialty;
+    }
     
     // Add additional parameters for annual summary reports
     if (reportType === 'annual_summary') {

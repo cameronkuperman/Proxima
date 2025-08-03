@@ -114,6 +114,28 @@ export class TimelineClient {
     }
   }
 
+  async fetchGeneralDeepDive(sessionId: string): Promise<any | null> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/general-deepdive/${sessionId}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch general deep dive');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('General deep dive fetch error:', error);
+      return null;
+    }
+  }
+
   // Helper to get icon component based on event type
   getEventIcon(eventType: string): string {
     const iconMap: Record<string, string> = {

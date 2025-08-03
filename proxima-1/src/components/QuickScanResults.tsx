@@ -137,15 +137,19 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
     
     // If we don't have a suggestion yet, generate one
     if (!currentSuggestion && scanData.scan_id) {
+      console.log('[QuickScanResults] Manual track button clicked - checking if suggestion exists')
       try {
         const { data: { user } } = await supabase.auth.getUser()
         
         if (user) {
+          console.log('[QuickScanResults] No existing suggestion, generating new one from button click')
           await generateSuggestion('quick_scan', scanData.scan_id, user.id)
         }
       } catch (error) {
         console.error('Error generating tracking suggestion:', error)
       }
+    } else {
+      console.log('[QuickScanResults] Suggestion already exists, just showing modal')
     }
     
     // Small delay for smooth UX

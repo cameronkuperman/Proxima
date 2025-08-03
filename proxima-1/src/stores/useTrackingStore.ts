@@ -76,6 +76,14 @@ export const useTrackingStore = create<TrackingStore>()(
       // Generate tracking suggestion
       generateSuggestion: async (sourceType: 'quick_scan' | 'deep_dive', sourceId: string, userId: string) => {
         console.log('[TrackingStore] generateSuggestion called:', { sourceType, sourceId, userId })
+        
+        // Check if we already have a suggestion for this source
+        const state = get()
+        if (state.currentSuggestion && state.suggestionId) {
+          console.log('[TrackingStore] Suggestion already exists, skipping generation')
+          return
+        }
+        
         set({ loading: true, error: null })
         try {
           const data = await trackingService.generateTrackingSuggestion(sourceType, sourceId, userId)

@@ -150,6 +150,12 @@ export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDee
       
       if (response.status === 'success') {
         console.log('Setting final results and marking as complete')
+        console.log('Response structure:', {
+          hasAnalysis: !!response.analysis,
+          analysisKeys: response.analysis ? Object.keys(response.analysis) : [],
+          category: response.category,
+          deep_dive_id: response.deep_dive_id
+        })
         setFinalResults(response)
         setIsComplete(true)
         onComplete(response)
@@ -170,8 +176,13 @@ export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDee
     return (
       <GeneralDeepDiveResult 
         result={finalResults}
-        category={scanData.category}
-        messages={messages}
+        conversationHistory={messages.filter(m => m.role === 'assistant' && m.content.includes('?')).map((q, idx) => {
+          const userAnswer = messages.find((m, i) => m.role === 'user' && i > messages.indexOf(q))
+          return {
+            question: q.content,
+            answer: userAnswer?.content || ''
+          }
+        })}
         onNewAssessment={() => {
           // Reset state
           setMessages([])
