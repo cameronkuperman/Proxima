@@ -11,6 +11,7 @@ const RATE_LIMITS = {
   '/api/quick-scan': { requests: 5, windowMs: 60000 }, // 5 per minute
   '/api/deep-dive': { requests: 3, windowMs: 60000 }, // 3 per minute
   '/api/photo-analysis': { requests: 5, windowMs: 60000 }, // 5 per minute
+  '/api/photo-upload': { requests: 10, windowMs: 300000 }, // 10 per 5 minutes
   '/api/oracle': { requests: 10, windowMs: 60000 }, // 10 per minute
   
   // Report generation - resource intensive

@@ -89,7 +89,8 @@ export function usePhotoAnalysis() {
     console.log('Uploading photos with user_id:', userId);
     console.log('Session ID:', sessionId);
 
-    const response = await fetch(`${API_URL}/api/photo-analysis/upload`, {
+    // Use our secure upload endpoint
+    const response = await fetch('/api/photo-upload', {
       method: 'POST',
       body: formData
     });
