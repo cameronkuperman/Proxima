@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/client';
+import { ApiErrors, createSuccessResponse } from '@/utils/api-errors';
 
 export async function GET() {
   const supabase = createClient();
@@ -7,7 +8,7 @@ export async function GET() {
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    return ApiErrors.unauthorized('test-user GET');
   }
   
   const { data: user, error } = await supabase
@@ -16,9 +17,10 @@ export async function GET() {
     .eq('id', session.user.id)
     .single();
   
-  return NextResponse.json({ 
-    user, 
-    error: error?.message,
-    session_user_id: session.user.id 
-  });
+  if (error) {
+    return ApiErrors.databaseError(error, 'test-user query');
+  }
+  
+  // Only return the user data, no session info or error details
+  return createSuccessResponse({ user });
 } 

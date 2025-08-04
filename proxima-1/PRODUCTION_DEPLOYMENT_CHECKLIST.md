@@ -105,6 +105,25 @@ With:
 'https://proxima-health.vercel.app' // Or your custom domain
 ```
 
+### 7. Production Configuration for API URLs
+
+**Critical**: Set up proper production API endpoints
+
+1. **Environment Variables**:
+   - Ensure all API URLs use HTTPS in production
+   - Never expose development/localhost URLs in production build
+   - Use environment-specific configuration
+
+2. **Backend Security**:
+   - Ensure backend validates all incoming requests
+   - Backend should have its own rate limiting
+   - Backend should sanitize all responses
+
+3. **API Key Management**:
+   - Store all API keys securely (server-side only)
+   - Rotate API keys regularly
+   - Monitor API key usage
+
 ## Testing After Deployment
 
 1. **Check Security Headers**:
