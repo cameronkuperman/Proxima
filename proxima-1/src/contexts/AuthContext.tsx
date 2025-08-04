@@ -5,6 +5,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/utils/logger';
+import { sessionManager } from '@/utils/session-manager';
 
 interface AuthContextType {
   session: Session | null;
@@ -73,6 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: session.user.email,
             name: session.user.user_metadata?.full_name
           });
+          
+          // Initialize session manager when user signs in
+          if (event === 'SIGNED_IN') {
+            const rememberMe = localStorage.getItem('proxima_remember_me_pending') === 'true';
+            sessionManager.initializeSession(rememberMe);
+            localStorage.removeItem('proxima_remember_me_pending');
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Session manager will handle cleanup
         }
       }
     });
