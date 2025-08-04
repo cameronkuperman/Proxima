@@ -2,14 +2,19 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/client';
 import { logger } from '@/utils/logger';
 import { ApiErrors, createSuccessResponse } from '@/utils/api-errors';
+import { timelineGetSchema, timelinePostSchema, parseQueryParams, validateRequest } from '@/utils/validation-schemas';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
-    const offset = parseInt(searchParams.get('offset') || '0');
-    const search = searchParams.get('search') || '';
-    const type = searchParams.get('type') || '';
+    // Validate query parameters
+    const params = parseQueryParams(request.url);
+    const validation = validateRequest(timelineGetSchema, params);
+    
+    if (!validation.success) {
+      return ApiErrors.badRequest('timeline GET', validation.error);
+    }
+    
+    const { limit, offset, search, type } = validation.data;
     
     // Create Supabase client
     const supabase = createClient();
@@ -76,7 +81,15 @@ export async function GET(request: Request) {
 // Helper function to validate interaction exists before navigation
 export async function POST(request: Request) {
   try {
-    const { interactionId, interactionType } = await request.json();
+    // Parse and validate request body
+    const body = await request.json();
+    const validation = validateRequest(timelinePostSchema, body);
+    
+    if (!validation.success) {
+      return ApiErrors.badRequest('timeline POST', validation.error);
+    }
+    
+    const { interactionId, interactionType } = validation.data;
     
     const supabase = createClient();
     
