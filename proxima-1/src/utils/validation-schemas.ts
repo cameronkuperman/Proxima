@@ -1,11 +1,15 @@
 import { z } from 'zod';
+import { sanitizeString, sanitizeUUID } from './sql-protection';
 
 /**
  * Common validation schemas used across API endpoints
+ * Now with additional SQL injection protection
  */
 
-// UUID validation schema
-export const uuidSchema = z.string().uuid();
+// UUID validation schema with SQL injection protection
+export const uuidSchema = z.string()
+  .uuid()
+  .transform((val) => sanitizeUUID(val, 'id'));
 
 // Pagination schemas - matching existing behavior
 export const paginationSchema = z.object({
@@ -22,19 +26,21 @@ export const paginationSchema = z.object({
     .pipe(z.number().min(0))
 });
 
-// Search schema - allowing any string but with length limit
+// Search schema - with SQL injection protection
 export const searchSchema = z.object({
   search: z.string()
     .optional()
     .default('')
     .transform(val => val.trim())
-    .pipe(z.string().max(200)), // Reasonable limit to prevent DoS
+    .pipe(z.string().max(200)) // Reasonable limit to prevent DoS
+    .transform(val => val ? sanitizeString(val, 'search') : ''),
   
   type: z.string()
     .optional()
     .default('')
     .transform(val => val.trim())
     .pipe(z.string().max(50))
+    .transform(val => val ? sanitizeString(val, 'type') : '')
 });
 
 // Timeline GET request schema
