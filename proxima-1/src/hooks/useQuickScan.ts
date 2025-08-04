@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 import { quickScanClient, QuickScanFormData, QuickScanResponse } from '@/lib/quickscan-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuditLog } from '@/hooks/useAuditLog';
 
 export const useQuickScan = () => {
   const { user } = useAuth();
+  const { logEvent } = useAuditLog();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<QuickScanResponse | null>(null);
@@ -24,6 +26,16 @@ export const useQuickScan = () => {
       
       setScanResult(result);
       
+      // Log AI usage event
+      if (user?.id) {
+        await logEvent('QUICK_SCAN_PERFORMED', {
+          body_part: bodyPart,
+          scan_id: result.scan_id,
+          model: result.model,
+          confidence: result.confidence,
+        });
+      }
+      
       // If user is authenticated, generate summary
       if (user?.id && result.scan_id) {
         // Fire and forget - don't wait for summary
@@ -40,7 +52,7 @@ export const useQuickScan = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, logEvent]);
 
   const reset = useCallback(() => {
     setScanResult(null);

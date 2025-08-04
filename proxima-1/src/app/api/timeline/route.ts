@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@/utils/supabase/client';
 import { logger } from '@/utils/logger';
 import { ApiErrors, createSuccessResponse } from '@/utils/api-errors';
 import { timelineGetSchema, timelinePostSchema, parseQueryParams, validateRequest } from '@/utils/validation-schemas';
+import { logMedicalDataAccess } from '@/lib/audit-logger';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     // Validate query parameters
     const params = parseQueryParams(request.url);
@@ -61,6 +62,20 @@ export async function GET(request: Request) {
       
       return ApiErrors.databaseError(error, 'timeline query');
     }
+    
+    // Log medical data access
+    await logMedicalDataAccess(
+      'MEDICAL_TIMELINE_VIEWED',
+      user.id,
+      request,
+      'timeline',
+      undefined,
+      {
+        records_count: data?.length || 0,
+        search: search || undefined,
+        type: type || undefined,
+      }
+    );
     
     // Return successful response with pagination info
     return createSuccessResponse({
