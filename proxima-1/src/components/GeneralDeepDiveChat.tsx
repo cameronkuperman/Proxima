@@ -108,7 +108,7 @@ export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDee
         console.log('Got next question:', response.question)
         // Add next question
         setCurrentQuestion(response.question)
-        setQuestionNumber(response.question_number)
+        setQuestionNumber(response.question_number || 1)
         
         const assistantMessage: Message = {
           id: `q-${response.question_number}`,

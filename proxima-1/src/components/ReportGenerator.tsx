@@ -196,9 +196,6 @@ export function ReportGenerator({
         {
           quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
           deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
-          flash_assessment_ids: selectedFlashAssessments.length > 0 ? selectedFlashAssessments : undefined,
-          general_assessment_ids: selectedGeneralAssessments.length > 0 ? selectedGeneralAssessments : undefined,
-          general_deepdive_ids: selectedGeneralDeepDives.length > 0 ? selectedGeneralDeepDives : undefined,
           photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : undefined
         },
         {
@@ -260,7 +257,6 @@ export function ReportGenerator({
         context: {
           purpose: 'specialist_referral',
           target_audience: 'specialist',
-          specialty: specialtyToUse, // Add specialty to context
         },
         available_data: {
           quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : quickScanIds,
@@ -281,9 +277,6 @@ export function ReportGenerator({
         {
           quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
           deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
-          flash_assessment_ids: selectedFlashAssessments.length > 0 ? selectedFlashAssessments : undefined,
-          general_assessment_ids: selectedGeneralAssessments.length > 0 ? selectedGeneralAssessments : undefined,
-          general_deepdive_ids: selectedGeneralDeepDives.length > 0 ? selectedGeneralDeepDives : undefined,
           photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : undefined
         }
       );
