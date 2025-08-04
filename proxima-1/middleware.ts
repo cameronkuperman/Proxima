@@ -49,6 +49,17 @@ function getRateLimitConfig(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  // HTTPS redirect for production (excluding localhost)
+  if (
+    process.env.NODE_ENV === 'production' &&
+    request.headers.get('x-forwarded-proto') !== 'https' &&
+    !request.url.includes('localhost')
+  ) {
+    const httpsUrl = new URL(request.url)
+    httpsUrl.protocol = 'https:'
+    return NextResponse.redirect(httpsUrl, 301)
+  }
+
   // Only apply rate limiting to API routes
   if (!request.nextUrl.pathname.startsWith('/api/')) {
     return NextResponse.next()
@@ -79,10 +90,23 @@ export async function middleware(request: NextRequest) {
             return request.cookies.get(name)?.value
           },
           set(name: string, value: string, options: any) {
-            response.cookies.set({ name, value, ...options })
+            // Ensure cookies are secure in production
+            const secureOptions = {
+              ...options,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax' as const,
+              httpOnly: true
+            }
+            response.cookies.set({ name, value, ...secureOptions })
           },
           remove(name: string, options: any) {
-            response.cookies.set({ name, value: '', ...options })
+            const secureOptions = {
+              ...options,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax' as const,
+              httpOnly: true
+            }
+            response.cookies.set({ name, value: '', ...secureOptions })
           }
         }
       }
