@@ -6,8 +6,8 @@ import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Download, Share2, Calendar, Clock, 
   Activity, Brain, Camera, FileText, MessageCircle,
-  BarChart, MapPin, AlertTriangle, TrendingUp,
-  RefreshCw, ChevronRight, User, Shield
+  AlertTriangle,
+  RefreshCw, ChevronRight
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -21,8 +21,8 @@ export default function HistoryPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [interaction, setInteraction] = useState<any>(null);
-  const [fullData, setFullData] = useState<any>(null);
+  const [interaction, setInteraction] = useState<Record<string, unknown> | null>(null);
+  const [fullData, setFullData] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // First, fetch from user_interactions to get the type
@@ -145,7 +145,7 @@ export default function HistoryPage() {
   };
 
   const runSimilarScan = () => {
-    if (!fullData) return;
+    if (!fullData || !interaction) return;
     
     switch (interaction.interaction_type) {
       case 'quick_scan':
@@ -163,12 +163,11 @@ export default function HistoryPage() {
   const renderDeepDiveDetails = () => {
     if (!fullData) return null;
     
-    const analysis = fullData.final_analysis;
-    const formData = fullData.form_data;
+    const analysis = fullData.final_analysis as Record<string, unknown> | undefined;
+    const formData = fullData.form_data as Record<string, unknown> | undefined;
     
     return (
       <div className="space-y-8">
-        {/* Summary Card */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -176,57 +175,52 @@ export default function HistoryPage() {
         >
           <h3 className="text-xl font-semibold text-white mb-4">Deep Dive Analysis Summary</h3>
           
-          {/* Primary Condition */}
-          {analysis?.primaryCondition && (
+          {Boolean(analysis?.primaryCondition) && (
             <div className="mb-6">
               <h4 className="text-sm font-medium text-gray-400 mb-2">Primary Assessment</h4>
-              <p className="text-lg text-white font-medium">{analysis.primaryCondition}</p>
-              {analysis.likelihood && (
-                <p className="text-sm text-gray-400 mt-1">Likelihood: {analysis.likelihood}</p>
+              <p className="text-lg text-white font-medium">{analysis!.primaryCondition as string}</p>
+              {Boolean(analysis!.likelihood) && (
+                <p className="text-sm text-gray-400 mt-1">Likelihood: {analysis!.likelihood as string}</p>
               )}
             </div>
           )}
 
-          {/* Confidence Score */}
-          {analysis?.confidence && (
+          {Boolean(analysis?.confidence) && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-400">Confidence Level</span>
-                <span className="text-sm text-white">{analysis.confidence}%</span>
+                <span className="text-sm text-white">{analysis!.confidence as number}%</span>
               </div>
               <div className="bg-white/[0.05] rounded-full h-3 overflow-hidden">
                 <motion.div 
                   className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
                   initial={{ width: 0 }}
-                  animate={{ width: `${analysis.confidence}%` }}
+                  animate={{ width: `${analysis!.confidence as number}%` }}
                   transition={{ duration: 0.8 }}
                 />
               </div>
             </div>
           )}
 
-          {/* Urgency Level */}
-          {analysis?.urgency && (
+          {Boolean(analysis?.urgency) && (
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
-              analysis.urgency === 'high' ? 'bg-red-500/20 text-red-400' :
-              analysis.urgency === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+              analysis!.urgency === 'high' ? 'bg-red-500/20 text-red-400' :
+              analysis!.urgency === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
               'bg-green-500/20 text-green-400'
             }`}>
               <AlertTriangle className="w-4 h-4" />
-              <span className="font-medium capitalize">{analysis.urgency} Urgency</span>
+              <span className="font-medium capitalize">{analysis!.urgency as string} Urgency</span>
             </div>
           )}
 
-          {/* Questions Asked */}
-          {fullData.questions && fullData.questions.length > 0 && (
+          {Boolean(fullData.questions && (fullData.questions as unknown[]).length > 0) && (
             <div className="mt-4 text-sm text-gray-400">
               <Brain className="w-4 h-4 inline mr-1" />
-              {fullData.questions.length} follow-up questions completed
+              {(fullData.questions as unknown[]).length} follow-up questions completed
             </div>
           )}
         </motion.div>
 
-        {/* Symptoms Reported */}
         {formData && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -236,54 +230,53 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Symptoms Reported</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {formData.symptoms && (
+              {Boolean(formData!.symptoms) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Main Symptoms</p>
-                  <p className="text-white">{formData.symptoms}</p>
+                  <p className="text-white">{formData!.symptoms as string}</p>
                 </div>
               )}
-              {formData.painLevel && (
+              {Boolean(formData!.painLevel) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Pain Level</p>
-                  <p className="text-white">{formData.painLevel}/10</p>
+                  <p className="text-white">{formData!.painLevel as number}/10</p>
                 </div>
               )}
-              {formData.duration && (
+              {Boolean(formData!.duration) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Duration</p>
-                  <p className="text-white">{formData.duration}</p>
+                  <p className="text-white">{formData!.duration as string}</p>
                 </div>
               )}
-              {formData.frequency && (
+              {Boolean(formData!.frequency) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Frequency</p>
-                  <p className="text-white">{formData.frequency}</p>
+                  <p className="text-white">{formData!.frequency as string}</p>
                 </div>
               )}
-              {formData.triggerEvent && (
+              {Boolean(formData!.triggerEvent) && (
                 <div className="md:col-span-2">
                   <p className="text-sm text-gray-400 mb-1">Trigger Event</p>
-                  <p className="text-white">{formData.triggerEvent}</p>
+                  <p className="text-white">{formData!.triggerEvent as string}</p>
                 </div>
               )}
-              {formData.painType && formData.painType.length > 0 && (
+              {Boolean(formData!.painType && (formData!.painType as unknown[]).length > 0) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Pain Type</p>
-                  <p className="text-white">{formData.painType.join(', ')}</p>
+                  <p className="text-white">{(formData!.painType as string[]).join(', ')}</p>
                 </div>
               )}
-              {formData.dailyImpact && formData.dailyImpact.length > 0 && (
+              {Boolean(formData!.dailyImpact && (formData!.dailyImpact as unknown[]).length > 0) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Daily Impact</p>
-                  <p className="text-white">{formData.dailyImpact.join(', ')}</p>
+                  <p className="text-white">{(formData!.dailyImpact as string[]).join(', ')}</p>
                 </div>
               )}
             </div>
           </motion.div>
         )}
 
-        {/* Recommendations */}
-        {analysis?.recommendations && analysis.recommendations.length > 0 && (
+        {Boolean(analysis?.recommendations && (analysis!.recommendations as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -292,7 +285,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Recommendations</h3>
             <ul className="space-y-3">
-              {analysis.recommendations.map((rec: string, idx: number) => (
+              {(analysis!.recommendations as string[]).map((rec: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-indigo-400 mt-0.5">•</span>
                   <span className="text-gray-300">{rec}</span>
@@ -302,8 +295,7 @@ export default function HistoryPage() {
           </motion.div>
         )}
 
-        {/* Self Care */}
-        {analysis?.selfCare && analysis.selfCare.length > 0 && (
+        {Boolean(analysis?.selfCare && (analysis!.selfCare as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -312,7 +304,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Self-Care Instructions</h3>
             <ul className="space-y-3">
-              {analysis.selfCare.map((care: string, idx: number) => (
+              {(analysis!.selfCare as string[]).map((care: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-green-400 mt-0.5">•</span>
                   <span className="text-gray-300">{care}</span>
@@ -322,8 +314,7 @@ export default function HistoryPage() {
           </motion.div>
         )}
 
-        {/* Red Flags */}
-        {analysis?.redFlags && analysis.redFlags.length > 0 && (
+        {Boolean(analysis?.redFlags && (analysis!.redFlags as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -335,15 +326,14 @@ export default function HistoryPage() {
               Warning Signs
             </h3>
             <ul className="space-y-2">
-              {analysis.redFlags.map((flag: string, idx: number) => (
+              {(analysis!.redFlags as string[]).map((flag: string, idx: number) => (
                 <li key={idx} className="text-red-300">{flag}</li>
               ))}
             </ul>
           </motion.div>
         )}
 
-        {/* Timeline & Follow-up */}
-        {(analysis?.timeline || analysis?.followUp) && (
+        {Boolean(analysis?.timeline || analysis?.followUp) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -352,16 +342,16 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Timeline & Follow-up</h3>
             <div className="space-y-4">
-              {analysis.timeline && (
+              {Boolean(analysis!.timeline) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Expected Timeline</p>
-                  <p className="text-white">{analysis.timeline}</p>
+                  <p className="text-white">{analysis!.timeline as string}</p>
                 </div>
               )}
-              {analysis.followUp && (
+              {Boolean(analysis!.followUp) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Follow-up Recommendation</p>
-                  <p className="text-white">{analysis.followUp}</p>
+                  <p className="text-white">{analysis!.followUp as string}</p>
                 </div>
               )}
             </div>
@@ -374,12 +364,11 @@ export default function HistoryPage() {
   const renderQuickScanDetails = () => {
     if (!fullData) return null;
     
-    const analysis = fullData.analysis_result;
-    const formData = fullData.form_data;
+    const analysis = fullData.analysis_result as Record<string, unknown> | undefined;
+    const formData = fullData.form_data as Record<string, unknown> | undefined;
     
     return (
       <div className="space-y-8">
-        {/* Summary Card */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -387,47 +376,43 @@ export default function HistoryPage() {
         >
           <h3 className="text-xl font-semibold text-white mb-4">Analysis Summary</h3>
           
-          {/* Primary Condition */}
-          {analysis?.primaryCondition && (
+          {Boolean(analysis?.primaryCondition) && (
             <div className="mb-6">
               <h4 className="text-sm font-medium text-gray-400 mb-2">Primary Assessment</h4>
-              <p className="text-lg text-white font-medium">{analysis.primaryCondition}</p>
-              {analysis.likelihood && (
-                <p className="text-sm text-gray-400 mt-1">Likelihood: {analysis.likelihood}</p>
+              <p className="text-lg text-white font-medium">{analysis!.primaryCondition as string}</p>
+              {Boolean(analysis!.likelihood) && (
+                <p className="text-sm text-gray-400 mt-1">Likelihood: {analysis!.likelihood as string}</p>
               )}
             </div>
           )}
 
-          {/* Confidence Score */}
-          {analysis?.confidence && (
+          {Boolean(analysis?.confidence) && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-400">Confidence Level</span>
-                <span className="text-sm text-white">{analysis.confidence}%</span>
+                <span className="text-sm text-white">{analysis!.confidence as number}%</span>
               </div>
               <div className="bg-white/[0.05] rounded-full h-3 overflow-hidden">
                 <motion.div 
                   className="h-full bg-gradient-to-r from-emerald-500 to-green-500"
                   initial={{ width: 0 }}
-                  animate={{ width: `${analysis.confidence}%` }}
+                  animate={{ width: `${analysis!.confidence as number}%` }}
                   transition={{ duration: 0.8 }}
                 />
               </div>
             </div>
           )}
 
-          {/* Urgency Level */}
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
             fullData.urgency_level === 'high' ? 'bg-red-500/20 text-red-400' :
             fullData.urgency_level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
             'bg-green-500/20 text-green-400'
           }`}>
             <AlertTriangle className="w-4 h-4" />
-            <span className="font-medium capitalize">{fullData.urgency_level} Urgency</span>
+            <span className="font-medium capitalize">{fullData.urgency_level as string} Urgency</span>
           </div>
         </motion.div>
 
-        {/* Symptoms Reported */}
         {formData && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -437,36 +422,35 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Symptoms Reported</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {formData.symptoms && (
+              {Boolean(formData!.symptoms) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Main Symptoms</p>
-                  <p className="text-white">{formData.symptoms}</p>
+                  <p className="text-white">{formData!.symptoms as string}</p>
                 </div>
               )}
-              {formData.painLevel && (
+              {Boolean(formData!.painLevel) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Pain Level</p>
-                  <p className="text-white">{formData.painLevel}/10</p>
+                  <p className="text-white">{formData!.painLevel as number}/10</p>
                 </div>
               )}
-              {formData.duration && (
+              {Boolean(formData!.duration) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Duration</p>
-                  <p className="text-white">{formData.duration}</p>
+                  <p className="text-white">{formData!.duration as string}</p>
                 </div>
               )}
-              {formData.frequency && (
+              {Boolean(formData!.frequency) && (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Frequency</p>
-                  <p className="text-white">{formData.frequency}</p>
+                  <p className="text-white">{formData!.frequency as string}</p>
                 </div>
               )}
             </div>
           </motion.div>
         )}
 
-        {/* Recommendations */}
-        {analysis?.recommendations && analysis.recommendations.length > 0 && (
+        {Boolean(analysis?.recommendations && (analysis!.recommendations as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -475,7 +459,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Recommendations</h3>
             <ul className="space-y-3">
-              {analysis.recommendations.map((rec: string, idx: number) => (
+              {(analysis!.recommendations as string[]).map((rec: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-emerald-400 mt-0.5">•</span>
                   <span className="text-gray-300">{rec}</span>
@@ -485,8 +469,7 @@ export default function HistoryPage() {
           </motion.div>
         )}
 
-        {/* Red Flags */}
-        {analysis?.redFlags && analysis.redFlags.length > 0 && (
+        {Boolean(analysis?.redFlags && (analysis!.redFlags as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -498,7 +481,7 @@ export default function HistoryPage() {
               Warning Signs
             </h3>
             <ul className="space-y-2">
-              {analysis.redFlags.map((flag: string, idx: number) => (
+              {(analysis!.redFlags as string[]).map((flag: string, idx: number) => (
                 <li key={idx} className="text-red-300">{flag}</li>
               ))}
             </ul>
@@ -559,14 +542,12 @@ export default function HistoryPage() {
   return (
     <UnifiedAuthGuard requireAuth={true}>
       <div className="min-h-screen bg-[#0a0a0a]">
-        {/* Background Effects */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 -left-48 w-96 h-96 bg-gradient-to-r from-purple-600/10 to-pink-600/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-full blur-3xl" />
         </div>
 
-        {/* Header */}
-        <div className={`relative h-48 bg-gradient-to-br ${getTypeColor(interaction.interaction_type)}`}>
+        <div className={`relative h-48 bg-gradient-to-br ${getTypeColor(interaction!.interaction_type as string)}`}>
           <div className="absolute inset-0 bg-black/30" />
           <div className="relative h-full max-w-6xl mx-auto px-6 flex items-center">
             <div className="flex items-center justify-between w-full">
@@ -580,20 +561,20 @@ export default function HistoryPage() {
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      {getIcon(interaction.interaction_type)}
+                      {getIcon(interaction!.interaction_type as string)}
                     </div>
                     <h1 className="text-3xl font-bold text-white">
-                      {interaction.title}
+                      {interaction!.title as string}
                     </h1>
                   </div>
                   <div className="flex items-center gap-4 text-white/70">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      <span>{format(new Date(interaction.created_at), 'PPP')}</span>
+                      <span>{format(new Date(interaction!.created_at as string), 'PPP')}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      <span>{format(new Date(interaction.created_at), 'p')}</span>
+                      <span>{format(new Date(interaction!.created_at as string), 'p')}</span>
                     </div>
                   </div>
                 </div>
@@ -625,7 +606,6 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="max-w-6xl mx-auto px-6 py-8">
           {renderContent()}
           

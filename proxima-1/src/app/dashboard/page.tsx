@@ -12,11 +12,12 @@ import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 export const dynamic = 'force-dynamic';
 import UnifiedFAB from '@/components/UnifiedFAB';
 import { useTutorial } from '@/contexts/TutorialContext';
-import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp, PersonStanding } from 'lucide-react';
+import { MapPin, Pill, Heart, Clock, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp, PersonStanding } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
 import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
 import { useHealthScore } from '@/hooks/useHealthScore';
+import { TimelineEvent } from '@/lib/timeline-client';
 import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
 import ActiveTrackingCard from '@/components/tracking/ActiveTrackingCard';
 import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal';
@@ -27,7 +28,7 @@ import HistoryModal from '@/components/HistoryModal';
 import AssessmentModal from '@/components/modals/AssessmentModal';
 import { formatDistanceToNow } from 'date-fns';
 import { reportsService, GeneratedReport } from '@/services/reportsService';
-import { healthStoryService } from '@/lib/health-story';
+import { healthStoryService, HealthStoryData } from '@/lib/health-story';
 
 // Mock graph data - Removed, no longer needed for tracking dashboard
 /*const mockGraphData = [
@@ -121,21 +122,19 @@ function DashboardContent() {
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineAnimating, setTimelineAnimating] = useState(false);
-  const [timelineData, setTimelineData] = useState<any[]>([]);
+  const [timelineData, setTimelineData] = useState<TimelineEvent[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
-  const [reportsMenuOpen, setReportsMenuOpen] = useState(false);
   // Dynamic health score with weekly comparison
-  const { scoreData, isLoading: healthScoreLoading, fetchHealthScore: refreshScore } = useHealthScore();
+  const { scoreData, isLoading: healthScoreLoading } = useHealthScore();
   const healthScore = scoreData?.score || 80;
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [quickScanLoading, setQuickScanLoading] = useState(false);
   const [assessmentModalOpen, setAssessmentModalOpen] = useState<'body' | 'general' | null>(null);
   const [showQuickReportChat, setShowQuickReportChat] = useState(false);
   
@@ -171,14 +170,14 @@ function DashboardContent() {
   
   // History modal state
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<{ id: string; interaction_type: string; metadata?: Record<string, unknown> } | null>(null);
   
   // Health timeline reports state
   const [healthTimelineData, setHealthTimelineData] = useState<GeneratedReport[]>([]);
   const [healthTimelineLoading, setHealthTimelineLoading] = useState(true);
   
   // Health story state
-  const [latestHealthStory, setLatestHealthStory] = useState<any>(null);
+  const [latestHealthStory, setLatestHealthStory] = useState<HealthStoryData | null>(null);
   const [healthStoryLoading, setHealthStoryLoading] = useState(true);
   
   // Initialize visible reports based on available data
@@ -262,7 +261,7 @@ function DashboardContent() {
       // Add pagination
       query = query.range(0, 49);
       
-      const { data, error: queryError, count } = await query;
+      const { data, error: queryError } = await query;
       
       if (queryError) {
         throw new Error(queryError.message);
@@ -365,7 +364,7 @@ function DashboardContent() {
       initWithRetry();
     }
     // DO NOT initialize tutorial otherwise
-  }, [user?.id, profileLoading, searchParams]); // Re-run when user loads or profile loading changes
+  }, [user?.id, profileLoading, searchParams, initializeTutorial, router, userProfile]); // Re-run when user loads or profile loading changes
 
   // Listen for events from FAB
   useEffect(() => {
@@ -706,7 +705,7 @@ function DashboardContent() {
               ) : (
                 // Timeline data
                 timelineData.map((entry, index) => {
-                  const colors = getInteractionColor(entry.interaction_type);
+                  const colors = getInteractionColor(entry.event_type);
                   return (
                     <motion.div
                       key={entry.id}
@@ -718,7 +717,7 @@ function DashboardContent() {
                       {/* Date dot with icon */}
                       <div className={`absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center`} style={{ left: '9px' }}>
                         <div className={colors.iconColor}>
-                          {getInteractionIcon(entry.interaction_type)}
+                          {getInteractionIcon(entry.event_type)}
                         </div>
                       </div>
                       
@@ -733,14 +732,18 @@ function DashboardContent() {
                           >
                             <div 
                               onClick={() => {
-                                setSelectedHistoryItem(entry);
+                                setSelectedHistoryItem({
+                                  id: entry.id,
+                                  interaction_type: entry.event_type,
+                                  metadata: entry.metadata
+                                });
                                 setHistoryModalOpen(true);
                               }}
                               className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all`}
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <p className="text-xs text-gray-400">
-                                  {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
+                                  {formatDistanceToNow(new Date(entry.event_timestamp), { addSuffix: true })}
                                 </p>
                                 {entry.severity && (
                                   <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -963,7 +966,7 @@ function DashboardContent() {
                   <ClipboardList className="w-6 h-6 text-blue-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">General Assessment</h3>
-                <p className="text-gray-400 text-sm mb-2">Describe how you're feeling overall</p>
+                <p className="text-gray-400 text-sm mb-2">Describe how you&apos;re feeling overall</p>
                 <p className="text-xs text-gray-500">
                   Best for: Fatigue, fever, mental health, multiple symptoms
                 </p>
