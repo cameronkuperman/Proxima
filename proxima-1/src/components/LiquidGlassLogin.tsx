@@ -516,7 +516,7 @@ export default function LiquidGlassLogin() {
                 </label>
                 
                 {/* Forgot Password */}
-                <div className="flex justify-end">
+                <div className="flex justify-center">
                   <button
                     type="button"
                     onClick={handleForgotPassword}
