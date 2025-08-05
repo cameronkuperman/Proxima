@@ -279,7 +279,7 @@ export default function HistoryPage() {
           )}
         </motion.div>
 
-        {formData && (
+        {Boolean(formData) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -471,7 +471,7 @@ export default function HistoryPage() {
           </div>
         </motion.div>
 
-        {formData && (
+        {Boolean(formData) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -577,7 +577,7 @@ export default function HistoryPage() {
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           {/* Main Concern */}
-          {fullData.main_concern && (
+          {Boolean(fullData.main_concern) && (
             <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
               <h4 className="text-sm font-medium text-gray-400 mb-2">Main Concern Identified</h4>
               <p className="text-lg text-white">{fullData.main_concern as string}</p>
@@ -585,7 +585,7 @@ export default function HistoryPage() {
           )}
 
           {/* Category */}
-          {fullData.category && (
+          {Boolean(fullData.category) && (
             <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
               <h4 className="text-sm font-medium text-gray-400 mb-2">Category</h4>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400">
@@ -604,7 +604,7 @@ export default function HistoryPage() {
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           {/* Urgency */}
-          {fullData.urgency && (
+          {Boolean(fullData.urgency) && (
             <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
               <h4 className="text-sm font-medium text-gray-400 mb-4">Urgency Level</h4>
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
@@ -639,7 +639,7 @@ export default function HistoryPage() {
         </motion.div>
 
         {/* Suggested Action */}
-        {fullData.suggested_next_action && (
+        {Boolean(fullData.suggested_next_action) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -700,7 +700,7 @@ export default function HistoryPage() {
               {fullData.category === 'multiple' && 'Multiple Issues'}
               {fullData.category === 'unsure' && 'General Health'}
             </div>
-            {fullData.doctor_visit_suggested && (
+            {Boolean(fullData.doctor_visit_suggested) && (
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 text-orange-400">
                 <Stethoscope className="w-4 h-4" />
                 <span className="text-sm font-medium">Doctor Visit Suggested</span>
@@ -708,7 +708,7 @@ export default function HistoryPage() {
             )}
           </div>
           
-          {fullData.primary_assessment && (
+          {Boolean(fullData.primary_assessment) && (
             <>
               <h3 className="text-xl font-semibold text-white mb-4">Primary Assessment</h3>
               <p className="text-gray-300 whitespace-pre-wrap">{fullData.primary_assessment as string}</p>
@@ -717,7 +717,7 @@ export default function HistoryPage() {
         </motion.div>
 
         {/* Form Data */}
-        {formData && (
+        {Boolean(formData) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -726,7 +726,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Information Provided</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(formData).map(([key, value]) => (
+              {Object.entries(formData || {}).map(([key, value]) => (
                 <div key={key}>
                   <p className="text-sm text-gray-400 mb-1">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
                   <p className="text-white">
@@ -746,7 +746,7 @@ export default function HistoryPage() {
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           {/* Urgency */}
-          {fullData.urgency_level && (
+          {Boolean(fullData.urgency_level) && (
             <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
               <h4 className="text-sm font-medium text-gray-400 mb-4">Urgency Level</h4>
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
@@ -780,7 +780,7 @@ export default function HistoryPage() {
         </motion.div>
 
         {/* Recommendations */}
-        {fullData.recommendations && (fullData.recommendations as unknown[]).length > 0 && (
+        {Boolean(fullData.recommendations && (fullData.recommendations as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -803,7 +803,7 @@ export default function HistoryPage() {
         )}
 
         {/* Follow-up */}
-        {fullData.follow_up_needed && (
+        {Boolean(fullData.follow_up_needed) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -827,7 +827,6 @@ export default function HistoryPage() {
     
     return (
       <div className="space-y-8">
-        {/* Session Overview */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -846,7 +845,7 @@ export default function HistoryPage() {
                 {fullData.category === 'unsure' && 'General Health'}
               </div>
               
-              {fullData.status && (
+              {Boolean(fullData.status) && (
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                   fullData.status === 'completed' ? 'bg-green-500/20 text-green-400' :
                   fullData.status === 'abandoned' ? 'bg-gray-500/20 text-gray-400' :
@@ -858,7 +857,7 @@ export default function HistoryPage() {
             </div>
           </div>
 
-          {fullData.initial_complaint && (
+          {Boolean(fullData.initial_complaint) && (
             <>
               <h3 className="text-xl font-semibold text-white mb-2">Initial Concern</h3>
               <p className="text-gray-300">{fullData.initial_complaint as string}</p>
@@ -867,25 +866,25 @@ export default function HistoryPage() {
 
           {/* Session Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            {fullData.questions && (
+            {Boolean(fullData.questions) && (
               <div className="bg-white/[0.05] rounded-lg p-3 text-center">
                 <p className="text-2xl font-semibold text-white">{(fullData.questions as unknown[]).length}</p>
                 <p className="text-xs text-gray-400 mt-1">Questions Asked</p>
               </div>
             )}
-            {fullData.answers && (
+            {Boolean(fullData.answers) && (
               <div className="bg-white/[0.05] rounded-lg p-3 text-center">
                 <p className="text-2xl font-semibold text-white">{(fullData.answers as unknown[]).length}</p>
                 <p className="text-xs text-gray-400 mt-1">Answers Given</p>
               </div>
             )}
-            {fullData.key_findings && (
+            {Boolean(fullData.key_findings) && (
               <div className="bg-white/[0.05] rounded-lg p-3 text-center">
                 <p className="text-2xl font-semibold text-white">{(fullData.key_findings as unknown[]).length}</p>
                 <p className="text-xs text-gray-400 mt-1">Key Findings</p>
               </div>
             )}
-            {fullData.session_duration_ms && (
+            {Boolean(fullData.session_duration_ms) && (
               <div className="bg-white/[0.05] rounded-lg p-3 text-center">
                 <p className="text-2xl font-semibold text-white">
                   {Math.round((fullData.session_duration_ms as number) / 60000)}
@@ -897,7 +896,7 @@ export default function HistoryPage() {
         </motion.div>
 
         {/* Q&A History */}
-        {fullData.questions && fullData.answers && (fullData.questions as unknown[]).length > 0 && (
+        {Boolean(fullData.questions && fullData.answers && (fullData.questions as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -974,7 +973,7 @@ export default function HistoryPage() {
         )}
 
         {/* Key Findings */}
-        {fullData.key_findings && (fullData.key_findings as unknown[]).length > 0 && (
+        {Boolean(fullData.key_findings && (fullData.key_findings as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -997,7 +996,7 @@ export default function HistoryPage() {
         )}
 
         {/* Reasoning Snippets */}
-        {fullData.reasoning_snippets && (fullData.reasoning_snippets as unknown[]).length > 0 && (
+        {Boolean(fullData.reasoning_snippets && (fullData.reasoning_snippets as unknown[]).length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1047,7 +1046,7 @@ export default function HistoryPage() {
                 {fullData.report_type === 'annual_summary' && 'Annual Summary'}
               </div>
               
-              {fullData.specialty && (
+              {Boolean(fullData.specialty) && (
                 <div className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
                   {fullData.specialty as string}
                 </div>
@@ -1055,7 +1054,7 @@ export default function HistoryPage() {
             </div>
             
             <div className="flex items-center gap-2 text-sm text-gray-400">
-              {fullData.model_used && (
+              {Boolean(fullData.model_used) && (
                 <>
                   <Brain className="w-4 h-4" />
                   <span>{fullData.model_used as string}</span>
@@ -1065,7 +1064,7 @@ export default function HistoryPage() {
           </div>
 
           {/* Executive Summary */}
-          {fullData.executive_summary && (
+          {Boolean(fullData.executive_summary) && (
             <>
               <h3 className="text-xl font-semibold text-white mb-4">Executive Summary</h3>
               <p className="text-gray-300 whitespace-pre-wrap">{fullData.executive_summary as string}</p>
@@ -1092,14 +1091,14 @@ export default function HistoryPage() {
         </motion.div>
 
         {/* Report Sections */}
-        {reportData && (
+        {Boolean(reportData) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="space-y-6"
           >
-            {Object.entries(reportData).map(([section, content]) => (
+            {Object.entries(reportData || {}).map(([section, content]) => (
               <div 
                 key={section}
                 className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]"
@@ -1145,7 +1144,7 @@ export default function HistoryPage() {
         >
           <h3 className="text-xl font-semibold text-white mb-4">Report Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {fullData.data_sources && (
+            {Boolean(fullData.data_sources) && (
               <div>
                 <p className="text-sm text-gray-400 mb-1">Data Sources</p>
                 <p className="text-white">
@@ -1155,7 +1154,7 @@ export default function HistoryPage() {
                 </p>
               </div>
             )}
-            {fullData.time_range && (
+            {Boolean(fullData.time_range) && (
               <div>
                 <p className="text-sm text-gray-400 mb-1">Time Period</p>
                 <p className="text-white">
@@ -1224,7 +1223,7 @@ export default function HistoryPage() {
         </motion.div>
 
         {/* Messages */}
-        {messages && messages.length > 0 && (
+        {Boolean(messages && messages.length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1233,7 +1232,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Conversation History</h3>
             <div className="space-y-4 max-h-[600px] overflow-y-auto">
-              {messages.map((message, idx) => (
+              {(messages || []).map((message, idx) => (
                 <div 
                   key={idx}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -1325,7 +1324,7 @@ export default function HistoryPage() {
             <h3 className="text-xl font-semibold text-white">
               {fullData.condition_name as string || 'Photo Analysis Session'}
             </h3>
-            {fullData.is_sensitive && (
+            {Boolean(fullData.is_sensitive) && (
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400">
                 <Shield className="w-4 h-4" />
                 <span className="text-sm font-medium">Sensitive Content</span>
@@ -1333,7 +1332,7 @@ export default function HistoryPage() {
             )}
           </div>
           
-          {fullData.description && (
+          {Boolean(fullData.description) && (
             <p className="text-gray-300 mb-4">{fullData.description as string}</p>
           )}
 
@@ -1346,7 +1345,7 @@ export default function HistoryPage() {
               <p className="text-2xl font-semibold text-white">{analyses?.length || 0}</p>
               <p className="text-xs text-gray-400 mt-1">Analyses</p>
             </div>
-            {fullData.monitoring_phase && (
+            {Boolean(fullData.monitoring_phase) && (
               <div className="bg-white/[0.05] rounded-lg p-3 text-center">
                 <p className="text-sm font-medium text-white capitalize">
                   {(fullData.monitoring_phase as string).replace(/_/g, ' ')}
@@ -1354,7 +1353,7 @@ export default function HistoryPage() {
                 <p className="text-xs text-gray-400 mt-1">Phase</p>
               </div>
             )}
-            {fullData.last_photo_at && (
+            {Boolean(fullData.last_photo_at) && (
               <div className="bg-white/[0.05] rounded-lg p-3 text-center">
                 <p className="text-sm font-medium text-white">
                   {format(new Date(fullData.last_photo_at as string), 'MMM d')}
@@ -1374,7 +1373,7 @@ export default function HistoryPage() {
             className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]"
           >
             <h3 className="text-xl font-semibold text-white mb-4">Latest Analysis</h3>
-            {analyses[0].analysis_data && (
+            {Boolean(analyses[0].analysis_data) && (
               <div className="prose prose-invert max-w-none">
                 <pre className="text-gray-300 whitespace-pre-wrap text-sm">
                   {JSON.stringify(analyses[0].analysis_data, null, 2)}
@@ -1404,7 +1403,7 @@ export default function HistoryPage() {
         )}
 
         {/* Photo Gallery */}
-        {uploads && uploads.length > 0 && (
+        {Boolean(uploads && uploads.length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1413,7 +1412,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Photo Timeline</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {uploads.map((upload, idx) => (
+              {(uploads || []).map((upload, idx) => (
                 <div key={idx} className="bg-white/[0.05] rounded-lg p-3">
                   <div className="aspect-square bg-gray-800 rounded mb-2 flex items-center justify-center">
                     <Camera className="w-12 h-12 text-gray-600" />
@@ -1421,7 +1420,7 @@ export default function HistoryPage() {
                   <p className="text-xs text-gray-400 text-center">
                     {format(new Date(upload.uploaded_at as string), 'MMM d, yyyy')}
                   </p>
-                  {upload.category && (
+                  {Boolean(upload.category) && (
                     <p className="text-xs text-gray-500 text-center capitalize">
                       {(upload.category as string).replace(/_/g, ' ')}
                     </p>
