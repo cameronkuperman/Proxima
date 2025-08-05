@@ -189,7 +189,8 @@ function DashboardContent() {
     currentSuggestion,
     suggestionId,
     logDataPoint,
-    clearSuggestion
+    clearSuggestion,
+    loading: trackingLoading
   } = useTrackingStore();
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -747,6 +748,30 @@ function DashboardContent() {
   // Removed: const currentGraph = mockGraphData[currentGraphIndex]; - No longer needed for tracking dashboard
   // const maxValue = Math.max(...currentGraph.data.map(d => d.value));
   // const minValue = Math.min(...currentGraph.data.map(d => d.value));
+
+  // Master loading state - check if all critical data is loaded
+  const isInitialLoading = profileLoading || 
+                           timelineLoading || 
+                           healthScoreLoading || 
+                           alertLoading || 
+                           healthTimelineLoading || 
+                           healthStoryLoading ||
+                           trackingLoading ||
+                           !hasLoaded;
+
+  // Show loading screen while data is loading
+  if (isInitialLoading) {
+    return (
+      <UnifiedAuthGuard requireAuth={true}>
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-white text-sm">Loading dashboard...</p>
+          </div>
+        </div>
+      </UnifiedAuthGuard>
+    );
+  }
 
   return (
     <UnifiedAuthGuard requireAuth={true}>
