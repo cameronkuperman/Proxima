@@ -147,7 +147,7 @@ function DashboardContent() {
   const [timelineData, setTimelineData] = useState<TimelineEntry[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [timelineOffset, setTimelineOffset] = useState(0);
   const [timelineHasMore, setTimelineHasMore] = useState(true);
   const [timelineLoadingMore, setTimelineLoadingMore] = useState(false);
@@ -376,7 +376,6 @@ function DashboardContent() {
       // Only has more if we got a full page of results
       const hasMore = newData.length === TIMELINE_PAGE_SIZE && newData.length > 0;
       setTimelineHasMore(hasMore);
-      setHasLoaded(true);
       
       // Log when we reach the end
       if (!hasMore && append) {
@@ -749,15 +748,30 @@ function DashboardContent() {
   // const maxValue = Math.max(...currentGraph.data.map(d => d.value));
   // const minValue = Math.min(...currentGraph.data.map(d => d.value));
 
-  // Master loading state - check if all critical data is loaded
-  const isInitialLoading = profileLoading || 
-                           timelineLoading || 
-                           healthScoreLoading || 
-                           alertLoading || 
-                           healthTimelineLoading || 
-                           healthStoryLoading ||
-                           trackingLoading ||
-                           !hasLoaded;
+  // Master loading state - check if all critical data is loaded (only on initial load)
+  const isInitialLoading = isInitialLoad && (
+    profileLoading || 
+    timelineLoading || 
+    healthScoreLoading || 
+    alertLoading || 
+    healthTimelineLoading || 
+    healthStoryLoading ||
+    trackingLoading
+  );
+
+  // Set initial load to false once all data is loaded
+  useEffect(() => {
+    if (isInitialLoad && 
+        !profileLoading && 
+        !timelineLoading && 
+        !healthScoreLoading && 
+        !alertLoading && 
+        !healthTimelineLoading && 
+        !healthStoryLoading &&
+        !trackingLoading) {
+      setIsInitialLoad(false);
+    }
+  }, [isInitialLoad, profileLoading, timelineLoading, healthScoreLoading, alertLoading, healthTimelineLoading, healthStoryLoading, trackingLoading]);
 
   // Show loading screen while data is loading
   if (isInitialLoading) {
@@ -864,7 +878,7 @@ function DashboardContent() {
             
             {/* Timeline entries */}
             <div ref={timelineRef} className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar relative min-h-0" style={{ paddingRight: '8px' }}>
-              {timelineLoading && !hasLoaded ? (
+              {timelineLoading && isInitialLoad ? (
                 // Loading state
                 <div className="space-y-8">
                   {[...Array(5)].map((_, i) => (
