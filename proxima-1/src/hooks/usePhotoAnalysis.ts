@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuditLog } from '@/hooks/useAuditLog';
 import { 
   PhotoSession, 
   AnalysisResult, 
@@ -19,6 +20,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4
 
 export function usePhotoAnalysis() {
   const { user } = useAuth();
+  const { logEvent } = useAuditLog();
   const [sessions, setSessions] = useState<PhotoSession[]>([]);
   const [activeSession, setActiveSession] = useState<PhotoSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,7 +91,8 @@ export function usePhotoAnalysis() {
     console.log('Uploading photos with user_id:', userId);
     console.log('Session ID:', sessionId);
 
-    const response = await fetch(`${API_URL}/api/photo-analysis/upload`, {
+    // Use our secure upload endpoint
+    const response = await fetch('/api/photo-upload', {
       method: 'POST',
       body: formData
     });
@@ -105,7 +108,18 @@ export function usePhotoAnalysis() {
       }
     }
 
-    return response.json();
+    const uploadResult = await response.json();
+    
+    // Log medical photo upload
+    if (user?.id && uploadResult.uploaded_photos?.length > 0) {
+      await logEvent('MEDICAL_PHOTO_UPLOADED', {
+        session_id: sessionId,
+        photo_count: uploadResult.uploaded_photos.length,
+        total_size: photos.reduce((sum, p) => sum + p.size, 0),
+      });
+    }
+    
+    return uploadResult;
   };
 
   // Analyze photos
@@ -126,7 +140,20 @@ export function usePhotoAnalysis() {
     });
 
     if (!response.ok) throw new Error('Analysis failed');
-    return response.json();
+    
+    const result = await response.json();
+    
+    // Log photo analysis event
+    if (user?.id) {
+      await logEvent('PHOTO_ANALYSIS_PERFORMED', {
+        session_id: params.session_id,
+        photo_count: params.photo_ids.length,
+        has_comparison: !!params.comparison_photo_ids?.length,
+        analysis_id: result.analysis_id,
+      });
+    }
+    
+    return result;
   };
 
   // Create new session

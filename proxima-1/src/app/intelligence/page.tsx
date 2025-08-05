@@ -29,9 +29,7 @@ export default function IntelligencePage() {
     weekOf,
     error,
     insightsError,
-    predictionsError,
     patternsError,
-    strategiesError,
     generationStatus,
     cacheInfo,
     refresh,
@@ -39,8 +37,7 @@ export default function IntelligencePage() {
     regenerateComponent,
     generateWeeklyAnalysis,
     generateInsights,
-    generateShadowPatterns,
-    checkStatus
+    generateShadowPatterns
   } = useHealthIntelligence();
   
   // Debug logging
@@ -79,7 +76,7 @@ export default function IntelligencePage() {
         }
       }
     }
-  }, [isLoading, isGenerating, insights.length, predictions.length, shadowPatterns.length, strategies.length, error]);
+  }, [isLoading, isGenerating, insights.length, predictions.length, shadowPatterns.length, strategies.length, error, regenerateAll, generateInsights, generateShadowPatterns, generatingInsights, generatingShadowPatterns, insightsError, patternsError]);
 
   const handleRefresh = async () => {
     console.log('🔄 Manual refresh triggered');

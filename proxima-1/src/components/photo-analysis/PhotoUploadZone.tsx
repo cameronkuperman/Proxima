@@ -22,12 +22,37 @@ export default function PhotoUploadZone({
 }: PhotoUploadZoneProps) {
   const [dragActive, setDragActive] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    // Check for rejected files
+    if (rejectedFiles.length > 0) {
+      const errors = rejectedFiles.map(rejection => {
+        const error = rejection.errors[0];
+        if (error.code === 'file-too-large') {
+          return `${rejection.file.name}: File too large (max 10MB)`;
+        } else if (error.code === 'file-invalid-type') {
+          return `${rejection.file.name}: Invalid file type`;
+        }
+        return `${rejection.file.name}: ${error.message}`;
+      }).join('\n');
+      
+      alert(`Failed to upload files:\n${errors}`);
+      return;
+    }
+    
     const remainingSlots = maxPhotos - uploadedPhotos.length;
     const filesToAdd = acceptedFiles.slice(0, remainingSlots);
     
     if (filesToAdd.length < acceptedFiles.length) {
       alert(`Maximum ${maxPhotos} photos allowed. Only first ${filesToAdd.length} photos were added.`);
+    }
+    
+    // Additional client-side validation
+    for (const file of filesToAdd) {
+      // Check file name for suspicious patterns
+      if (file.name.includes('..') || file.name.includes('/') || file.name.includes('\\')) {
+        alert(`File "${file.name}" has an invalid name`);
+        return;
+      }
     }
     
     onUpload(filesToAdd);
@@ -36,12 +61,26 @@ export default function PhotoUploadZone({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.heic', '.heif']
+      'image/jpeg': ['.jpeg', '.jpg'],
+      'image/png': ['.png'],
+      'image/heic': ['.heic'],
+      'image/heif': ['.heif']
     },
     maxSize: 10 * 1024 * 1024, // 10MB
+    maxFiles: maxPhotos - uploadedPhotos.length,
     disabled: isAnalyzing || uploadedPhotos.length >= maxPhotos,
     onDragEnter: () => setDragActive(true),
-    onDragLeave: () => setDragActive(false)
+    onDragLeave: () => setDragActive(false),
+    validator: (file) => {
+      // Additional validation
+      if (file.name.length > 255) {
+        return {
+          code: 'name-too-long',
+          message: 'Filename is too long'
+        };
+      }
+      return null;
+    }
   });
 
   const formatFileSize = (bytes: number) => {

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Camera, Upload, Clock, TrendingUp, ArrowLeft, Plus, X, AlertCircle, Check, Download, Share2, ChevronRight, Calendar } from 'lucide-react';
+import { Camera, Clock, TrendingUp, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 import PhotoUploadZone from '@/components/photo-analysis/PhotoUploadZone';
@@ -24,11 +24,10 @@ export const dynamic = 'force-dynamic';
 
 export default function PhotoAnalysisPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { } = useAuth();
   const { 
     sessions, 
     activeSession,
-    isLoading,
     uploadPhotos,
     analyzePhotos,
     createSession,
@@ -169,9 +168,9 @@ export default function PhotoAnalysisPage() {
         
         setAnalysisResult(analysis);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Analysis error:', error);
-      alert(error.message || 'An error occurred during analysis. Please try again.');
+      alert(error instanceof Error ? error.message : 'An error occurred during analysis. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -251,7 +250,7 @@ export default function PhotoAnalysisPage() {
                   key={tab.id}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setMode(tab.id as any)}
+                  onClick={() => setMode(tab.id as 'new' | 'continue' | 'history')}
                   className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
                     mode === tab.id
                       ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'

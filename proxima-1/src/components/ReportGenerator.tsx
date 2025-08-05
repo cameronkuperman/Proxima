@@ -260,7 +260,6 @@ export function ReportGenerator({
         context: {
           purpose: 'specialist_referral',
           target_audience: 'specialist',
-          specialty: specialtyToUse, // Add specialty to context
         },
         available_data: {
           quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : quickScanIds,

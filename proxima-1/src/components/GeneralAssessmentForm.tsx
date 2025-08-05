@@ -184,7 +184,7 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
     }))
   }
 
-  const handleCheckboxChange = (field: 'aggravatingFactors' | 'triedInterventions' | 'lifestyleFactors' | 'emotionalImpact', value: string) => {
+  const handleCheckboxChange = (field: 'aggravatingFactors' | 'triedInterventions' | 'functionalImpact', value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field]?.includes(value) 
@@ -1037,7 +1037,7 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
           {selectedCategory === 'physical' && (
             <>
               {/* Affected Side - only for bilateral body parts */}
-              {['arms', 'legs', 'joints'].includes(formData.bodyRegion) && (
+              {formData.bodyRegion && ['arms', 'legs', 'joints'].includes(formData.bodyRegion) && (
                 <div>
                   <label className="block text-white font-medium mb-2">
                     Which side is affected?
@@ -1151,13 +1151,14 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
                     </label>
                   ))}
                 </div>
-                {formData.bodyLocation?.regions?.length > 0 && (
+                {formData.bodyLocation?.regions && formData.bodyLocation.regions.length > 0 && (
                   <textarea
                     name="bodyLocationDescription"
                     value={formData.bodyLocation?.description || ''}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
                       bodyLocation: {
+                        regions: prev.bodyLocation?.regions || [],
                         ...prev.bodyLocation,
                         description: e.target.value
                       }
@@ -1722,44 +1723,14 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
                     Describe how symptoms have changed over time
                   </label>
                   <textarea
-                    name="symptomTimeline"
-                    value={formData.symptomTimeline || ''}
+                    name="symptomVariation"
+                    value={formData.symptomVariation || ''}
                     onChange={handleInputChange}
                     placeholder="Started gradually... got worse when... better in the mornings..."
                     className="w-full h-24 px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:border-indigo-500/50 transition-all resize-none"
                   />
                 </div>
 
-                {/* Previous episodes */}
-                <div>
-                  <label className="block text-white font-medium mb-2">
-                    Have you experienced this before?
-                  </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="previousEpisodes"
-                        value="yes"
-                        checked={formData.previousEpisodes === true}
-                        onChange={() => setFormData(prev => ({ ...prev, previousEpisodes: true }))}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-white">Yes, previously</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="previousEpisodes"
-                        value="no"
-                        checked={formData.previousEpisodes === false}
-                        onChange={() => setFormData(prev => ({ ...prev, previousEpisodes: false }))}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-white">No, first time</span>
-                    </label>
-                  </div>
-                </div>
 
                 {/* Aggravating and alleviating factors */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1975,60 +1946,7 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
               >
-                {/* Main goal */}
-                <div>
-                  <label className="block text-white font-medium mb-2">
-                    What's your main goal?
-                  </label>
-                  <div className="space-y-2">
-                    {[
-                      'Understanding what\'s wrong',
-                      'Feeling better quickly',
-                      'Preventing it from getting worse',
-                      'Being able to work/function normally',
-                      'Getting proper medical care'
-                    ].map((goal) => (
-                      <label key={goal} className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="mainGoal"
-                          value={goal}
-                          checked={formData.mainGoal === goal}
-                          onChange={handleInputChange}
-                          className="w-4 h-4"
-                        />
-                        <span className="text-gray-300">{goal}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Emotional impact */}
-                <div>
-                  <label className="block text-white font-medium mb-2">
-                    How are you feeling about these symptoms?
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Worried', 'Frustrated', 'Confused', 'Calm', 'Scared', 'Hopeful'].map((emotion) => (
-                      <label
-                        key={emotion}
-                        className={`px-4 py-2 rounded-full border cursor-pointer transition-all ${
-                          formData.emotionalImpact?.includes(emotion)
-                            ? 'bg-indigo-500/20 border-indigo-500 text-white'
-                            : 'bg-white/[0.03] border-white/[0.08] text-gray-400 hover:border-white/[0.15]'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.emotionalImpact?.includes(emotion) || false}
-                          onChange={() => handleCheckboxChange('emotionalImpact', emotion)}
-                          className="sr-only"
-                        />
-                        {emotion}
-                      </label>
-                    ))}
-                  </div>
-                </div>
 
                 {/* Functional impact */}
                 <div>

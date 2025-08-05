@@ -23,13 +23,22 @@ export default function LiquidGlassLogin() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
 
-  // Check for OAuth errors in URL
+  // Check for OAuth errors and session messages in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get('error');
+    const messageParam = urlParams.get('message');
+    
     if (errorParam) {
       setError(decodeURIComponent(errorParam));
+    } else if (messageParam) {
+      // Show session timeout messages
+      setError(decodeURIComponent(messageParam));
+    }
+    
+    if (errorParam || messageParam) {
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -122,6 +131,10 @@ export default function LiquidGlassLogin() {
           setError(error.message);
         } else if (data.user) {
           console.log('Sign in successful, middleware will handle redirect...');
+          // Store remember me preference for session manager
+          if (rememberMe) {
+            localStorage.setItem('proxima_remember_me_pending', 'true');
+          }
           // Let middleware handle the redirect based on onboarding status
           router.push('/dashboard');
         }
@@ -473,16 +486,45 @@ export default function LiquidGlassLogin() {
               </div>
             )}
 
-            {/* Forgot Password */}
+            {/* Remember Me & Forgot Password */}
             {!isSignup && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Forgot password?
-                </button>
+              <div className="space-y-4">
+                {/* Remember Me Checkbox */}
+                <label className="flex items-center space-x-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className="relative flex items-center justify-center">
+                    <div className={`w-5 h-5 rounded border transition-all duration-200 flex items-center justify-center ${
+                      rememberMe 
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-transparent' 
+                        : 'bg-transparent border-white/20 group-hover:border-white/40'
+                    }`}>
+                      {rememberMe && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-sm text-gray-400 group-hover:text-white transition-colors select-none">
+                    Remember me for 30 days
+                  </span>
+                </label>
+                
+                {/* Forgot Password */}
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-sm text-gray-400 hover:text-white transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
               </div>
             )}
 

@@ -7,6 +7,7 @@ import QuickScanResults from './QuickScanResults'
 import { deepDiveClient } from '@/lib/deepdive-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTrackingStore } from '@/stores/useTrackingStore'
+import { useAuditLog } from '@/hooks/useAuditLog'
 
 interface DeepDiveChatProps {
   scanData: {
@@ -110,6 +111,7 @@ const generateContextualQuestion = (bodyPart: string, symptoms: string, question
 
 export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps) {
   const { user } = useAuth()
+  const { logEvent } = useAuditLog()
   const { generateSuggestion } = useTrackingStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializingRef = useRef(false)
@@ -263,6 +265,16 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       setQuestionCount(response.question_number || 1)
       setMessages([firstQuestion])
       setIsInitialized(true)
+      
+      // Log deep dive started
+      if (user?.id) {
+        await logEvent('DEEP_DIVE_STARTED', {
+          session_id: response.session_id,
+          body_part: scanData.bodyPart,
+          model: modelToUse,
+          from_scan: scanData.fromScan || undefined,
+        })
+      }
       
     } catch (error) {
       console.error('Failed to start deep dive:', error)
@@ -489,6 +501,17 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
       setIsComplete(true)
       setAnalysisReady(false) // Reset this since we've completed
       onComplete(result.analysis)
+      
+      // Log deep dive completed
+      if (user?.id) {
+        await logEvent('DEEP_DIVE_COMPLETED', {
+          session_id: sessionId,
+          deep_dive_id: result.deep_dive_id,
+          body_part: result.body_part,
+          questions_asked: result.questions_asked,
+          confidence: result.confidence,
+        })
+      }
       
       // Auto-show results like Quick Scan
       console.log('Auto-showing Deep Dive results')

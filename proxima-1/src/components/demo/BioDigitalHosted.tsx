@@ -14,6 +14,9 @@ export function BioDigitalHosted() {
   
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Security: Only accept messages from our own domain (biodigital-host.html)
+      if (event.origin !== window.location.origin) return;
+      
       if (event.data.type === 'BIODIGITAL_PICK') {
         addLog(`Received pick event: ${event.data.data.objectName}`)
         setSelectedPart(event.data.data)

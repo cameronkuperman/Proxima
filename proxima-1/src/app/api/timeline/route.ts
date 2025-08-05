@@ -1,14 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@/utils/supabase/client';
 import { logger } from '@/utils/logger';
+import { ApiErrors, createSuccessResponse } from '@/utils/api-errors';
+import { timelineGetSchema, timelinePostSchema, parseQueryParams, validateRequest } from '@/utils/validation-schemas';
+import { logMedicalDataAccess } from '@/lib/audit-logger';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
-    const offset = parseInt(searchParams.get('offset') || '0');
-    const search = searchParams.get('search') || '';
-    const type = searchParams.get('type') || '';
+    // Validate query parameters
+    const params = parseQueryParams(request.url);
+    const validation = validateRequest(timelineGetSchema, params);
+    
+    if (!validation.success) {
+      return ApiErrors.badRequest('timeline GET', validation.error);
+    }
+    
+    const { limit, offset, search, type } = validation.data;
     
     // Create Supabase client
     const supabase = createClient();
@@ -16,12 +23,7 @@ export async function GET(request: Request) {
     // Get session instead of user for better auth handling
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
-      logger.error('Session error in timeline:', sessionError);
-      return NextResponse.json({ 
-        error: 'Unauthorized',
-        interactions: [],
-        pagination: { total: 0, limit: 50, offset: 0, hasMore: false }
-      }, { status: 401 });
+      return ApiErrors.unauthorized('timeline GET');
     }
     
     const user = session.user;
@@ -51,27 +53,32 @@ export async function GET(request: Request) {
     const { data, error, count } = await query;
     
     if (error) {
-      logger.error('Timeline query error:', error);
-      logger.error('Query details:', { user_id: user.id, search, type, limit, offset });
+      // Log detailed error info server-side only
+      logger.error('Timeline query error:', {
+        error,
+        userId: user.id,
+        filters: { search, type, limit, offset }
+      });
       
-      // Try a direct query to quick_scans to debug
-      const { data: debugData, error: debugError } = await supabase
-        .from('quick_scans')
-        .select('id, user_id, created_at')
-        .limit(5);
-        
-      logger.debug('Debug quick_scans query:', { debugData, debugError });
-      
-      return NextResponse.json({ 
-        error: 'Failed to fetch timeline data',
-        details: error.message,
-        user_id: user.id,
-        debug: { hasQuickScans: !!debugData?.length }
-      }, { status: 500 });
+      return ApiErrors.databaseError(error, 'timeline query');
     }
     
+    // Log medical data access
+    await logMedicalDataAccess(
+      'MEDICAL_TIMELINE_VIEWED',
+      user.id,
+      request,
+      'timeline',
+      undefined,
+      {
+        records_count: data?.length || 0,
+        search: search || undefined,
+        type: type || undefined,
+      }
+    );
+    
     // Return successful response with pagination info
-    return NextResponse.json({
+    return createSuccessResponse({
       interactions: data || [],
       pagination: {
         total: count || 0,
@@ -82,30 +89,29 @@ export async function GET(request: Request) {
     });
     
   } catch (error) {
-    logger.error('Timeline API error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      interactions: [],
-      pagination: { total: 0, limit: 50, offset: 0, hasMore: false }
-    }, { status: 500 });
+    return ApiErrors.serverError(error, 'timeline GET');
   }
 }
 
 // Helper function to validate interaction exists before navigation
 export async function POST(request: Request) {
   try {
-    const { interactionId, interactionType } = await request.json();
+    // Parse and validate request body
+    const body = await request.json();
+    const validation = validateRequest(timelinePostSchema, body);
+    
+    if (!validation.success) {
+      return ApiErrors.badRequest('timeline POST', validation.error);
+    }
+    
+    const { interactionId, interactionType } = validation.data;
     
     const supabase = createClient();
     
     // Get session for auth
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
-      logger.error('Session error in timeline validation:', sessionError);
-      return NextResponse.json({ 
-        isValid: false,
-        error: 'Unauthorized' 
-      }, { status: 401 });
+      return ApiErrors.unauthorized('timeline validation');
     }
     
     const user = session.user;
@@ -239,16 +245,12 @@ export async function POST(request: Request) {
         break;
     }
     
-    return NextResponse.json({
+    return createSuccessResponse({
       isValid,
       navigationPath
     });
     
   } catch (error) {
-    logger.error('Validation error:', error);
-    return NextResponse.json({ 
-      isValid: false,
-      error: 'Failed to validate interaction' 
-    }, { status: 500 });
+    return ApiErrors.serverError(error, 'timeline validation');
   }
 }

@@ -17,6 +17,7 @@ import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
 import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
 import { useHealthScore } from '@/hooks/useHealthScore';
+import { TimelineEvent } from '@/lib/timeline-client';
 import TrackingSuggestionCard from '@/components/tracking/TrackingSuggestionCard';
 import ActiveTrackingCard from '@/components/tracking/ActiveTrackingCard';
 import CustomizeTrackingModal from '@/components/tracking/CustomizeTrackingModal';
@@ -27,7 +28,7 @@ import HistoryModal from '@/components/HistoryModal';
 import AssessmentModal from '@/components/modals/AssessmentModal';
 import { formatDistanceToNow, format } from 'date-fns';
 import { reportsService, GeneratedReport } from '@/services/reportsService';
-import { healthStoryService } from '@/lib/health-story';
+import { healthStoryService, HealthStoryData } from '@/lib/health-story';
 
 // Type definitions
 interface TimelineEntry {
@@ -350,7 +351,7 @@ function DashboardContent() {
       const currentOffset = append ? timelineOffsetRef.current : 0;
       query = query.range(currentOffset, currentOffset + TIMELINE_PAGE_SIZE - 1);
       
-      const { data, error: queryError, count } = await query;
+      const { data, error: queryError } = await query;
       
       if (queryError) {
         throw new Error(queryError.message);
@@ -543,7 +544,7 @@ function DashboardContent() {
       initWithRetry();
     }
     // DO NOT initialize tutorial otherwise
-  }, [user?.id, profileLoading, searchParams]); // Re-run when user loads or profile loading changes
+  }, [user?.id, profileLoading, searchParams, initializeTutorial, router, userProfile]); // Re-run when user loads or profile loading changes
 
   // Listen for events from FAB
   useEffect(() => {
@@ -910,6 +911,7 @@ function DashboardContent() {
                 </AnimatePresence>
               ) : (
                 // Timeline data
+<<<<<<< HEAD
                 <>
                   {timelineData.map((entry, index) => {
                     const colors = getInteractionColor(entry.interaction_type);
@@ -961,7 +963,11 @@ function DashboardContent() {
                           >
                             <div 
                               onClick={() => {
-                                setSelectedHistoryItem(entry);
+                                setSelectedHistoryItem({
+                                  id: entry.id,
+                                  interaction_type: entry.interaction_type,
+                                  metadata: entry.metadata
+                                });
                                 setHistoryModalOpen(true);
                               }}
                               className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all`}
@@ -1218,7 +1224,7 @@ function DashboardContent() {
                   <ClipboardList className="w-6 h-6 text-blue-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">General Assessment</h3>
-                <p className="text-gray-400 text-sm mb-2">Describe how you're feeling overall</p>
+                <p className="text-gray-400 text-sm mb-2">Describe how you&apos;re feeling overall</p>
                 <p className="text-xs text-gray-500">
                   Best for: Fatigue, fever, mental health, multiple symptoms
                 </p>

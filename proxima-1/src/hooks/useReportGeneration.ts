@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { reportService, ReportAnalyzeRequest, ReportAnalyzeResponse, MedicalReport } from '@/services/reportService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuditLog } from '@/hooks/useAuditLog';
 
 interface ReportGenerationState {
   isAnalyzing: boolean;
@@ -12,6 +13,7 @@ interface ReportGenerationState {
 
 export const useReportGeneration = () => {
   const { user } = useAuth();
+  const { logEvent } = useAuditLog();
   const [state, setState] = useState<ReportGenerationState>({
     isAnalyzing: false,
     isGenerating: false,
@@ -52,6 +54,15 @@ export const useReportGeneration = () => {
         isGenerating: false 
       }));
 
+      // Log doctor report generation
+      if (user?.id && result.report) {
+        await logEvent('DOCTOR_REPORT_GENERATED', {
+          report_id: result.report.report_id,
+          purpose: request.context?.purpose,
+          target_audience: request.context?.target_audience,
+        });
+      }
+
       return result;
     } catch (error) {
       console.error('Report generation failed:', error);
@@ -64,7 +75,7 @@ export const useReportGeneration = () => {
       }));
       return null;
     }
-  }, [user]);
+  }, [user, logEvent]);
 
   // Legacy method for backward compatibility
   const generateReportLegacy = useCallback(async (context: any, userId?: string) => {

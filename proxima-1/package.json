@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/ssr": "^0.6.1",
@@ -29,6 +28,7 @@
     "react-dropzone": "^14.3.8",
     "sonner": "^2.0.6",
     "uuid": "^11.1.0",
+    "zod": "^4.0.14",
     "zustand": "^5.0.6"
   },
   "devDependencies": {
