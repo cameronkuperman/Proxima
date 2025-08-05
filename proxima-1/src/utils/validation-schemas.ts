@@ -52,6 +52,9 @@ export const timelinePostSchema = z.object({
   interactionType: z.enum([
     'quick_scan',
     'deep_dive',
+    'flash_assessment',
+    'general_assessment', 
+    'general_deepdive',
     'photo_analysis',
     'report',
     'oracle_chat',

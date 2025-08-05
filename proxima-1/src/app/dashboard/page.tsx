@@ -911,7 +911,6 @@ function DashboardContent() {
                 </AnimatePresence>
               ) : (
                 // Timeline data
-<<<<<<< HEAD
                 <>
                   {timelineData.map((entry, index) => {
                     const colors = getInteractionColor(entry.interaction_type);
