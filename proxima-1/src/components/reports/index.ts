@@ -9,7 +9,7 @@ export { TimePeriodReport } from './TimePeriodReport';
 export { DataQualityNotes } from './DataQualityNotes';
 export { SpecialistReport } from './SpecialistReport';
 export { CareCoordination } from './CareCoordination';
-export { PhotoAnalysisReport } from './PhotoAnalysisReport';
+export { default as PhotoAnalysisReport } from './PhotoAnalysisReport';
 
 // Export common components
 export { ReportHeader } from './common/ReportHeader';

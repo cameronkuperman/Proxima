@@ -28,7 +28,8 @@ import HistoryModal from '@/components/HistoryModal';
 import AssessmentModal from '@/components/modals/AssessmentModal';
 import { formatDistanceToNow, format } from 'date-fns';
 import { reportsService, GeneratedReport } from '@/services/reportsService';
-import { healthStoryService, HealthStoryData } from '@/lib/health-story';
+import { healthStoryService } from '@/lib/health-story';
+import type { HealthStoryData } from '@/lib/health-story';
 
 // Type definitions
 interface TimelineEntry {
@@ -50,14 +51,6 @@ interface TimelineEntry {
   };
 }
 
-interface HealthStory {
-  id: string;
-  user_id: string;
-  title: string;
-  summary: string;
-  created_at: string;
-  [key: string]: any;
-}
 
 // Mock graph data - Removed, no longer needed for tracking dashboard
 /*const mockGraphData = [
@@ -216,7 +209,7 @@ function DashboardContent() {
   const [healthTimelineLoading, setHealthTimelineLoading] = useState(true);
   
   // Health story state
-  const [latestHealthStory, setLatestHealthStory] = useState<HealthStory | null>(null);
+  const [latestHealthStory, setLatestHealthStory] = useState<HealthStoryData | null>(null);
   const [healthStoryLoading, setHealthStoryLoading] = useState(true);
   
   // Initialize visible reports based on available data
@@ -351,7 +344,7 @@ function DashboardContent() {
       const currentOffset = append ? timelineOffsetRef.current : 0;
       query = query.range(currentOffset, currentOffset + TIMELINE_PAGE_SIZE - 1);
       
-      const { data, error: queryError } = await query;
+      const { data, error: queryError, count } = await query;
       
       if (queryError) {
         throw new Error(queryError.message);
@@ -962,11 +955,7 @@ function DashboardContent() {
                           >
                             <div 
                               onClick={() => {
-                                setSelectedHistoryItem({
-                                  id: entry.id,
-                                  interaction_type: entry.interaction_type,
-                                  metadata: entry.metadata
-                                });
+                                setSelectedHistoryItem(entry);
                                 setHistoryModalOpen(true);
                               }}
                               className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all`}
@@ -1001,22 +990,22 @@ function DashboardContent() {
                                     {entry.metadata.category}
                                   </span>
                                 )}
-                                {entry.metadata.photo_count > 0 && (
+                                {entry.metadata.photo_count && entry.metadata.photo_count > 0 && (
                                   <span className="text-xs text-gray-400">
                                     📷 {entry.metadata.photo_count} photos
                                   </span>
                                 )}
-                                {entry.metadata.message_count > 0 && (
+                                {entry.metadata.message_count && entry.metadata.message_count > 0 && (
                                   <span className="text-xs text-gray-400">
                                     💬 {entry.metadata.message_count} messages
                                   </span>
                                 )}
-                                {entry.metadata.questions_asked > 0 && (
+                                {entry.metadata.questions_asked && entry.metadata.questions_asked > 0 && (
                                   <span className="text-xs text-gray-400">
                                     ❓ {entry.metadata.questions_asked} questions
                                   </span>
                                 )}
-                                {entry.metadata.confidence > 0 && (
+                                {entry.metadata.confidence && entry.metadata.confidence > 0 && (
                                   <span className="text-xs text-gray-400">
                                     {Math.round(entry.metadata.confidence)}% confidence
                                   </span>

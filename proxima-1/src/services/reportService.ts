@@ -391,6 +391,9 @@ export const reportService = {
     selectedIds?: {
       quick_scan_ids?: string[];
       deep_dive_ids?: string[];
+      flash_assessment_ids?: string[];
+      general_assessment_ids?: string[];
+      general_deep_dive_ids?: string[];
       photo_session_ids?: string[];
     }
   ): Promise<MedicalReport> {

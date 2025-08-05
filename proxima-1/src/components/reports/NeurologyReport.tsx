@@ -19,7 +19,7 @@ interface NeurologyReportProps {
   reportId: string;
   generatedAt: string;
   confidenceScore?: number;
-  urgencyLevel?: string;
+  urgencyLevel?: 'routine' | 'urgent' | 'emergent';
   onExport?: () => void;
   onPrint?: () => void;
 }
@@ -57,6 +57,7 @@ export const NeurologyReport: React.FC<NeurologyReportProps> = ({
       {/* Report Header */}
       <ReportHeader
         reportType="Neurology Specialist Report"
+        reportTitle="Neurological Assessment"
         reportId={reportId}
         generatedAt={generatedAt}
         confidenceScore={confidenceScore}
@@ -379,12 +380,21 @@ export const NeurologyReport: React.FC<NeurologyReportProps> = ({
 
       {/* Diagnostic Priorities */}
       {data.diagnostic_priorities && (
-        <DiagnosticPriorities data={data.diagnostic_priorities} specialty="neurology" />
+        <DiagnosticPriorities 
+          immediate={data.diagnostic_priorities.immediate}
+          shortTerm={data.diagnostic_priorities.short_term}
+          contingent={data.diagnostic_priorities.contingent}
+        />
       )}
 
       {/* Treatment Recommendations */}
       {data.treatment_recommendations && (
-        <TreatmentPlan data={data.treatment_recommendations} specialty="neurology" />
+        <TreatmentPlan 
+          specialty="neurology"
+          immediateTherapy={data.treatment_recommendations.immediate_medical_therapy}
+          lifestyleInterventions={data.treatment_recommendations.lifestyle_interventions}
+          preventiveMeasures={data.treatment_recommendations.preventive_measures}
+        />
       )}
 
       {/* Follow-up Plan */}
@@ -443,7 +453,11 @@ export const NeurologyReport: React.FC<NeurologyReportProps> = ({
 
       {/* Data Quality Notes */}
       {data.data_quality_notes && (
-        <DataQualityNotes data={data.data_quality_notes} />
+        <DataQualityNotes 
+          completeness={data.data_quality_notes.completeness}
+          consistency={data.data_quality_notes.consistency}
+          gaps={data.data_quality_notes.gaps}
+        />
       )}
 
       {/* Confidence Indicator at bottom */}
