@@ -25,6 +25,45 @@ interface Message {
   timestamp: Date
 }
 
+// Transform backend response to match frontend expectations
+function transformDeepDiveResponse(backendResponse: any) {
+  console.log('Transforming backend response:', backendResponse)
+  
+  const transformed = {
+    ...backendResponse,
+    analysis: {
+      // Map primary_diagnosis to primary_assessment
+      primary_assessment: backendResponse.analysis?.primary_diagnosis || '',
+      
+      // Move confidence inside analysis
+      confidence: backendResponse.confidence || backendResponse.analysis?.confidence || 80,
+      
+      // Keep key_findings as is
+      key_findings: backendResponse.analysis?.key_findings || [],
+      
+      // Map differential_diagnoses to possible_causes
+      possible_causes: (backendResponse.analysis?.differential_diagnoses || []).map((diagnosis: any) => ({
+        condition: diagnosis.condition || diagnosis.name || '',
+        likelihood: diagnosis.probability || diagnosis.likelihood || 0,
+        explanation: diagnosis.reasoning || diagnosis.explanation || ''
+      })),
+      
+      // Keep recommendations as is
+      recommendations: backendResponse.analysis?.recommendations || [],
+      
+      // Add urgency (derive from backend data or default)
+      urgency: backendResponse.analysis?.urgency || 
+               (backendResponse.analysis?.red_flags?.length > 0 ? 'high' : 'medium') as 'low' | 'medium' | 'high',
+      
+      // Move reasoning_snippets inside analysis
+      reasoning_snippets: backendResponse.reasoning_snippets || []
+    }
+  }
+  
+  console.log('Transformed response:', transformed)
+  return transformed
+}
+
 export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDeepDiveChatProps) {
   const { user } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
@@ -36,6 +75,7 @@ export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDee
   const [isComplete, setIsComplete] = useState(false)
   const [finalResults, setFinalResults] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showCompletionAnimation, setShowCompletionAnimation] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when new messages arrive
@@ -156,9 +196,19 @@ export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDee
           category: response.category,
           deep_dive_id: response.deep_dive_id
         })
-        setFinalResults(response)
-        setIsComplete(true)
-        onComplete(response)
+        
+        // Transform the response to match frontend expectations
+        const transformedResponse = transformDeepDiveResponse(response)
+        
+        // Show completion animation
+        setShowCompletionAnimation(true)
+        
+        // Wait for animation to play before showing results
+        setTimeout(() => {
+          setFinalResults(transformedResponse)
+          setIsComplete(true)
+          onComplete(transformedResponse)
+        }, 2000) // 2 second animation
       } else {
         console.error('Deep dive response status not success:', response)
         setError('Assessment completed but with unexpected status')
@@ -171,18 +221,122 @@ export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDee
     }
   }
 
+  // Show completion animation
+  if (showCompletionAnimation && !isComplete) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-8"
+        >
+          {/* Animated border glow */}
+          <motion.div
+            className="absolute inset-0 rounded-xl"
+            animate={{
+              boxShadow: [
+                '0 0 0 0 rgba(168, 85, 247, 0)',
+                '0 0 20px 10px rgba(168, 85, 247, 0.3)',
+                '0 0 40px 20px rgba(236, 72, 153, 0.3)',
+                '0 0 20px 10px rgba(168, 85, 247, 0.3)',
+                '0 0 0 0 rgba(168, 85, 247, 0)',
+              ],
+            }}
+            transition={{
+              duration: 2,
+              times: [0, 0.25, 0.5, 0.75, 1],
+              ease: 'easeInOut',
+            }}
+          />
+          
+          <div className="relative z-10 text-center">
+            {/* Animated check circle */}
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{
+                type: 'spring',
+                stiffness: 200,
+                damping: 20,
+                delay: 0.2,
+              }}
+              className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center"
+            >
+              <CheckCircle className="w-10 h-10 text-white" />
+            </motion.div>
+            
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="text-2xl font-bold text-white mb-3"
+            >
+              Analysis Complete!
+            </motion.h2>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="text-gray-400"
+            >
+              Your comprehensive health assessment is ready
+            </motion.p>
+            
+            {/* Loading dots animation */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+              className="flex justify-center gap-1 mt-6"
+            >
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-purple-400"
+                  animate={{
+                    scale: [1, 1.5, 1],
+                    opacity: [0.5, 1, 0.5],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    delay: i * 0.15,
+                  }}
+                />
+              ))}
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    )
+  }
+
   // Show final results if complete
   if (isComplete && finalResults) {
     return (
       <GeneralDeepDiveResult 
         result={finalResults}
-        conversationHistory={messages.filter(m => m.role === 'assistant' && m.content.includes('?')).map((q, idx) => {
-          const userAnswer = messages.find((m, i) => m.role === 'user' && i > messages.indexOf(q))
-          return {
-            question: q.content,
-            answer: userAnswer?.content || ''
-          }
-        })}
+        conversationHistory={(() => {
+          const pairs: Array<{ question: string; answer: string }> = []
+          let currentQuestion: string | null = null
+          
+          messages.forEach((message) => {
+            if (message.role === 'assistant' && message.content.includes('?')) {
+              // This is a question from the assistant
+              currentQuestion = message.content
+            } else if (message.role === 'user' && currentQuestion) {
+              // This is an answer to the previous question
+              pairs.push({
+                question: currentQuestion,
+                answer: message.content
+              })
+              currentQuestion = null
+            }
+          })
+          
+          return pairs
+        })()}
         onNewAssessment={() => {
           // Reset state
           setMessages([])
@@ -190,6 +344,7 @@ export default function GeneralDeepDiveChat({ scanData, onComplete }: GeneralDee
           setIsComplete(false)
           setFinalResults(null)
           setQuestionNumber(0)
+          setShowCompletionAnimation(false)
         }}
       />
     )

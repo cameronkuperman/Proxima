@@ -145,6 +145,50 @@ export async function POST(request: Request) {
         }
         break;
         
+      case 'flash_assessment':
+        const { data: flashAssessment } = await supabase
+          .from('flash_assessments')
+          .select('id')
+          .eq('id', interactionId)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (flashAssessment) {
+          isValid = true;
+          navigationPath = `/assessment/flash/${interactionId}`;
+        }
+        break;
+        
+      case 'general_assessment':
+        const { data: generalAssessment } = await supabase
+          .from('general_assessments')
+          .select('id')
+          .eq('id', interactionId)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (generalAssessment) {
+          isValid = true;
+          navigationPath = `/assessment/general/${interactionId}`;
+        }
+        break;
+        
+      case 'general_deepdive':
+        const { data: generalDeepDive } = await supabase
+          .from('general_deepdive_sessions')
+          .select('id, status')
+          .eq('id', interactionId)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (generalDeepDive) {
+          isValid = true;
+          navigationPath = generalDeepDive.status === 'completed'
+            ? `/assessment/deep-dive/results/${interactionId}`
+            : `/assessment/deep-dive/${interactionId}`;
+        }
+        break;
+        
       case 'photo_analysis':
         // For photo analysis, we need the session_id from metadata
         const { data: photoSession } = await supabase

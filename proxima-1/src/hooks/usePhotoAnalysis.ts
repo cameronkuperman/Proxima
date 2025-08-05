@@ -10,7 +10,9 @@ import {
   FollowUpUploadResponse,
   ReminderConfig,
   MonitoringSuggestion,
-  SessionTimeline
+  SessionTimeline,
+  ProgressionAnalysisResponse,
+  AnalysisHistoryResponse
 } from '@/types/photo-analysis';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
@@ -313,6 +315,27 @@ export function usePhotoAnalysis() {
     if (!response.ok) throw new Error('Failed to delete reminder');
   };
 
+  // Get progression analysis
+  const getProgressionAnalysis = async (sessionId: string): Promise<ProgressionAnalysisResponse> => {
+    const response = await fetch(`${API_URL}/api/photo-analysis/session/${sessionId}/progression-analysis`);
+    
+    if (!response.ok) throw new Error('Failed to fetch progression analysis');
+    return response.json();
+  };
+
+  // Get analysis history for a session
+  const getAnalysisHistory = async (sessionId: string, currentAnalysisId?: string): Promise<AnalysisHistoryResponse> => {
+    const url = new URL(`${API_URL}/api/photo-analysis/session/${sessionId}/analysis-history`);
+    if (currentAnalysisId) {
+      url.searchParams.append('current_analysis_id', currentAnalysisId);
+    }
+    
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) throw new Error('Failed to fetch analysis history');
+    return response.json();
+  };
+
   return {
     sessions,
     activeSession,
@@ -331,6 +354,8 @@ export function usePhotoAnalysis() {
     getMonitoringSuggestions,
     getSessionTimeline,
     updateReminder,
-    deleteReminder
+    deleteReminder,
+    getProgressionAnalysis,
+    getAnalysisHistory
   };
 }

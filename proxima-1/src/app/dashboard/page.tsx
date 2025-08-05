@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import HealthProfileModal from '@/components/HealthProfileModal';
@@ -12,7 +12,7 @@ import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 export const dynamic = 'force-dynamic';
 import UnifiedFAB from '@/components/UnifiedFAB';
 import { useTutorial } from '@/contexts/TutorialContext';
-import { MapPin, Pill, Heart, Clock, Utensils, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp, PersonStanding } from 'lucide-react';
+import { MapPin, Pill, Heart, Clock, User, AlertTriangle, Zap, Brain, Camera, BrainCircuit, Sparkles, FileText, ChevronLeft, ChevronRight, Search, Activity, ClipboardList, Calendar, Stethoscope, Shield, TrendingUp, PersonStanding, Filter } from 'lucide-react';
 import { getUserProfile, OnboardingData } from '@/utils/onboarding';
 import { useTrackingStore } from '@/stores/useTrackingStore';
 import { useWeeklyAIPredictions } from '@/hooks/useWeeklyAIPredictions';
@@ -25,9 +25,38 @@ import TrackingChart from '@/components/tracking/TrackingChart';
 import { DashboardItem } from '@/services/trackingService';
 import HistoryModal from '@/components/HistoryModal';
 import AssessmentModal from '@/components/modals/AssessmentModal';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { reportsService, GeneratedReport } from '@/services/reportsService';
 import { healthStoryService } from '@/lib/health-story';
+
+// Type definitions
+interface TimelineEntry {
+  id: string;
+  user_id: string;
+  interaction_type: string;
+  created_at: string;
+  title: string;
+  severity: string;
+  metadata: {
+    confidence?: number;
+    urgency?: string;
+    body_part?: string;
+    has_summary?: boolean;
+    escalated?: boolean;
+    message_count?: number;
+    questions_asked?: number;
+    [key: string]: any;
+  };
+}
+
+interface HealthStory {
+  id: string;
+  user_id: string;
+  title: string;
+  summary: string;
+  created_at: string;
+  [key: string]: any;
+}
 
 // Mock graph data - Removed, no longer needed for tracking dashboard
 /*const mockGraphData = [
@@ -121,21 +150,29 @@ function DashboardContent() {
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineAnimating, setTimelineAnimating] = useState(false);
-  const [timelineData, setTimelineData] = useState<any[]>([]);
+  const [timelineData, setTimelineData] = useState<TimelineEntry[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [timelineOffset, setTimelineOffset] = useState(0);
+  const [timelineHasMore, setTimelineHasMore] = useState(true);
+  const [timelineLoadingMore, setTimelineLoadingMore] = useState(false);
+  const [timelineDateFilter, setTimelineDateFilter] = useState<string>('all');
+  const [timelineTotalCount, setTimelineTotalCount] = useState(0);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const timelineOffsetRef = useRef(0);
+  const TIMELINE_PAGE_SIZE = 20; // Industry best practice: smaller page size for better performance
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [oracleChatOpen, setOracleChatOpen] = useState(false);
   // const [currentGraphIndex, setCurrentGraphIndex] = useState(0); // Removed, no longer needed
-  const [reportsMenuOpen, setReportsMenuOpen] = useState(false);
+  // const [reportsMenuOpen, setReportsMenuOpen] = useState(false); // Commented out - not used
   // Dynamic health score with weekly comparison
-  const { scoreData, isLoading: healthScoreLoading, fetchHealthScore: refreshScore } = useHealthScore();
+  const { scoreData, isLoading: healthScoreLoading } = useHealthScore();
   const healthScore = scoreData?.score || 80;
   const [ambientHealth, setAmbientHealth] = useState('good'); // good, moderate, poor
   const [userProfile, setUserProfile] = useState<OnboardingData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [quickScanLoading, setQuickScanLoading] = useState(false);
+  // const [quickScanLoading, setQuickScanLoading] = useState(false); // Commented out - not used
   const [assessmentModalOpen, setAssessmentModalOpen] = useState<'body' | 'general' | null>(null);
   const [showQuickReportChat, setShowQuickReportChat] = useState(false);
   
@@ -171,14 +208,14 @@ function DashboardContent() {
   
   // History modal state
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<TimelineEntry | null>(null);
   
   // Health timeline reports state
   const [healthTimelineData, setHealthTimelineData] = useState<GeneratedReport[]>([]);
   const [healthTimelineLoading, setHealthTimelineLoading] = useState(true);
   
   // Health story state
-  const [latestHealthStory, setLatestHealthStory] = useState<any>(null);
+  const [latestHealthStory, setLatestHealthStory] = useState<HealthStory | null>(null);
   const [healthStoryLoading, setHealthStoryLoading] = useState(true);
   
   // Initialize visible reports based on available data
@@ -237,11 +274,55 @@ function DashboardContent() {
     fetchLatestHealthStory();
   }, [user?.id]);
   
-  // Fetch timeline data for sidebar (keeping existing functionality)
-  const fetchTimeline = useCallback(async () => {
+  // Calculate date range based on filter
+  const getDateRange = useCallback(() => {
+    const now = new Date();
+    const startDate = new Date();
+    
+    switch (timelineDateFilter) {
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '2weeks':
+        startDate.setDate(now.getDate() - 14);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case '3months':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'all':
+      default:
+        return null;
+    }
+    
+    return startDate.toISOString();
+  }, [timelineDateFilter]);
+
+  // Fetch timeline data with pagination support
+  const fetchTimeline = useCallback(async (append = false) => {
     if (!user?.id) return;
     
-    setTimelineLoading(true);
+    // Check if we've reached the end when appending
+    if (append && !timelineHasMore) {
+      console.log('No more timeline items to load');
+      return;
+    }
+    
+    // Prevent multiple simultaneous loads
+    if (timelineLoadingMore) return;
+    
+    // Debug: Track fetchTimeline calls
+    // console.log('fetchTimeline called:', { append, currentOffset: timelineOffsetRef.current, hasMore: timelineHasMore });
+    
+    if (!append) {
+      setTimelineLoading(true);
+      setTimelineOffset(0);
+      timelineOffsetRef.current = 0;
+    } else {
+      setTimelineLoadingMore(true);
+    }
     setTimelineError(null);
     
     try {
@@ -254,13 +335,20 @@ function DashboardContent() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
+      // Add date filter
+      const startDate = getDateRange();
+      if (startDate) {
+        query = query.gte('created_at', startDate);
+      }
+      
       // Add search filter if provided
       if (timelineSearch) {
         query = query.or(`title.ilike.%${timelineSearch}%,metadata->>body_part.ilike.%${timelineSearch}%,metadata->>condition.ilike.%${timelineSearch}%`);
       }
       
       // Add pagination
-      query = query.range(0, 49);
+      const currentOffset = append ? timelineOffsetRef.current : 0;
+      query = query.range(currentOffset, currentOffset + TIMELINE_PAGE_SIZE - 1);
       
       const { data, error: queryError, count } = await query;
       
@@ -268,21 +356,93 @@ function DashboardContent() {
         throw new Error(queryError.message);
       }
       
-      setTimelineData(data || []);
+      const newData = data || [];
+      // Debug: Track query results
+      // console.log('Timeline query result:', { 
+      //   append, 
+      //   currentOffset, 
+      //   newDataLength: newData.length, 
+      //   totalCount: count,
+      //   pageSize: TIMELINE_PAGE_SIZE 
+      // });
+      
+      if (append) {
+        setTimelineData(prev => [...prev, ...newData]);
+        setTimelineOffset(prev => prev + newData.length);
+        timelineOffsetRef.current += newData.length;
+      } else {
+        setTimelineData(newData);
+        setTimelineOffset(newData.length);
+        timelineOffsetRef.current = newData.length;
+      }
+      
+      setTimelineTotalCount(count || 0);
+      
+      // Only has more if we got a full page of results
+      const hasMore = newData.length === TIMELINE_PAGE_SIZE && newData.length > 0;
+      setTimelineHasMore(hasMore);
       setHasLoaded(true);
+      
+      // Log when we reach the end
+      if (!hasMore && append) {
+        console.log(`Reached end of timeline. Total items loaded: ${timelineOffsetRef.current}`);
+      }
       
     } catch (err) {
       console.error('Timeline fetch error:', err);
       setTimelineError(err instanceof Error ? err.message : 'Failed to load timeline');
-      setTimelineData([]);
+      if (!append) {
+        setTimelineData([]);
+      }
     } finally {
       setTimelineLoading(false);
+      setTimelineLoadingMore(false);
     }
-  }, [user?.id, timelineSearch]);
+  }, [user?.id, timelineSearch, timelineDateFilter, getDateRange, timelineHasMore, timelineLoadingMore]);
   
+  // Fetch timeline when dependencies change
   useEffect(() => {
-    fetchTimeline();
-  }, [fetchTimeline]);
+    fetchTimeline(false);
+  }, [user?.id, timelineSearch, timelineDateFilter]);
+  
+  // Infinite scroll handler
+  useEffect(() => {
+    const container = timelineRef.current;
+    if (!container) return;
+    
+    const handleScroll = () => {
+      // Don't block scroll events during animation
+      if (timelineLoadingMore || !timelineHasMore) {
+        // console.log('Scroll blocked:', { timelineLoadingMore, timelineHasMore });
+        return;
+      }
+      
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+      
+      // Debug logging (uncomment if needed)
+      // console.log('Timeline scroll:', {
+      //   scrollTop,
+      //   scrollHeight,
+      //   clientHeight,
+      //   scrollPercentage,
+      //   timelineLoadingMore,
+      //   timelineHasMore,
+      //   currentItems: timelineData.length,
+      //   totalCount: timelineTotalCount
+      // });
+      
+      // Load more when user reaches the bottom (within 50px)
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+      if (distanceFromBottom < 50) {
+        // console.log('Near bottom, triggering load more...', { distanceFromBottom });
+        fetchTimeline(true);
+      }
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [timelineLoadingMore, timelineHasMore, fetchTimeline, timelineData.length, timelineTotalCount]);
   
   // Helper function to get interaction color
   const getInteractionColor = useCallback((type: string) => {
@@ -294,6 +454,24 @@ function DashboardContent() {
           borderColor: 'border-emerald-500/20',
         };
       case 'deep_dive':
+        return {
+          gradient: 'from-indigo-500/20 to-purple-500/20',
+          iconColor: 'text-indigo-400',
+          borderColor: 'border-indigo-500/20',
+        };
+      case 'flash_assessment':
+        return {
+          gradient: 'from-amber-500/20 to-yellow-500/20',
+          iconColor: 'text-amber-400',
+          borderColor: 'border-amber-500/20',
+        };
+      case 'general_assessment':
+        return {
+          gradient: 'from-blue-500/20 to-cyan-500/20',
+          iconColor: 'text-blue-400',
+          borderColor: 'border-blue-500/20',
+        };
+      case 'general_deepdive':
         return {
           gradient: 'from-indigo-500/20 to-purple-500/20',
           iconColor: 'text-indigo-400',
@@ -517,6 +695,9 @@ function DashboardContent() {
     switch(type) {
       case 'quick_scan': return <Zap className="w-3 h-3" />;
       case 'deep_dive': return <Brain className="w-3 h-3" />;
+      case 'flash_assessment': return <Sparkles className="w-3 h-3" />;
+      case 'general_assessment': return <ClipboardList className="w-3 h-3" />;
+      case 'general_deepdive': return <Search className="w-3 h-3" />;
       case 'photo_analysis': return <Camera className="w-3 h-3" />;
       case 'report': return <FileText className="w-3 h-3" />;
       case 'oracle_chat': return <BrainCircuit className="w-3 h-3" />;
@@ -614,16 +795,33 @@ function DashboardContent() {
             {/* Timeline gradient line - Fixed position */}
             <div className="absolute top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20 pointer-events-none" style={{ left: '21px' }} />
             
-            {/* Search bar (only visible when expanded) */}
+            {/* Search and Filter Section (only visible when expanded) */}
             <AnimatePresence>
               {timelineExpanded && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="pt-4 pb-2 px-4 flex-shrink-0"
+                  className="pt-4 pb-2 px-4 flex-shrink-0 space-y-3"
                   style={{ paddingLeft: '48px' }}
                 >
+                  {/* Date Filter Dropdown */}
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-gray-400" />
+                    <select
+                      value={timelineDateFilter}
+                      onChange={(e) => setTimelineDateFilter(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/[0.05] rounded-lg text-sm text-white focus:outline-none focus:border-white/[0.1] transition-all cursor-pointer"
+                    >
+                      <option value="week" className="bg-gray-900">Last Week</option>
+                      <option value="2weeks" className="bg-gray-900">Last 2 Weeks</option>
+                      <option value="month" className="bg-gray-900">Last Month</option>
+                      <option value="3months" className="bg-gray-900">Last 3 Months</option>
+                      <option value="all" className="bg-gray-900">All Time</option>
+                    </select>
+                  </div>
+                  
+                  {/* Search Bar */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -634,12 +832,19 @@ function DashboardContent() {
                       className="w-full pl-10 pr-3 py-2 bg-white/[0.03] border border-white/[0.05] rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-white/[0.1] transition-all"
                     />
                   </div>
+                  
+                  {/* Results Count */}
+                  {timelineTotalCount > 0 && (
+                    <p className="text-xs text-gray-500 text-center">
+                      Showing {timelineData.length} of {timelineTotalCount} interactions
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
             
             {/* Timeline entries */}
-            <div className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar relative" style={{ paddingRight: '8px' }}>
+            <div ref={timelineRef} className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar relative min-h-0" style={{ paddingRight: '8px' }}>
               {timelineLoading && !hasLoaded ? (
                 // Loading state
                 <div className="space-y-8">
@@ -705,16 +910,39 @@ function DashboardContent() {
                 </AnimatePresence>
               ) : (
                 // Timeline data
-                timelineData.map((entry, index) => {
-                  const colors = getInteractionColor(entry.interaction_type);
-                  return (
-                    <motion.div
-                      key={entry.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: Math.min(index * 0.05, 0.3) }}
-                      className="relative mb-8"
-                    >
+                <>
+                  {timelineData.map((entry, index) => {
+                    const colors = getInteractionColor(entry.interaction_type);
+                    const entryDate = new Date(entry.created_at);
+                    const dateStr = format(entryDate, 'MMM d, yyyy');
+                    
+                    // Show date separator for first item or when date changes
+                    const showDateSeparator = index === 0 || 
+                      format(new Date(timelineData[index - 1].created_at), 'MMM d, yyyy') !== dateStr;
+                    
+                    return (
+                    <React.Fragment key={entry.id}>
+                      {/* Date separator */}
+                      {showDateSeparator && timelineExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="relative mb-4 ml-12"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="h-px flex-1 bg-white/[0.05]" />
+                            <span className="text-xs text-gray-500 px-2">{dateStr}</span>
+                            <div className="h-px flex-1 bg-white/[0.05]" />
+                          </div>
+                        </motion.div>
+                      )}
+                      
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                        className="relative mb-8"
+                      >
                       {/* Date dot with icon */}
                       <div className={`absolute left-[9px] w-6 h-6 rounded-full bg-[#0a0a0a] border-2 ${colors.borderColor} flex items-center justify-center`} style={{ left: '9px' }}>
                         <div className={colors.iconColor}>
@@ -762,6 +990,12 @@ function DashboardContent() {
                                     {entry.metadata.body_part}
                                   </span>
                                 )}
+                                {entry.metadata.category && (
+                                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                                    <Activity className="w-3 h-3" />
+                                    {entry.metadata.category}
+                                  </span>
+                                )}
                                 {entry.metadata.photo_count > 0 && (
                                   <span className="text-xs text-gray-400">
                                     📷 {entry.metadata.photo_count} photos
@@ -770,6 +1004,11 @@ function DashboardContent() {
                                 {entry.metadata.message_count > 0 && (
                                   <span className="text-xs text-gray-400">
                                     💬 {entry.metadata.message_count} messages
+                                  </span>
+                                )}
+                                {entry.metadata.questions_asked > 0 && (
+                                  <span className="text-xs text-gray-400">
+                                    ❓ {entry.metadata.questions_asked} questions
                                   </span>
                                 )}
                                 {entry.metadata.confidence > 0 && (
@@ -782,9 +1021,25 @@ function DashboardContent() {
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </motion.div>
-                  );
-                })
+                      </motion.div>
+                    </React.Fragment>
+                    );
+                  })}
+                  
+                  {/* Loading more indicator */}
+                  {timelineLoadingMore && (
+                    <div className="flex justify-center py-4">
+                      <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  
+                  {/* No more data indicator */}
+                  {!timelineHasMore && timelineData.length > 0 && (
+                    <div className="text-center py-4">
+                      <p className="text-xs text-gray-500">No more interactions</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

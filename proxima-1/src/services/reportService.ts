@@ -166,7 +166,7 @@ export const reportService = {
       deep_dive_ids?: string[];
       flash_assessment_ids?: string[];
       general_assessment_ids?: string[];
-      general_deepdive_ids?: string[];
+      general_deep_dive_ids?: string[];
       photo_session_ids?: string[];
     },
     additionalParams?: {
@@ -207,8 +207,8 @@ export const reportService = {
       if (selectedIds.general_assessment_ids?.length) {
         requestBody.general_assessment_ids = selectedIds.general_assessment_ids;
       }
-      if (selectedIds.general_deepdive_ids?.length) {
-        requestBody.general_deepdive_ids = selectedIds.general_deepdive_ids;
+      if (selectedIds.general_deep_dive_ids?.length) {
+        requestBody.general_deep_dive_ids = selectedIds.general_deep_dive_ids;
       }
       if (selectedIds.photo_session_ids?.length) {
         requestBody.photo_session_ids = selectedIds.photo_session_ids;

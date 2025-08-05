@@ -14,8 +14,11 @@ import PhotoQualityModal from '@/components/photo-analysis/PhotoQualityModal';
 import ReminderOptIn from '@/components/photo-analysis/ReminderOptIn';
 import PrivacyInfoModal from '@/components/photo-analysis/PrivacyInfoModal';
 import ErrorModal from '@/components/photo-analysis/ErrorModal';
+import SmartBatchingNotification from '@/components/photo-analysis/SmartBatchingNotification';
+import AdaptiveSchedulingCard from '@/components/photo-analysis/AdaptiveSchedulingCard';
+import ProgressionAnalysisView from '@/components/photo-analysis/ProgressionAnalysisView';
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis';
-import { PhotoSession, PhotoCategory, AnalysisResult } from '@/types/photo-analysis';
+import { PhotoSession, PhotoCategory, AnalysisResult, FollowUpUploadResponse } from '@/types/photo-analysis';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +36,8 @@ export default function PhotoAnalysisPage() {
     exportSession,
     addFollowUpPhotos,
     configureReminder,
-    getMonitoringSuggestions
+    getMonitoringSuggestions,
+    getProgressionAnalysis
   } = usePhotoAnalysis();
 
   // Listen for privacy info event
@@ -54,6 +58,8 @@ export default function PhotoAnalysisPage() {
   const [showReminderOptIn, setShowReminderOptIn] = useState(false);
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
   const [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
+  const [followUpData, setFollowUpData] = useState<FollowUpUploadResponse | null>(null);
+  const [showProgressionAnalysis, setShowProgressionAnalysis] = useState(false);
 
   // Tab navigation
   const tabs = [
@@ -419,12 +425,20 @@ export default function PhotoAnalysisPage() {
                                   }
                                 );
                                 
+                                // Handle smart batching info if present
+                                if (followUpResult.smart_batching_info) {
+                                  console.log('Smart batching active:', followUpResult.smart_batching_info);
+                                }
+                                
                                 // Analyze the new photos
                                 const analysis = await analyzePhotos({
                                   session_id: activeSession.id || activeSession.session_id || '',
                                   photo_ids: followUpResult.uploaded_photos.map(p => p.id),
                                   context: notes || 'Follow-up photos for tracking progress'
                                 });
+                                
+                                // Store follow-up data for display
+                                setFollowUpData(followUpResult);
                                 
                                 setAnalysisResult(analysis);
                                 setMode('new');
@@ -489,13 +503,26 @@ export default function PhotoAnalysisPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
+                  className="space-y-6"
                 >
+                  {/* Smart Batching Notification */}
+                  {followUpData?.smart_batching_info && (
+                    <SmartBatchingNotification
+                      batchingInfo={followUpData.smart_batching_info}
+                      onViewAllPhotos={() => {
+                        // TODO: Implement view all photos modal
+                        console.log('View all photos clicked');
+                      }}
+                    />
+                  )}
+                  
                   <PhotoAnalysisResults
                     analysis={analysisResult}
                     sessionId={activeSession?.id || activeSession?.session_id}
                     onNewAnalysis={() => {
                       setAnalysisResult(null);
                       setUploadedPhotos([]);
+                      setFollowUpData(null);
                       setMode('new');
                     }}
                     onExport={() => exportSession(analysisResult.analysis_id)}
@@ -505,6 +532,51 @@ export default function PhotoAnalysisPage() {
                         setShowReminderOptIn(true);
                       }
                     }}
+                    followUpData={followUpData}
+                    onViewProgression={() => {
+                      if (activeSession?.id || activeSession?.session_id) {
+                        setShowProgressionAnalysis(true);
+                      }
+                    }}
+                  />
+                  
+                  {/* Adaptive Scheduling Card */}
+                  {followUpData?.follow_up_suggestion && (
+                    <AdaptiveSchedulingCard
+                      suggestion={followUpData.follow_up_suggestion}
+                      onSetReminder={() => {
+                        setCurrentAnalysisId(analysisResult.analysis_id);
+                        setShowReminderOptIn(true);
+                      }}
+                      onSchedule={() => {
+                        // TODO: Implement calendar integration
+                        console.log('Schedule clicked');
+                      }}
+                    />
+                  )}
+                </motion.div>
+              )}
+              
+              {/* Progression Analysis Modal/View */}
+              {showProgressionAnalysis && (activeSession?.id || activeSession?.session_id) && (
+                <motion.div
+                  key="progression"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <div className="mb-4">
+                    <button
+                      onClick={() => setShowProgressionAnalysis(false)}
+                      className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Results
+                    </button>
+                  </div>
+                  <ProgressionAnalysisView
+                    sessionId={activeSession.id || activeSession.session_id || ''}
+                    getProgressionAnalysis={getProgressionAnalysis}
                   />
                 </motion.div>
               )}

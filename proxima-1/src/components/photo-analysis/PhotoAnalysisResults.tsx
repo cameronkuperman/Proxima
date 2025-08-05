@@ -1,9 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, TrendingUp, TrendingDown, Minus, Download, Share2, Calendar, ChevronRight, Shield, Clock } from 'lucide-react';
-import { AnalysisResult } from '@/types/photo-analysis';
+import { AlertCircle, TrendingUp, TrendingDown, Minus, Download, Share2, Calendar, ChevronRight, Shield, Clock, ChartLine, Image, Eye } from 'lucide-react';
+import { AnalysisResult, FollowUpUploadResponse, AnalysisHistoryResponse } from '@/types/photo-analysis';
+import EnhancedComparisonView from './EnhancedComparisonView';
+import PhotoDisplay from './PhotoDisplay';
+import PhotoComparison from './PhotoComparison';
+import AnalysisTimeline from './AnalysisTimeline';
+import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis';
 
 interface PhotoAnalysisResultsProps {
   analysis: AnalysisResult;
@@ -11,6 +16,8 @@ interface PhotoAnalysisResultsProps {
   onExport: () => void;
   onEnableReminders?: () => void;
   sessionId?: string;
+  followUpData?: FollowUpUploadResponse | null;
+  onViewProgression?: () => void;
 }
 
 export default function PhotoAnalysisResults({
@@ -18,8 +25,66 @@ export default function PhotoAnalysisResults({
   onNewAnalysis,
   onExport,
   onEnableReminders,
-  sessionId
+  sessionId,
+  followUpData,
+  onViewProgression
 }: PhotoAnalysisResultsProps) {
+  const { getAnalysisHistory } = usePhotoAnalysis();
+  const [showPhotos, setShowPhotos] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+  const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistoryResponse | null>(null);
+  const [currentAnalysisIndex, setCurrentAnalysisIndex] = useState(0);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  
+  // Load analysis history if we have a session
+  useEffect(() => {
+    if (sessionId && !analysisHistory) {
+      loadAnalysisHistory();
+    }
+  }, [sessionId]);
+  
+  const loadAnalysisHistory = async () => {
+    if (!sessionId) return;
+    
+    try {
+      setIsLoadingHistory(true);
+      const history = await getAnalysisHistory(sessionId, analysis.analysis_id);
+      setAnalysisHistory(history);
+      setCurrentAnalysisIndex(history.current_index);
+    } catch (error) {
+      console.error('Failed to load analysis history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+  
+  const handleSelectAnalysis = async (index: number) => {
+    if (!analysisHistory || index === currentAnalysisIndex) return;
+    
+    const selectedAnalysis = analysisHistory.analyses[index];
+    if (selectedAnalysis.analysis_data) {
+      // We have the full analysis data, update the view
+      // This would require parent component to handle analysis change
+      console.log('Navigate to analysis:', selectedAnalysis);
+      // TODO: Implement navigation to different analysis
+    }
+  };
+  
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!analysisHistory || analysisHistory.analyses.length <= 1) return;
+      
+      if (e.key === 'ArrowLeft' && currentAnalysisIndex > 0) {
+        handleSelectAnalysis(currentAnalysisIndex - 1);
+      } else if (e.key === 'ArrowRight' && currentAnalysisIndex < analysisHistory.analyses.length - 1) {
+        handleSelectAnalysis(currentAnalysisIndex + 1);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [analysisHistory, currentAnalysisIndex]);
   const getSeverityColor = (confidence: number) => {
     if (confidence >= 80) return 'from-green-500 to-emerald-500';
     if (confidence >= 60) return 'from-yellow-500 to-orange-500';
@@ -41,8 +106,80 @@ export default function PhotoAnalysisResults({
   const expiresIn = isTemporary ? new Date(analysis.expires_at!).getTime() - Date.now() : 0;
   const hoursRemaining = Math.floor(expiresIn / (1000 * 60 * 60));
 
+  // Get current photo URL if available
+  const currentPhotoUrl = followUpData?.uploaded_photos?.[0]?.preview_url || 
+                         analysisHistory?.analyses?.[currentAnalysisIndex]?.photo_url;
+  
+  // Get previous photo for comparison (if available)
+  const previousPhotoUrl = currentAnalysisIndex > 0 && analysisHistory
+    ? analysisHistory.analyses[currentAnalysisIndex - 1].photo_url
+    : null;
+
   return (
     <div className="space-y-6">
+      {/* Analysis Timeline Navigation - Show only if we have multiple analyses */}
+      {analysisHistory && analysisHistory.analyses.length > 1 && (
+        <AnalysisTimeline
+          analyses={analysisHistory.analyses.map(a => ({
+            id: a.id,
+            date: a.date,
+            photo_url: a.photo_url,
+            thumbnail_url: a.thumbnail_url,
+            primary_assessment: a.primary_assessment,
+            confidence: a.confidence,
+            key_metrics: a.key_metrics,
+            has_red_flags: a.has_red_flags,
+            trend: a.trend
+          }))}
+          currentIndex={currentAnalysisIndex}
+          onSelectAnalysis={handleSelectAnalysis}
+        />
+      )}
+      
+      {/* Photo Display Section - Only show if toggled and photos exist */}
+      {showPhotos && currentPhotoUrl && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          {/* Photo Comparison Toggle */}
+          {previousPhotoUrl && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowComparison(!showComparison)}
+                className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+              >
+                {showComparison ? 'Hide comparison' : 'Compare with previous'}
+              </button>
+            </div>
+          )}
+          
+          {/* Photo Comparison or Single Photo */}
+          {showComparison && previousPhotoUrl ? (
+            <PhotoComparison
+              beforePhoto={{
+                url: previousPhotoUrl,
+                date: analysisHistory!.analyses[currentAnalysisIndex - 1].date,
+                label: 'Previous'
+              }}
+              afterPhoto={{
+                url: currentPhotoUrl,
+                date: analysisHistory!.analyses[currentAnalysisIndex].date || new Date().toISOString(),
+                label: 'Current'
+              }}
+            />
+          ) : (
+            <PhotoDisplay
+              photoUrl={currentPhotoUrl}
+              alt="Analysis photo"
+              date={analysisHistory?.analyses[currentAnalysisIndex].date || new Date().toISOString()}
+              className="max-w-2xl mx-auto"
+            />
+          )}
+        </motion.div>
+      )}
+      
       {/* Temporary Analysis Warning */}
       {isTemporary && (
         <motion.div
@@ -74,6 +211,18 @@ export default function PhotoAnalysisResults({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-white">Medical Analysis</h2>
             <div className="flex items-center gap-2">
+              {/* Photo View Toggle - Only show if we have photo URLs */}
+              {(followUpData?.uploaded_photos?.[0]?.preview_url || analysisHistory?.analyses?.[currentAnalysisIndex]?.photo_url) && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowPhotos(!showPhotos)}
+                  className="p-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] transition-colors"
+                  title="Toggle photo view"
+                >
+                  <Eye className="w-5 h-5 text-white" />
+                </motion.button>
+              )}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -112,6 +261,20 @@ export default function PhotoAnalysisResults({
               </div>
             </div>
           </div>
+          
+          {/* Photo Available Indicator - Show when photos exist but aren't displayed */}
+          {!showPhotos && currentPhotoUrl && (
+            <div className="flex items-center gap-2 text-sm text-gray-400 mt-4">
+              <Image className="w-4 h-4" />
+              <span>Photo available</span>
+              <button
+                onClick={() => setShowPhotos(true)}
+                className="text-orange-400 hover:text-orange-300 transition-colors"
+              >
+                View
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Visual Observations */}
@@ -133,8 +296,32 @@ export default function PhotoAnalysisResults({
           </div>
         </div>
 
-        {/* Comparison Results */}
-        {analysis.comparison && (
+        {/* Comparison Results - Use Enhanced View for Follow-ups */}
+        {followUpData?.comparison_results?.visual_comparison ? (
+          <>
+            <EnhancedComparisonView
+              comparison={followUpData.comparison_results.visual_comparison}
+              measurements={followUpData.comparison_results.key_measurements}
+              daysSinceLast={followUpData.comparison_results.days_since_last}
+            />
+            {/* Add photo comparison option for enhanced view */}
+            {showPhotos && currentPhotoUrl && previousPhotoUrl && (
+              <PhotoComparison
+                beforePhoto={{
+                  url: previousPhotoUrl,
+                  date: followUpData.comparison_results.compared_with[0] || 'Previous',
+                  label: 'Previous'
+                }}
+                afterPhoto={{
+                  url: currentPhotoUrl,
+                  date: new Date().toISOString(),
+                  label: 'Current'
+                }}
+                className="mt-4"
+              />
+            )}
+          </>
+        ) : analysis.comparison ? (
           <div className="p-6 border-b border-white/[0.05] bg-gradient-to-r from-blue-500/5 to-purple-500/5">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-sm font-medium text-gray-400 uppercase">Progress Comparison</h4>
@@ -177,7 +364,7 @@ export default function PhotoAnalysisResults({
               <p className="text-white font-medium">{analysis.comparison.ai_summary}</p>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Differential Diagnosis */}
         <div className="p-6 border-b border-white/[0.05]">
@@ -268,6 +455,17 @@ export default function PhotoAnalysisResults({
         >
           New Analysis
         </motion.button>
+        {sessionId && onViewProgression && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onViewProgression}
+            className="flex-1 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium flex items-center justify-center gap-2"
+          >
+            <ChartLine className="w-4 h-4" />
+            View Progression
+          </motion.button>
+        )}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}

@@ -6,7 +6,8 @@ import {
   X, Calendar, Clock, MapPin, Activity, Brain, 
   Camera, FileText, MessageCircle, BarChart,
   ChevronRight, Share2, Download, Stethoscope,
-  AlertTriangle, TrendingUp, Shield
+  AlertTriangle, TrendingUp, Shield, Sparkles,
+  ClipboardList, Search
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -55,6 +56,30 @@ export default function HistoryModal({
           case 'deep_dive':
             query = supabase
               .from('deep_dive_sessions')
+              .select('*')
+              .eq('id', interactionId)
+              .single();
+            break;
+            
+          case 'flash_assessment':
+            query = supabase
+              .from('flash_assessments')
+              .select('*')
+              .eq('id', interactionId)
+              .single();
+            break;
+            
+          case 'general_assessment':
+            query = supabase
+              .from('general_assessments')
+              .select('*')
+              .eq('id', interactionId)
+              .single();
+            break;
+            
+          case 'general_deepdive':
+            query = supabase
+              .from('general_deepdive_sessions')
               .select('*')
               .eq('id', interactionId)
               .single();
@@ -118,6 +143,9 @@ export default function HistoryModal({
     switch (interactionType) {
       case 'quick_scan': return <Activity className="w-6 h-6" />;
       case 'deep_dive': return <Brain className="w-6 h-6" />;
+      case 'flash_assessment': return <Sparkles className="w-6 h-6" />;
+      case 'general_assessment': return <ClipboardList className="w-6 h-6" />;
+      case 'general_deepdive': return <Search className="w-6 h-6" />;
       case 'photo_analysis': return <Camera className="w-6 h-6" />;
       case 'report': return <FileText className="w-6 h-6" />;
       case 'oracle_chat': return <MessageCircle className="w-6 h-6" />;
@@ -130,6 +158,9 @@ export default function HistoryModal({
     switch (interactionType) {
       case 'quick_scan': return 'from-emerald-500 to-green-500';
       case 'deep_dive': return 'from-indigo-500 to-purple-500';
+      case 'flash_assessment': return 'from-amber-500 to-yellow-500';
+      case 'general_assessment': return 'from-blue-500 to-cyan-500';
+      case 'general_deepdive': return 'from-indigo-500 to-purple-500';
       case 'photo_analysis': return 'from-pink-500 to-rose-500';
       case 'report': return 'from-blue-500 to-cyan-500';
       case 'oracle_chat': return 'from-amber-500 to-yellow-500';

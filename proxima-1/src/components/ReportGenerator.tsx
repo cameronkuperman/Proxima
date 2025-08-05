@@ -198,7 +198,7 @@ export function ReportGenerator({
           deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
           flash_assessment_ids: selectedFlashAssessments.length > 0 ? selectedFlashAssessments : undefined,
           general_assessment_ids: selectedGeneralAssessments.length > 0 ? selectedGeneralAssessments : undefined,
-          general_deepdive_ids: selectedGeneralDeepDives.length > 0 ? selectedGeneralDeepDives : undefined,
+          general_deep_dive_ids: selectedGeneralDeepDives.length > 0 ? selectedGeneralDeepDives : undefined,
           photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : undefined
         },
         {
@@ -283,7 +283,7 @@ export function ReportGenerator({
           deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
           flash_assessment_ids: selectedFlashAssessments.length > 0 ? selectedFlashAssessments : undefined,
           general_assessment_ids: selectedGeneralAssessments.length > 0 ? selectedGeneralAssessments : undefined,
-          general_deepdive_ids: selectedGeneralDeepDives.length > 0 ? selectedGeneralDeepDives : undefined,
+          general_deep_dive_ids: selectedGeneralDeepDives.length > 0 ? selectedGeneralDeepDives : undefined,
           photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : undefined
         }
       );

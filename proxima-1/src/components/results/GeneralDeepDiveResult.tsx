@@ -136,7 +136,7 @@ export default function GeneralDeepDiveResult({
           </div>
         </div>
         <p className="text-gray-300 leading-relaxed text-lg">
-          {result.analysis.primary_assessment}
+          {result.analysis?.primary_assessment || 'Assessment details are being processed...'}
         </p>
       </motion.div>
 
@@ -165,7 +165,7 @@ export default function GeneralDeepDiveResult({
               exit={{ height: 0, opacity: 0 }}
               className="mt-4 space-y-3"
             >
-              {result.analysis.reasoning_snippets.map((snippet, index) => (
+              {(result.analysis?.reasoning_snippets || []).map((snippet, index) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
                     <span className="text-xs text-indigo-400">{index + 1}</span>
@@ -190,7 +190,7 @@ export default function GeneralDeepDiveResult({
           Key Findings
         </h3>
         <div className="grid gap-3">
-          {result.analysis.key_findings.map((finding, index) => (
+          {(result.analysis?.key_findings || []).map((finding, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -20 }}
@@ -214,7 +214,7 @@ export default function GeneralDeepDiveResult({
       >
         <h3 className="text-lg font-semibold text-white mb-4">Differential Analysis</h3>
         <div className="space-y-3">
-          {result.analysis.possible_causes.map((cause, index) => (
+          {(result.analysis?.possible_causes || []).map((cause, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 10 }}
@@ -346,7 +346,7 @@ export default function GeneralDeepDiveResult({
           Personalized Recommendations
         </h3>
         <div className="grid gap-3">
-          {result.analysis.recommendations.map((rec, index) => (
+          {(result.analysis?.recommendations || []).map((rec, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -20 }}
