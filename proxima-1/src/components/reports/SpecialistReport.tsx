@@ -110,6 +110,60 @@ const specialtyConfig = {
     borderColor: 'border-cyan-200',
     textColor: 'text-cyan-600',
     title: 'Pulmonology Consultation Report'
+  },
+  'primary-care': {
+    icon: Stethoscope,
+    color: 'gray',
+    gradient: 'from-gray-600 to-slate-600',
+    bgLight: 'bg-gray-50',
+    borderColor: 'border-gray-200',
+    textColor: 'text-gray-600',
+    title: 'Primary Care Consultation Report'
+  },
+  orthopedics: {
+    icon: Activity,
+    color: 'amber',
+    gradient: 'from-amber-600 to-orange-600',
+    bgLight: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    textColor: 'text-amber-600',
+    title: 'Orthopedics Consultation Report'
+  },
+  rheumatology: {
+    icon: Activity,
+    color: 'violet',
+    gradient: 'from-violet-600 to-purple-600',
+    bgLight: 'bg-violet-50',
+    borderColor: 'border-violet-200',
+    textColor: 'text-violet-600',
+    title: 'Rheumatology Consultation Report'
+  },
+  urology: {
+    icon: Stethoscope,
+    color: 'teal',
+    gradient: 'from-teal-600 to-cyan-600',
+    bgLight: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-600',
+    title: 'Urology Consultation Report'
+  },
+  'infectious-disease': {
+    icon: AlertCircle,
+    color: 'rose',
+    gradient: 'from-rose-600 to-pink-600',
+    bgLight: 'bg-rose-50',
+    borderColor: 'border-rose-200',
+    textColor: 'text-rose-600',
+    title: 'Infectious Disease Consultation Report'
+  },
+  specialist: {
+    icon: Stethoscope,
+    color: 'slate',
+    gradient: 'from-slate-600 to-gray-600',
+    bgLight: 'bg-slate-50',
+    borderColor: 'border-slate-200',
+    textColor: 'text-slate-600',
+    title: 'Specialist Consultation Report'
   }
 };
 
@@ -132,6 +186,19 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
   
   // Detect specialty from report data
   const detectSpecialty = () => {
+    // FIRST: Check if specialty is directly in the report
+    if (report.specialty) {
+      console.log('Found specialty in report:', report.specialty);
+      return report.specialty;
+    }
+    
+    // SECOND: Check if report_type contains the specialty
+    if (report.report_type && report.report_type !== 'specialist') {
+      console.log('Found specialty in report_type:', report.report_type);
+      return report.report_type;
+    }
+    
+    // THIRD: Check for specialty-specific assessment sections
     const specialties = Object.keys(specialtyConfig);
     for (const specialty of specialties) {
       if (data[`${specialty}_specific`]) {
@@ -147,20 +214,44 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
         return specialty;
       }
     }
-    // Fallback to checking executive summary
+    
+    // FOURTH: Check executive summary for specialist focus
     if (data?.executive_summary?.specialist_focus) {
       const focus = data.executive_summary.specialist_focus.toLowerCase();
-      return specialties.find(s => focus.includes(s)) || 'cardiology';
+      const found = specialties.find(s => focus.includes(s));
+      if (found) {
+        console.log('Found specialty in executive_summary.specialist_focus:', found);
+        return found;
+      }
     }
-    return 'cardiology'; // Default
+    
+    // LAST RESORT: Default to specialist (generic) or primary-care
+    console.warn('WARNING: Could not detect specialty, defaulting to specialist');
+    console.log('Report structure:', { 
+      specialty: report.specialty,
+      report_type: report.report_type,
+      data_keys: Object.keys(data || {}),
+      specialist_focus: data?.executive_summary?.specialist_focus
+    });
+    // Return a safe default that exists in specialtyConfig
+    return 'specialist'; // Generic specialist as safest default
   };
   
   const specialty = detectSpecialty();
   console.log('Detected Specialty:', specialty);
   
-  const config = specialtyConfig[specialty as keyof typeof specialtyConfig];
+  // Add fallback for unknown specialties
+  const config = specialtyConfig[specialty as keyof typeof specialtyConfig] || {
+    icon: Stethoscope,
+    color: 'gray',
+    gradient: 'from-gray-600 to-slate-600',
+    bgLight: 'bg-gray-50',
+    borderColor: 'border-gray-200',
+    textColor: 'text-gray-600',
+    title: `${specialty?.charAt(0).toUpperCase() + specialty?.slice(1) || 'Medical'} Consultation Report`
+  };
   const Icon = config.icon;
-  const specialtyData = data[`${specialty}_specific`] || {};
+  const specialtyData = data[`${specialty}_specific`] || data[`${specialty}_assessment`] || {};
   
   console.log('Specialty Data:', specialtyData);
   console.log('Config:', config);

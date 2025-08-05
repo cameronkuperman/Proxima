@@ -17,7 +17,9 @@ import {
   Loader2,
   AlertCircle,
   Info,
-  Stethoscope
+  Stethoscope,
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 import { reportApi } from '@/lib/api/reports';
 import { SpecialtyType } from '@/types/reports';
@@ -61,11 +63,17 @@ interface SpecialtyTriageProps {
   onSpecialtySelected: (specialty: SpecialtyType, triageResult: TriageResult, selectedIds: {
     quick_scan_ids: string[];
     deep_dive_ids: string[];
+    general_assessment_ids: string[];
+    general_deep_dive_ids: string[];
+    flash_assessment_ids: string[];
   }) => void;
   initialConcern?: string;
   symptoms?: string[];
   quickScans?: QuickScan[];
   deepDives?: DeepDive[];
+  flashAssessments?: any[];
+  generalAssessments?: any[];
+  generalDeepDives?: any[];
 }
 
 const specialtyInfo = {
@@ -141,18 +149,37 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
   initialConcern = '',
   symptoms = [],
   quickScans = [],
-  deepDives = []
+  deepDives = [],
+  flashAssessments = [],
+  generalAssessments = [],
+  generalDeepDives = []
 }) => {
   const [primaryConcern, setPrimaryConcern] = useState(initialConcern);
   const [selectedQuickScans, setSelectedQuickScans] = useState<string[]>(quickScans.map(scan => scan.id));
   const [selectedDeepDives, setSelectedDeepDives] = useState<string[]>(deepDives.map(dive => dive.id));
+  const [selectedFlashAssessments, setSelectedFlashAssessments] = useState<string[]>(flashAssessments.map(a => a.id));
+  const [selectedGeneralAssessments, setSelectedGeneralAssessments] = useState<string[]>(generalAssessments.map(a => a.id));
+  const [selectedGeneralDeepDives, setSelectedGeneralDeepDives] = useState<string[]>(generalDeepDives.map(a => a.id));
   const [isLoading, setIsLoading] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState({ quickScans: true, deepDives: true });
+  const [expandedSections, setExpandedSections] = useState({ 
+    quickScans: true, 
+    deepDives: true,
+    flashAssessments: true,
+    generalAssessments: true,
+    generalDeepDives: true
+  });
 
   const runTriage = async () => {
-    if (!primaryConcern.trim() && symptoms.length === 0 && selectedQuickScans.length === 0 && selectedDeepDives.length === 0) {
+    // Check if ANY assessments are selected
+    const hasSelections = selectedQuickScans.length > 0 || 
+                         selectedDeepDives.length > 0 || 
+                         selectedFlashAssessments.length > 0 || 
+                         selectedGeneralAssessments.length > 0 || 
+                         selectedGeneralDeepDives.length > 0;
+    
+    if (!primaryConcern.trim() && symptoms.length === 0 && !hasSelections) {
       setError('Please describe your health concern or select previous analyses');
       return;
     }
@@ -171,14 +198,32 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
       const triageUrl = `${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/report/specialty-triage`;
       console.log('Triage URL:', triageUrl);
       
-      const requestBody = {
-        user_id: userId,
-        quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
-        deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
-        primary_concern: primaryConcern || undefined,
-        symptoms: symptoms.length > 0 ? symptoms : undefined,
-        urgency: 'routine' // Let AI determine actual urgency
+      const requestBody: any = {
+        user_id: userId
       };
+      
+      // Only include fields with actual selections to avoid sending empty arrays
+      if (selectedQuickScans.length > 0) {
+        requestBody.quick_scan_ids = selectedQuickScans;
+      }
+      if (selectedDeepDives.length > 0) {
+        requestBody.deep_dive_ids = selectedDeepDives;
+      }
+      if (selectedFlashAssessments.length > 0) {
+        requestBody.flash_assessment_ids = selectedFlashAssessments;
+      }
+      if (selectedGeneralAssessments.length > 0) {
+        requestBody.general_assessment_ids = selectedGeneralAssessments;
+      }
+      if (selectedGeneralDeepDives.length > 0) {
+        requestBody.general_deep_dive_ids = selectedGeneralDeepDives;
+      }
+      if (primaryConcern && primaryConcern.trim()) {
+        requestBody.primary_concern = primaryConcern;
+      }
+      if (symptoms && symptoms.length > 0) {
+        requestBody.symptoms = symptoms;
+      }
       console.log('Request Body:', requestBody);
 
       const response = await fetch(triageUrl, {
@@ -199,11 +244,21 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
       const data = await response.json();
       console.log('Triage Response Data:', data);
       
+      // Handle multiple response formats from backend
+      let triageData = null;
+      
       if (data.status === 'success' && data.triage_result) {
-        setTriageResult(data.triage_result);
+        // Wrapped response format
+        triageData = data.triage_result;
+      } else if (data.primary_specialty && data.confidence) {
+        // Direct response format
+        triageData = data;
       } else {
-        throw new Error('Invalid response from triage service');
+        console.error('Unexpected triage response format:', data);
+        throw new Error('Invalid response format from triage service');
       }
+      
+      setTriageResult(triageData);
     } catch (err) {
       console.error('Triage error:', err);
       setError('Unable to analyze your symptoms. Please try again.');
@@ -222,23 +277,47 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
     }
   };
 
-  const toggleScan = (scanId: string, type: 'quick' | 'deep') => {
-    if (type === 'quick') {
-      setSelectedQuickScans(prev => 
-        prev.includes(scanId) 
-          ? prev.filter(id => id !== scanId)
-          : [...prev, scanId]
-      );
-    } else {
-      setSelectedDeepDives(prev => 
-        prev.includes(scanId) 
-          ? prev.filter(id => id !== scanId)
-          : [...prev, scanId]
-      );
+  const toggleScan = (scanId: string, type: 'quick' | 'deep' | 'flash' | 'general' | 'generalDeep') => {
+    switch (type) {
+      case 'quick':
+        setSelectedQuickScans(prev => 
+          prev.includes(scanId) 
+            ? prev.filter(id => id !== scanId)
+            : [...prev, scanId]
+        );
+        break;
+      case 'deep':
+        setSelectedDeepDives(prev => 
+          prev.includes(scanId) 
+            ? prev.filter(id => id !== scanId)
+            : [...prev, scanId]
+        );
+        break;
+      case 'flash':
+        setSelectedFlashAssessments(prev => 
+          prev.includes(scanId) 
+            ? prev.filter(id => id !== scanId)
+            : [...prev, scanId]
+        );
+        break;
+      case 'general':
+        setSelectedGeneralAssessments(prev => 
+          prev.includes(scanId) 
+            ? prev.filter(id => id !== scanId)
+            : [...prev, scanId]
+        );
+        break;
+      case 'generalDeep':
+        setSelectedGeneralDeepDives(prev => 
+          prev.includes(scanId) 
+            ? prev.filter(id => id !== scanId)
+            : [...prev, scanId]
+        );
+        break;
     }
   };
 
-  const toggleSection = (section: 'quickScans' | 'deepDives') => {
+  const toggleSection = (section: 'quickScans' | 'deepDives' | 'flashAssessments' | 'generalAssessments' | 'generalDeepDives') => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
@@ -331,7 +410,10 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
                     
                     onSpecialtySelected(specialty as SpecialtyType, triageResult!, {
                       quick_scan_ids: selectedQuickScans,
-                      deep_dive_ids: selectedDeepDives
+                      deep_dive_ids: selectedDeepDives,
+                      general_assessment_ids: selectedGeneralAssessments,
+                      general_deep_dive_ids: selectedGeneralDeepDives,
+                      flash_assessment_ids: selectedFlashAssessments
                     });
                   }}
                   className={`
@@ -542,11 +624,238 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
             </motion.div>
           )}
 
+          {/* Flash Assessments Selection */}
+          {flashAssessments.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            >
+              <button
+                onClick={() => toggleSection('flashAssessments')}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Zap className="w-5 h-5 text-yellow-600" />
+                  <h3 className="font-semibold text-gray-900">Select Flash Assessments to Include</h3>
+                  <span className="text-sm text-gray-500">({selectedFlashAssessments.length} selected)</span>
+                </div>
+                {expandedSections.flashAssessments ? (
+                  <ChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                )}
+              </button>
+              
+              <AnimatePresence>
+                {expandedSections.flashAssessments && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-gray-100"
+                  >
+                    <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+                      {flashAssessments.map(assessment => {
+                        const isSelected = selectedFlashAssessments.includes(assessment.id);
+                        
+                        return (
+                          <label
+                            key={assessment.id}
+                            className={`
+                              flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+                              ${isSelected ? 'bg-yellow-50 border-2 border-yellow-300' : 'hover:bg-gray-50 border-2 border-transparent'}
+                            `}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleScan(assessment.id, 'flash')}
+                              className="mt-1 w-4 h-4 text-yellow-600 rounded border-gray-300 focus:ring-yellow-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">
+                                  {new Date(assessment.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="font-medium text-gray-900">Flash Assessment</p>
+                              {assessment.assessment_summary && (
+                                <p className="text-sm text-gray-600 mt-1">{assessment.assessment_summary}</p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* General Assessments Selection */}
+          {generalAssessments.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            >
+              <button
+                onClick={() => toggleSection('generalAssessments')}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-5 h-5 text-green-600" />
+                  <h3 className="font-semibold text-gray-900">Select General Assessments to Include</h3>
+                  <span className="text-sm text-gray-500">({selectedGeneralAssessments.length} selected)</span>
+                </div>
+                {expandedSections.generalAssessments ? (
+                  <ChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                )}
+              </button>
+              
+              <AnimatePresence>
+                {expandedSections.generalAssessments && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-gray-100"
+                  >
+                    <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+                      {generalAssessments.map(assessment => {
+                        const isSelected = selectedGeneralAssessments.includes(assessment.id);
+                        
+                        return (
+                          <label
+                            key={assessment.id}
+                            className={`
+                              flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+                              ${isSelected ? 'bg-green-50 border-2 border-green-300' : 'hover:bg-gray-50 border-2 border-transparent'}
+                            `}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleScan(assessment.id, 'general')}
+                              className="mt-1 w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">
+                                  {new Date(assessment.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="font-medium text-gray-900">General Health Assessment</p>
+                              {assessment.summary && (
+                                <p className="text-sm text-gray-600 mt-1">{assessment.summary}</p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* General Deep Dives Selection */}
+          {generalDeepDives.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            >
+              <button
+                onClick={() => toggleSection('generalDeepDives')}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Brain className="w-5 h-5 text-indigo-600" />
+                  <h3 className="font-semibold text-gray-900">Select General Deep Dives to Include</h3>
+                  <span className="text-sm text-gray-500">({selectedGeneralDeepDives.length} selected)</span>
+                </div>
+                {expandedSections.generalDeepDives ? (
+                  <ChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                )}
+              </button>
+              
+              <AnimatePresence>
+                {expandedSections.generalDeepDives && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-gray-100"
+                  >
+                    <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+                      {generalDeepDives.map(dive => {
+                        const isSelected = selectedGeneralDeepDives.includes(dive.id);
+                        const statusColor = {
+                          'completed': 'bg-green-100 text-green-800',
+                          'in_progress': 'bg-yellow-100 text-yellow-800',
+                          'failed': 'bg-red-100 text-red-800'
+                        }[dive.status] || 'bg-gray-100 text-gray-800';
+                        
+                        return (
+                          <label
+                            key={dive.id}
+                            className={`
+                              flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+                              ${isSelected ? 'bg-indigo-50 border-2 border-indigo-300' : 'hover:bg-gray-50 border-2 border-transparent'}
+                            `}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleScan(dive.id, 'generalDeep')}
+                              className="mt-1 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">
+                                  {new Date(dive.created_at).toLocaleDateString()}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
+                                  {dive.status}
+                                </span>
+                              </div>
+                              <p className="font-medium text-gray-900">General Deep Dive</p>
+                              {dive.summary && (
+                                <p className="text-sm text-gray-600 mt-1">{dive.summary}</p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
           {/* Additional Context */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.3 }}
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -582,7 +891,14 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
             
             <button
               onClick={runTriage}
-              disabled={isLoading || (selectedQuickScans.length === 0 && selectedDeepDives.length === 0 && !primaryConcern.trim())}
+              disabled={isLoading || (
+                selectedQuickScans.length === 0 && 
+                selectedDeepDives.length === 0 && 
+                selectedFlashAssessments.length === 0 &&
+                selectedGeneralAssessments.length === 0 &&
+                selectedGeneralDeepDives.length === 0 &&
+                !primaryConcern.trim()
+              )}
               className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (

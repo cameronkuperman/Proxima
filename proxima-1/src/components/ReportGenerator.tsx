@@ -9,6 +9,7 @@ import { Activity, FileText, Calendar, ChevronUp, ChevronDown, CheckCircle, Zap,
 import { motion, AnimatePresence } from 'framer-motion';
 import { TimelineClient, FlashAssessment, GeneralAssessment, TimelineEvent } from '@/lib/timeline-client';
 import { AssessmentSelector } from './AssessmentSelector';
+import { createClient } from '@/utils/supabase/client';
 
 interface ReportGeneratorProps {
   userId?: string;
@@ -31,7 +32,6 @@ export function ReportGenerator({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'select' | 'triage' | 'analyzing' | 'generating' | 'complete'>('select');
   const [error, setError] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [generatedReport, setGeneratedReport] = useState<any>(null);
   const [triageResult, setTriageResult] = useState<any>(null);
 
@@ -166,32 +166,52 @@ export function ReportGenerator({
   };
 
   const handleGenerateSymptomReport = async () => {
+    const supabase = createClient();
     setLoading(true);
     setError(null);
     setStep('analyzing');
 
     try {
-      // Step 1: Analyze
-      const analysis = await reportService.analyzeReport({
+      // Step 1: Create analysis record in DATABASE (following exact spec)
+      const analysisId = crypto.randomUUID();
+      console.log('Creating symptom report analysis record:', analysisId);
+      
+      const analysisRecord = {
+        id: analysisId,
         user_id: userId,
-        context: {
-          purpose: 'symptom_specific',
+        created_at: new Date().toISOString(),
+        purpose: 'symptom_specific',
+        recommended_type: 'symptom_timeline',
+        confidence: 0.85,
+        report_config: {
           symptom_focus: symptomFocus,
+          time_range: {
+            start: new Date(Date.now() - 30*24*60*60*1000).toISOString(),
+            end: new Date().toISOString()
+          }
         },
-        available_data: {
-          quick_scan_ids: quickScanIds,
-          deep_dive_ids: deepDiveIds,
-          photo_session_ids: photoSessionIds,
-        }
-      });
-
-      setAnalysisResult(analysis);
+        quick_scan_ids: selectedQuickScans,
+        deep_dive_ids: selectedDeepDives,
+        general_assessment_ids: selectedGeneralAssessments,
+        general_deep_dive_ids: selectedGeneralDeepDives,
+        flash_assessment_ids: selectedFlashAssessments
+      };
+      
+      const { error: dbError } = await supabase
+        .from('report_analyses')
+        .insert(analysisRecord);
+        
+      if (dbError) {
+        console.error('Failed to create analysis record:', dbError);
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+      
       setStep('generating');
 
-      // Step 2: Generate based on AI recommendation
+      // Step 2: Generate symptom timeline report
       const report = await reportService.generateReport(
-        analysis.analysis_id,
-        analysis.recommended_type as any,
+        analysisId,
+        'symptom_timeline' as any,
         userId,
         {
           quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
@@ -218,11 +238,48 @@ export function ReportGenerator({
   };
 
   const handleGenerateTimeReport = async (period: '30-day' | 'annual') => {
+    const supabase = createClient();
     setLoading(true);
     setError(null);
     setStep('generating');
 
     try {
+      // Create analysis record for time-based report
+      const analysisId = crypto.randomUUID();
+      const reportType = period === '30-day' ? 'monthly_summary' : 'annual_summary';
+      
+      const analysisRecord = {
+        id: analysisId,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        purpose: period === '30-day' ? '30-day health summary' : 'Annual health summary',
+        recommended_type: reportType,
+        confidence: 0.9,
+        report_config: {
+          period: period,
+          time_range: {
+            start: period === '30-day' 
+              ? new Date(Date.now() - 30*24*60*60*1000).toISOString()
+              : new Date(new Date().getFullYear(), 0, 1).toISOString(),
+            end: new Date().toISOString()
+          }
+        },
+        quick_scan_ids: [],
+        deep_dive_ids: [],
+        general_assessment_ids: [],
+        general_deep_dive_ids: [],
+        flash_assessment_ids: []
+      };
+      
+      const { error: dbError } = await supabase
+        .from('report_analyses')
+        .insert(analysisRecord);
+        
+      if (dbError) {
+        console.error('Failed to create analysis record:', dbError);
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+
       const report = period === '30-day' 
         ? await reportService.generate30DayReport(userId!)
         : await reportService.generateAnnualReport(userId!);
@@ -238,15 +295,31 @@ export function ReportGenerator({
     }
   };
 
-  const handleGenerateSpecialistReport = async (specialtyOverride?: SpecialtyType) => {
+  const handleGenerateSpecialistReport = async (
+    specialtyOverride?: SpecialtyType,
+    idsOverride?: {
+      quick_scan_ids: string[];
+      deep_dive_ids: string[];
+      general_assessment_ids?: string[];
+      general_deep_dive_ids?: string[];
+      flash_assessment_ids?: string[];
+    }
+  ) => {
     const specialtyToUse = specialtyOverride || selectedSpecialty;
+    const supabase = createClient();
     
-    console.log('=== SPECIALIST REPORT GENERATION DEBUG ===');
-    console.log('Specialty Override:', specialtyOverride);
-    console.log('Selected Specialty State:', selectedSpecialty);
-    console.log('Specialty to Use:', specialtyToUse);
-    console.log('Selected Quick Scans:', selectedQuickScans);
-    console.log('Selected Deep Dives:', selectedDeepDives);
+    // Use passed IDs or fall back to state (but prefer passed IDs to avoid race conditions)
+    const idsToUse = idsOverride || {
+      quick_scan_ids: selectedQuickScans,
+      deep_dive_ids: selectedDeepDives,
+      general_assessment_ids: selectedGeneralAssessments,
+      general_deep_dive_ids: selectedGeneralDeepDives,
+      flash_assessment_ids: selectedFlashAssessments
+    };
+    
+    console.log('=== SPECIALIST REPORT GENERATION (EXACT SPEC) ===');
+    console.log('Step 1: Using specialty from triage:', specialtyToUse);
+    console.log('Step 2: Selected IDs to use:', idsToUse);
     console.log('User ID:', userId);
     
     setLoading(true);
@@ -254,40 +327,77 @@ export function ReportGenerator({
     setStep('analyzing');
 
     try {
-      // First analyze to get analysis_id
-      const analysis = await reportService.analyzeReport({
+      // STEP 1: Create analysis record in DATABASE (REQUIRED by spec)
+      const analysisId = crypto.randomUUID();
+      console.log('Step 3: Creating analysis record with ID:', analysisId);
+      
+      const analysisRecord = {
+        id: analysisId,
         user_id: userId,
-        context: {
-          purpose: 'specialist_referral',
-          target_audience: 'specialist',
+        created_at: new Date().toISOString(),
+        purpose: 'Specialist report generation',
+        recommended_type: specialtyToUse,
+        confidence: triageResult?.confidence || 0.8,
+        report_config: {
+          time_range: {
+            start: new Date(Date.now() - 30*24*60*60*1000).toISOString(),
+            end: new Date().toISOString()
+          }
         },
-        available_data: {
-          quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : quickScanIds,
-          deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : deepDiveIds,
-          photo_session_ids: photoSessionIds,
-        }
-      });
-
-      console.log('Analysis Result:', analysis);
+        // Store the EXACT selected IDs
+        quick_scan_ids: idsToUse.quick_scan_ids,
+        deep_dive_ids: idsToUse.deep_dive_ids,
+        general_assessment_ids: idsToUse.general_assessment_ids || [],
+        general_deep_dive_ids: idsToUse.general_deep_dive_ids || [],
+        flash_assessment_ids: idsToUse.flash_assessment_ids || []
+      };
+      
+      console.log('Inserting analysis record:', analysisRecord);
+      const { error: dbError } = await supabase
+        .from('report_analyses')
+        .insert(analysisRecord);
+        
+      if (dbError) {
+        console.error('Failed to create analysis record in database:', dbError);
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+      
+      // STEP 2: Verify the analysis record was created
+      console.log('Step 4: Verifying analysis record exists...');
+      const { data: analysisCheck, error: checkError } = await supabase
+        .from('report_analyses')
+        .select('*')
+        .eq('id', analysisId)
+        .single();
+        
+      if (checkError || !analysisCheck) {
+        console.error('Analysis record verification failed:', checkError);
+        throw new Error('Failed to verify analysis record in database');
+      }
+      
+      console.log('Analysis record verified:', analysisCheck);
       setStep('generating');
 
-      // Generate specialist report with selected IDs
-      console.log('Generating report for specialty:', specialtyToUse);
+      // STEP 3: Generate specialist report with the CREATED analysis_id
+      console.log('Step 5: Generating report for specialty:', specialtyToUse);
+      console.log('Using analysis_id from database:', analysisId);
+      console.log('Sending EXACT same IDs:', idsToUse);
+      
       const report = await reportService.generateSpecialistReport(
         specialtyToUse,
-        analysis.analysis_id,
+        analysisId,  // Use the ID we just created and verified
         userId,
         {
-          quick_scan_ids: selectedQuickScans.length > 0 ? selectedQuickScans : undefined,
-          deep_dive_ids: selectedDeepDives.length > 0 ? selectedDeepDives : undefined,
-          flash_assessment_ids: selectedFlashAssessments.length > 0 ? selectedFlashAssessments : undefined,
-          general_assessment_ids: selectedGeneralAssessments.length > 0 ? selectedGeneralAssessments : undefined,
-          general_deep_dive_ids: selectedGeneralDeepDives.length > 0 ? selectedGeneralDeepDives : undefined,
+          quick_scan_ids: idsToUse.quick_scan_ids.length > 0 ? idsToUse.quick_scan_ids : undefined,
+          deep_dive_ids: idsToUse.deep_dive_ids.length > 0 ? idsToUse.deep_dive_ids : undefined,
+          flash_assessment_ids: idsToUse.flash_assessment_ids && idsToUse.flash_assessment_ids.length > 0 ? idsToUse.flash_assessment_ids : undefined,
+          general_assessment_ids: idsToUse.general_assessment_ids && idsToUse.general_assessment_ids.length > 0 ? idsToUse.general_assessment_ids : undefined,
+          general_deep_dive_ids: idsToUse.general_deep_dive_ids && idsToUse.general_deep_dive_ids.length > 0 ? idsToUse.general_deep_dive_ids : undefined,
           photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : undefined
         }
       );
 
-      console.log('Generated Report:', report);
+      console.log('Step 6: Report generated successfully:', report);
       setGeneratedReport(report);
       setStep('complete');
       onComplete?.(report);
@@ -323,6 +433,71 @@ export function ReportGenerator({
       </div>
     );
   }
+
+  // TEST FUNCTION - Remove in production
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).testSpecialistReport = async () => {
+        console.log('=== TESTING EXACT SPECIALIST REPORT FLOW ===');
+        const testUserId = userId || "45b61b67-175d-48a0-aca6-d0be57609383";
+        const testDeepDiveId = "057447a9-3369-42b2-b683-778d10ae5c8b";
+        
+        console.log('1. Calling triage with single deep dive ID...');
+        const triageRes = await fetch(`${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/report/specialty-triage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: testUserId,
+            deep_dive_ids: [testDeepDiveId]
+          })
+        });
+        const triage = await triageRes.json();
+        console.log('Triage result:', triage);
+        
+        if (triage.status === 'success' || triage.primary_specialty) {
+          const specialty = triage.triage_result?.primary_specialty || triage.primary_specialty;
+          console.log('2. Determined specialty:', specialty);
+          
+          const supabase = createClient();
+          const analysisId = crypto.randomUUID();
+          console.log('3. Creating analysis record:', analysisId);
+          
+          const { error: dbError } = await supabase
+            .from('report_analyses')
+            .insert({
+              id: analysisId,
+              user_id: testUserId,
+              created_at: new Date().toISOString(),
+              purpose: 'Test specialist report',
+              recommended_type: specialty,
+              confidence: 0.85,
+              report_config: {},
+              deep_dive_ids: [testDeepDiveId]
+            });
+            
+          if (dbError) {
+            console.error('DB Error:', dbError);
+            return;
+          }
+          
+          console.log('4. Generating report for specialty:', specialty);
+          const reportRes = await fetch(`${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/report/${specialty}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              analysis_id: analysisId,
+              user_id: testUserId,
+              deep_dive_ids: [testDeepDiveId]
+            })
+          });
+          const report = await reportRes.json();
+          console.log('5. Report generated:', report);
+          console.log('Chief complaints should ONLY be from deep dive:', report.report_data?.executive_summary?.chief_complaints);
+        }
+      };
+      console.log('Test function available: window.testSpecialistReport()');
+    }
+  }, [userId]);
 
   return (
     <div className="space-y-6">
@@ -493,6 +668,9 @@ export function ReportGenerator({
           userId={userId}
           quickScans={availableQuickScans.filter(scan => selectedQuickScans.includes(scan.id))}
           deepDives={availableDeepDives.filter(dive => selectedDeepDives.includes(dive.id))}
+          flashAssessments={availableFlashAssessments.filter(a => selectedFlashAssessments.includes(a.id))}
+          generalAssessments={availableGeneralAssessments.filter(a => selectedGeneralAssessments.includes(a.id))}
+          generalDeepDives={availableGeneralDeepDives.filter(a => selectedGeneralDeepDives.includes(a.id))}
           onSpecialtySelected={(specialty, triage, selectedIds) => {
             console.log('=== SPECIALTY SELECTED ===');
             console.log('Specialty:', specialty);
@@ -501,11 +679,16 @@ export function ReportGenerator({
             
             setSelectedSpecialty(specialty);
             setTriageResult(triage);
+            
+            // Update ALL selected IDs from triage
             setSelectedQuickScans(selectedIds.quick_scan_ids);
             setSelectedDeepDives(selectedIds.deep_dive_ids);
+            setSelectedFlashAssessments(selectedIds.flash_assessment_ids || []);
+            setSelectedGeneralAssessments(selectedIds.general_assessment_ids || []);
+            setSelectedGeneralDeepDives(selectedIds.general_deep_dive_ids || []);
             
-            // Pass specialty directly to avoid state race condition
-            handleGenerateSpecialistReport(specialty);
+            // Pass specialty and ALL IDs directly to avoid state race condition
+            handleGenerateSpecialistReport(specialty, selectedIds);
           }}
         />
       )}
@@ -518,12 +701,11 @@ export function ReportGenerator({
         </div>
       )}
 
-      {step === 'generating' && analysisResult && (
+      {step === 'generating' && (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-lg">Generating {analysisResult.recommended_type} report...</p>
-          <p className="text-sm text-gray-600">{analysisResult.reasoning}</p>
-          <p className="text-sm text-gray-600 mt-2">Confidence: {Math.round(analysisResult.confidence * 100)}%</p>
+          <p className="mt-4 text-lg">Generating specialist report...</p>
+          <p className="text-sm text-gray-600">Processing your selected health data</p>
         </div>
       )}
     </div>
