@@ -1066,8 +1066,8 @@ function DashboardContent() {
                     </div>
                   )}
                   
-                  {/* No more data indicator */}
-                  {!timelineHasMore && timelineData.length > 0 && (
+                  {/* No more data indicator - only show after attempting to load more */}
+                  {!timelineHasMore && timelineData.length > 0 && timelineData.length >= TIMELINE_PAGE_SIZE && (
                     <div className="text-center py-4">
                       <p className="text-xs text-gray-500">No more interactions</p>
                     </div>
