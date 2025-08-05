@@ -9,7 +9,7 @@ import {
   AlertTriangle, TrendingUp, Shield, Sparkles,
   ClipboardList, Search
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -306,23 +306,412 @@ export default function HistoryModal({
     );
   };
 
+  const renderFlashAssessmentPreview = () => {
+    if (!data) return null;
+    
+    return (
+      <div className="space-y-4">
+        {/* Main Concern */}
+        {data.main_concern && (
+          <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
+            <h4 className="text-sm font-medium text-gray-400 mb-2">Main Concern</h4>
+            <p className="text-white">{data.main_concern}</p>
+          </div>
+        )}
+
+        {/* Urgency & Confidence */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Urgency */}
+          {data.urgency && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+              data.urgency === 'emergency' ? 'bg-red-500/20 text-red-400' :
+              data.urgency === 'high' ? 'bg-orange-500/20 text-orange-400' :
+              data.urgency === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-green-500/20 text-green-400'
+            }`}>
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-medium capitalize">{data.urgency}</span>
+            </div>
+          )}
+
+          {/* Category */}
+          {data.category && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/20 text-amber-400">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium capitalize">{data.category}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Confidence Score */}
+        {data.confidence_score !== undefined && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-gray-400">Confidence</span>
+              <span className="text-sm text-gray-300">{Math.round(data.confidence_score)}%</span>
+            </div>
+            <div className="flex-1 bg-white/[0.05] rounded-full h-2 overflow-hidden">
+              <motion.div 
+                className="h-full bg-gradient-to-r from-amber-500 to-yellow-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${data.confidence_score}%` }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Suggested Action */}
+        {data.suggested_next_action && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+            <p className="text-sm font-medium text-amber-400 mb-1">Recommended Next Step</p>
+            <p className="text-sm text-gray-300">
+              {data.suggested_next_action === 'general-assessment' && 'Take a General Assessment'}
+              {data.suggested_next_action === 'body-scan' && 'Use the 3D Body Scanner'}
+              {data.suggested_next_action === 'see-doctor' && 'Consider seeing a doctor'}
+              {data.suggested_next_action === 'monitor' && 'Monitor your symptoms'}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderGeneralAssessmentPreview = () => {
+    if (!data) return null;
+    
+    const analysis = data.analysis_result;
+    return (
+      <div className="space-y-4">
+        {/* Category Badge */}
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">
+            <ClipboardList className="w-4 h-4 inline mr-1" />
+            {data.category === 'energy' && 'Energy & Fatigue'}
+            {data.category === 'mental' && 'Mental Health'}
+            {data.category === 'sick' && 'Feeling Sick'}
+            {data.category === 'physical' && 'Physical Pain'}
+            {data.category === 'medication' && 'Medication Side Effects'}
+            {data.category === 'multiple' && 'Multiple Issues'}
+            {data.category === 'unsure' && 'General Health'}
+          </div>
+        </div>
+
+        {/* Primary Assessment */}
+        {data.primary_assessment && (
+          <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
+            <h4 className="text-sm font-medium text-gray-400 mb-2">Primary Assessment</h4>
+            <p className="text-white text-sm">
+              {data.primary_assessment.length > 200 
+                ? data.primary_assessment.substring(0, 200) + '...' 
+                : data.primary_assessment}
+            </p>
+          </div>
+        )}
+
+        {/* Urgency & Doctor Visit */}
+        <div className="flex gap-3">
+          {data.urgency_level && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+              data.urgency_level === 'high' ? 'bg-red-500/20 text-red-400' :
+              data.urgency_level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-green-500/20 text-green-400'
+            }`}>
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-medium capitalize">{data.urgency_level} Priority</span>
+            </div>
+          )}
+
+          {data.doctor_visit_suggested && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 text-orange-400">
+              <Stethoscope className="w-4 h-4" />
+              <span className="text-sm font-medium">Doctor Visit Suggested</span>
+            </div>
+          )}
+        </div>
+
+        {/* Confidence Score */}
+        {data.confidence_score !== undefined && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-gray-400">Analysis Confidence</span>
+              <span className="text-sm text-gray-300">{Math.round(data.confidence_score)}%</span>
+            </div>
+            <div className="flex-1 bg-white/[0.05] rounded-full h-2 overflow-hidden">
+              <motion.div 
+                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${data.confidence_score}%` }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations Count */}
+        {data.recommendations && data.recommendations.length > 0 && (
+          <div className="text-sm text-gray-400">
+            <TrendingUp className="w-4 h-4 inline mr-1" />
+            <span className="font-medium">{data.recommendations.length}</span> recommendations available
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderGeneralDeepDivePreview = () => {
+    if (!data) return null;
+    
+    return (
+      <div className="space-y-4">
+        {/* Category & Status */}
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-sm font-medium">
+            <Search className="w-4 h-4 inline mr-1" />
+            {data.category === 'energy' && 'Energy & Fatigue'}
+            {data.category === 'mental' && 'Mental Health'}
+            {data.category === 'sick' && 'Feeling Sick'}
+            {data.category === 'physical' && 'Physical Pain'}
+            {data.category === 'medication' && 'Medication Side Effects'}
+            {data.category === 'multiple' && 'Multiple Issues'}
+            {data.category === 'unsure' && 'General Health'}
+          </div>
+          
+          {data.status && (
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              data.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+              data.status === 'abandoned' ? 'bg-gray-500/20 text-gray-400' :
+              'bg-blue-500/20 text-blue-400'
+            }`}>
+              {data.status}
+            </div>
+          )}
+        </div>
+
+        {/* Initial Complaint */}
+        {data.initial_complaint && (
+          <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
+            <h4 className="text-sm font-medium text-gray-400 mb-2">Initial Concern</h4>
+            <p className="text-white text-sm">
+              {data.initial_complaint.length > 100 
+                ? data.initial_complaint.substring(0, 100) + '...' 
+                : data.initial_complaint}
+            </p>
+          </div>
+        )}
+
+        {/* Progress Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          {data.questions && (
+            <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.05]">
+              <p className="text-xs text-gray-400 mb-1">Questions Asked</p>
+              <p className="text-xl font-semibold text-white">{data.questions.length}</p>
+            </div>
+          )}
+          
+          {data.key_findings && (
+            <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.05]">
+              <p className="text-xs text-gray-400 mb-1">Key Findings</p>
+              <p className="text-xl font-semibold text-white">{data.key_findings.length}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Final Confidence (if completed) */}
+        {data.status === 'completed' && data.final_confidence !== undefined && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-gray-400">Final Confidence</span>
+              <span className="text-sm text-gray-300">{Math.round(data.final_confidence)}%</span>
+            </div>
+            <div className="flex-1 bg-white/[0.05] rounded-full h-2 overflow-hidden">
+              <motion.div 
+                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${data.final_confidence}%` }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderReportPreview = () => {
+    if (!data) return null;
+    
+    return (
+      <div className="space-y-4">
+        {/* Report Type */}
+        <div className="flex items-center gap-2">
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            data.report_type === 'urgent_triage' 
+              ? 'bg-red-500/20 text-red-400' 
+              : 'bg-blue-500/20 text-blue-400'
+          }`}>
+            <FileText className="w-4 h-4 inline mr-1" />
+            {data.report_type === 'comprehensive' && 'Comprehensive Report'}
+            {data.report_type === 'urgent_triage' && 'Urgent Triage Report'}
+            {data.report_type === 'photo_progression' && 'Photo Progression Report'}
+            {data.report_type === 'symptom_timeline' && 'Symptom Timeline Report'}
+            {data.report_type === 'specialist_focused' && 'Specialist Report'}
+            {data.report_type === 'annual_summary' && 'Annual Summary'}
+          </div>
+          
+          {data.specialty && (
+            <div className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
+              {data.specialty}
+            </div>
+          )}
+        </div>
+
+        {/* Executive Summary */}
+        {data.executive_summary && (
+          <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
+            <h4 className="text-sm font-medium text-gray-400 mb-2">Executive Summary</h4>
+            <p className="text-white text-sm">
+              {data.executive_summary.length > 200 
+                ? data.executive_summary.substring(0, 200) + '...' 
+                : data.executive_summary}
+            </p>
+          </div>
+        )}
+
+        {/* Model & Confidence */}
+        <div className="flex items-center justify-between text-sm">
+          {data.model_used && (
+            <div className="text-gray-400">
+              <Brain className="w-4 h-4 inline mr-1" />
+              Model: <span className="text-gray-300">{data.model_used}</span>
+            </div>
+          )}
+          
+          {data.confidence_score !== undefined && (
+            <div className="text-gray-400">
+              Confidence: <span className="text-gray-300">{data.confidence_score}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderOracleChatPreview = () => {
+    if (!data) return null;
+    
+    return (
+      <div className="space-y-4">
+        {/* Chat Title */}
+        <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
+          <h4 className="text-sm font-medium text-gray-400 mb-2">Conversation</h4>
+          <p className="text-white font-medium">{data.title || 'Oracle Consultation'}</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.05]">
+            <p className="text-xs text-gray-400 mb-1">Messages</p>
+            <p className="text-xl font-semibold text-white">{data.message_count || 0}</p>
+          </div>
+          
+          <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.05]">
+            <p className="text-xs text-gray-400 mb-1">Status</p>
+            <p className={`text-sm font-medium ${
+              data.status === 'active' ? 'text-green-400' : 'text-gray-400'
+            }`}>
+              {data.status === 'active' ? 'Active' : 'Completed'}
+            </p>
+          </div>
+        </div>
+
+        {/* AI Model Info */}
+        <div className="flex items-center justify-between text-sm">
+          <div className="text-gray-400">
+            <Brain className="w-4 h-4 inline mr-1" />
+            {data.ai_provider || 'openai'} - {data.model_name || 'gpt-4'}
+          </div>
+        </div>
+
+        {/* Last Message Time */}
+        {data.last_message_at && (
+          <div className="text-sm text-gray-400">
+            <Clock className="w-4 h-4 inline mr-1" />
+            Last message: {formatDistanceToNow(new Date(data.last_message_at), { addSuffix: true })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPhotoAnalysisPreview = () => {
+    if (!data) return null;
+    
+    return (
+      <div className="space-y-4">
+        {/* Condition Name */}
+        <div className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.05]">
+          <h4 className="text-sm font-medium text-gray-400 mb-2">Condition</h4>
+          <p className="text-white font-medium">{data.condition_name || 'Photo Analysis'}</p>
+          {data.description && (
+            <p className="text-sm text-gray-300 mt-1">{data.description}</p>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          {metadata?.photo_count !== undefined && (
+            <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.05]">
+              <p className="text-xs text-gray-400 mb-1">Photos</p>
+              <p className="text-xl font-semibold text-white">{metadata.photo_count}</p>
+            </div>
+          )}
+          
+          {metadata?.confidence !== undefined && (
+            <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.05]">
+              <p className="text-xs text-gray-400 mb-1">Confidence</p>
+              <p className="text-xl font-semibold text-white">{Math.round(metadata.confidence * 100)}%</p>
+            </div>
+          )}
+        </div>
+
+        {/* Sensitive Warning */}
+        {data.is_sensitive && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/20 text-yellow-400">
+            <Shield className="w-4 h-4" />
+            <span className="text-sm font-medium">Sensitive Content</span>
+          </div>
+        )}
+
+        {/* Analysis Status */}
+        {metadata?.has_analysis && (
+          <div className="text-sm text-gray-400">
+            <Activity className="w-4 h-4 inline mr-1" />
+            Latest analysis available
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderPreviewContent = () => {
     switch (interactionType) {
       case 'quick_scan':
         return renderQuickScanPreview();
       case 'deep_dive':
         return renderDeepDivePreview();
+      case 'flash_assessment':
+        return renderFlashAssessmentPreview();
+      case 'general_assessment':
+        return renderGeneralAssessmentPreview();
+      case 'general_deepdive':
+        return renderGeneralDeepDivePreview();
       case 'photo_analysis':
-        return (
-          <div className="space-y-4">
-            <p className="text-gray-300">
-              Photo analysis for {data?.condition_name || 'condition'}
-            </p>
-            {metadata?.photo_count > 0 && (
-              <p className="text-sm text-gray-400">{metadata.photo_count} photos analyzed</p>
-            )}
-          </div>
-        );
+        return renderPhotoAnalysisPreview();
+      case 'report':
+        return renderReportPreview();
+      case 'oracle_chat':
+        return renderOracleChatPreview();
       default:
         return <p className="text-gray-300">View full details for more information</p>;
     }
