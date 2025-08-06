@@ -147,7 +147,7 @@ function DashboardContent() {
   const [timelineData, setTimelineData] = useState<TimelineEntry[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [timelineOffset, setTimelineOffset] = useState(0);
   const [timelineHasMore, setTimelineHasMore] = useState(true);
   const [timelineLoadingMore, setTimelineLoadingMore] = useState(false);
@@ -189,7 +189,8 @@ function DashboardContent() {
     currentSuggestion,
     suggestionId,
     logDataPoint,
-    clearSuggestion
+    clearSuggestion,
+    loading: trackingLoading
   } = useTrackingStore();
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -375,7 +376,6 @@ function DashboardContent() {
       // Only has more if we got a full page of results
       const hasMore = newData.length === TIMELINE_PAGE_SIZE && newData.length > 0;
       setTimelineHasMore(hasMore);
-      setHasLoaded(true);
       
       // Log when we reach the end
       if (!hasMore && append) {
@@ -748,6 +748,45 @@ function DashboardContent() {
   // const maxValue = Math.max(...currentGraph.data.map(d => d.value));
   // const minValue = Math.min(...currentGraph.data.map(d => d.value));
 
+  // Master loading state - check if all critical data is loaded (only on initial load)
+  const isInitialLoading = isInitialLoad && (
+    profileLoading || 
+    timelineLoading || 
+    healthScoreLoading || 
+    alertLoading || 
+    healthTimelineLoading || 
+    healthStoryLoading ||
+    trackingLoading
+  );
+
+  // Set initial load to false once all data is loaded
+  useEffect(() => {
+    if (isInitialLoad && 
+        !profileLoading && 
+        !timelineLoading && 
+        !healthScoreLoading && 
+        !alertLoading && 
+        !healthTimelineLoading && 
+        !healthStoryLoading &&
+        !trackingLoading) {
+      setIsInitialLoad(false);
+    }
+  }, [isInitialLoad, profileLoading, timelineLoading, healthScoreLoading, alertLoading, healthTimelineLoading, healthStoryLoading, trackingLoading]);
+
+  // Show loading screen while data is loading
+  if (isInitialLoading) {
+    return (
+      <UnifiedAuthGuard requireAuth={true}>
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-white text-sm">Loading dashboard...</p>
+          </div>
+        </div>
+      </UnifiedAuthGuard>
+    );
+  }
+
   return (
     <UnifiedAuthGuard requireAuth={true}>
       <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden transition-all duration-1000">
@@ -839,7 +878,7 @@ function DashboardContent() {
             
             {/* Timeline entries */}
             <div ref={timelineRef} className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar relative min-h-0" style={{ paddingRight: '8px' }}>
-              {timelineLoading && !hasLoaded ? (
+              {timelineLoading && isInitialLoad ? (
                 // Loading state
                 <div className="space-y-8">
                   {[...Array(5)].map((_, i) => (
@@ -1027,8 +1066,8 @@ function DashboardContent() {
                     </div>
                   )}
                   
-                  {/* No more data indicator */}
-                  {!timelineHasMore && timelineData.length > 0 && (
+                  {/* No more data indicator - only show after attempting to load more */}
+                  {!timelineHasMore && timelineData.length > 0 && timelineData.length >= TIMELINE_PAGE_SIZE && (
                     <div className="text-center py-4">
                       <p className="text-xs text-gray-500">No more interactions</p>
                     </div>
