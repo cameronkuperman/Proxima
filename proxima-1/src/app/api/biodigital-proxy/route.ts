@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(html, { headers })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to proxy BioDigital content', details: error.message },
+      { error: 'Failed to proxy BioDigital content', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
