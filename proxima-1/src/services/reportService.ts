@@ -121,6 +121,7 @@ export interface MedicalReport {
   model_used?: string;                 // "tngtech/deepseek-r1t-chimera:free"
   user_id?: string;
   analysis_id?: string;
+  specialty?: string;
   status: 'success' | 'error';
   error?: string;
 }

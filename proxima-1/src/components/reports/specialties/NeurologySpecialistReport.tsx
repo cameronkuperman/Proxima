@@ -24,7 +24,8 @@ import {
   CloudRain,
   Wind,
   ThermometerSun,
-  Sparkles
+  Sparkles,
+  Shield
 } from 'lucide-react';
 import { extractSpecialtyData } from '@/utils/specialtyDetector';
 

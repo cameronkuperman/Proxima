@@ -415,18 +415,21 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
           tags: [selectedOption.id, 'selected-data', specialty]
         };
         
-        // Store the report for viewing
-        setViewingReport(generatedReport);
         console.log('✅ Report generated successfully with specialty:', specialty);
         
-        // Add success message to chat
+        // Add success message to chat FIRST
         const successMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `✅ Your ${specialty} report has been generated successfully! The report is now displayed below.`,
+          content: `✅ Your ${specialty.replace('-', ' ')} report has been generated successfully! Click the button below to view your detailed report.`,
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, successMessage]);
+        
+        // Store the report for viewing (but don't automatically open it)
+        setViewingReport(generatedReport);
+        // Don't automatically open the viewer - let user click to view
+        setShowReportViewer(false);
       } else {
         throw new Error('Report generated but missing data');
       }
@@ -558,6 +561,21 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
                       : 'bg-white/[0.03] border border-white/[0.05] text-gray-300'
                   }`}>
                     <p className="text-sm">{message.content}</p>
+                    
+                    {/* Add View Report button if this is the success message and we have a report */}
+                    {message.content.includes('report has been generated successfully') && viewingReport && (
+                      <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowReportViewer(true)}
+                        className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20"
+                      >
+                        <FileText className="w-5 h-5" />
+                        View Your Report
+                      </motion.button>
+                    )}
                   </div>
                   
                   {/* Report Options */}

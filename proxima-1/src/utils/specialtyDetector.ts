@@ -103,7 +103,7 @@ export const specialtyFieldMap = {
 } as const;
 
 // All possible specialty variations we might encounter
-const specialtyVariations: Record<string, SpecialtyType> = {
+const specialtyVariations: Record<string, SpecialtyType | null> = {
   // Exact matches
   'cardiology': 'cardiology',
   'neurology': 'neurology',

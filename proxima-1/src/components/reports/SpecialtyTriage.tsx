@@ -157,11 +157,11 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
   const [primaryConcern, setPrimaryConcern] = useState(initialConcern);
   // These are the assessments user ALREADY SELECTED in the previous screen
   // We'll use them directly without showing selection UI
-  const [selectedQuickScans] = useState<string[]>(quickScans.map(scan => scan.id));
-  const [selectedDeepDives] = useState<string[]>(deepDives.map(dive => dive.id));
-  const [selectedFlashAssessments] = useState<string[]>(flashAssessments.map(a => a.id));
-  const [selectedGeneralAssessments] = useState<string[]>(generalAssessments.map(a => a.id));
-  const [selectedGeneralDeepDives] = useState<string[]>(generalDeepDives.map(a => a.id));
+  const [selectedQuickScans, setSelectedQuickScans] = useState<string[]>(quickScans.map(scan => scan.id));
+  const [selectedDeepDives, setSelectedDeepDives] = useState<string[]>(deepDives.map(dive => dive.id));
+  const [selectedFlashAssessments, setSelectedFlashAssessments] = useState<string[]>(flashAssessments.map(a => a.id));
+  const [selectedGeneralAssessments, setSelectedGeneralAssessments] = useState<string[]>(generalAssessments.map(a => a.id));
+  const [selectedGeneralDeepDives, setSelectedGeneralDeepDives] = useState<string[]>(generalDeepDives.map(a => a.id));
   const [isLoading, setIsLoading] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -631,7 +631,7 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
                           'completed': 'bg-green-100 text-green-800',
                           'in_progress': 'bg-yellow-100 text-yellow-800',
                           'failed': 'bg-red-100 text-red-800'
-                        }[dive.status] || 'bg-gray-100 text-gray-800';
+                        }[dive.status as string] || 'bg-gray-100 text-gray-800';
                         
                         return (
                           <label
@@ -867,7 +867,7 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
                           'completed': 'bg-green-100 text-green-800',
                           'in_progress': 'bg-yellow-100 text-yellow-800',
                           'failed': 'bg-red-100 text-red-800'
-                        }[dive.status] || 'bg-gray-100 text-gray-800';
+                        }[dive.status as string] || 'bg-gray-100 text-gray-800';
                         
                         return (
                           <label
@@ -1043,7 +1043,10 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
                   
                   onSpecialtySelected('primary-care' as SpecialtyType, triageResult, {
                     quick_scan_ids: selectedQuickScans,
-                    deep_dive_ids: selectedDeepDives
+                    deep_dive_ids: selectedDeepDives,
+                    general_assessment_ids: selectedGeneralAssessments,
+                    general_deep_dive_ids: selectedGeneralDeepDives,
+                    flash_assessment_ids: selectedFlashAssessments
                   });
                 }}
                 className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors"

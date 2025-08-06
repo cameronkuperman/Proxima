@@ -22,7 +22,7 @@ export default function HistoryPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [interaction, setInteraction] = useState<Record<string, unknown> | null>(null);
-  const [fullData, setFullData] = useState<Record<string, unknown> | null>(null);
+  const [fullData, setFullData] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // First, fetch from user_interactions to get the type
@@ -1310,8 +1310,8 @@ export default function HistoryPage() {
   const renderPhotoAnalysisDetails = () => {
     if (!fullData) return null;
     
-    const analyses = fullData.photo_analyses as Array<Record<string, unknown>> | undefined;
-    const uploads = fullData.photo_uploads as Array<Record<string, unknown>> | undefined;
+    const analyses = fullData.photo_analyses as Array<Record<string, any>> | undefined;
+    const uploads = fullData.photo_uploads as Array<Record<string, any>> | undefined;
     
     return (
       <div className="space-y-8">

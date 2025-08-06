@@ -17,6 +17,8 @@ export interface GeneratedReport {
     photo_session_ids?: string[];
   };
   report_data: any;
+  specialty?: string;
+  full_report?: any;
   tags?: string[];
 }
 

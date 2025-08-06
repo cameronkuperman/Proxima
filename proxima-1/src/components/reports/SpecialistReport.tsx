@@ -39,6 +39,8 @@ import { CardiologySpecialistReport } from './specialties/CardiologySpecialistRe
 import { NeurologySpecialistReport } from './specialties/NeurologySpecialistReport';
 import { PsychiatrySpecialistReport } from './specialties/PsychiatrySpecialistReport';
 import { OncologySpecialistReport } from './specialties/OncologySpecialistReport';
+import { PrimaryCareSpecialistReport } from './specialties/PrimaryCareSpecialistReport';
+import { OrthopedicsSpecialistReport } from './specialties/OrthopedicsSpecialistReport';
 import { SymptomTimeline } from './SymptomTimeline';
 import { ClinicalScales } from './ClinicalScales';
 import { TreatmentPlan } from './TreatmentPlan';
@@ -249,6 +251,10 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
       return <PsychiatrySpecialistReport report={report} />;
     case 'oncology':
       return <OncologySpecialistReport report={report} />;
+    case 'primary-care':
+      return <PrimaryCareSpecialistReport report={report} />;
+    case 'orthopedics':
+      return <OrthopedicsSpecialistReport report={report} />;
     // TODO: Add other specialty components as they are created
     default:
       // Fall back to the generic specialist report for now
@@ -358,7 +364,7 @@ const GenericSpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
   }
   
   // Combine assessment and findings for display
-  const specialtyData = { ...specialtyAssessment, ...specialtyFindings };
+  const specialtyData: any = { ...specialtyAssessment, ...specialtyFindings };
   
   console.log('Specialty Assessment:', specialtyAssessment);
   console.log('Specialty Findings:', specialtyFindings);
