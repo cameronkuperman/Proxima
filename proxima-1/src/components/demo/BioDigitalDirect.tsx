@@ -13,7 +13,7 @@ export function BioDigitalDirect() {
       // Create iframe programmatically
       const iframe = document.createElement('iframe')
       iframe.id = 'biodigital-human'
-      iframe.src = 'https://human.biodigital.com/widget/?m=production/maleAdult/male_region_skeleton_2&dk=4a7eb63719c66a365c746afeae476870503ba4be'
+      iframe.src = 'https://human.biodigital.com/widget/?m=production/maleAdult/male_region_skeleton_2&dk=3cbb6a7f38981892550f66544f254f8e9dd158ee'
       iframe.style.width = '100%'
       iframe.style.height = '600px'
       iframe.style.border = 'none'

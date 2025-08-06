@@ -19,7 +19,9 @@
         frameBorder="0" 
         style="aspect-ratio: 4 / 3; width: 100%; height: 100%;" 
         allowFullScreen="true" 
-        loading="lazy">
+        loading="lazy"
+        allow="autoplay; fullscreen; vr"
+        sandbox="allow-same-origin allow-scripts allow-popups allow-forms">
     </iframe>
     
     <!-- Load the HumanAPI SDK -->
@@ -33,14 +35,14 @@
         // Configure models based on gender
         const models = {
             male: {
-                id: '6Gv7',
-                uaid: 'M8K4i',
+                id: '6JKq',
+                uaid: 'MA20I',
                 audio: 'false'
             },
             female: {
-                id: '6Gv9',
-                uaid: 'M8K4o',
-                audio: 'true'
+                id: '6JK0',
+                uaid: 'MA1zy',
+                audio: 'false'
             }
         };
         
@@ -48,10 +50,20 @@
         const model = models[gender] || models.male;
         
         // Build the iframe URL with all parameters
-        const iframeSrc = `https://human.biodigital.com/viewer/?id=${model.id}&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=false&ui-audio=${model.audio}&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&dk=ee9a8650aef671b33ba4918a8256059e2260c6ca&uaid=${model.uaid}&paid=o_149e818b`;
+        const iframeSrc = `https://human.biodigital.com/viewer/?id=${model.id}&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=false&ui-audio=${model.audio}&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&dk=3cbb6a7f38981892550f66544f254f8e9dd158ee&uaid=${model.uaid}&paid=o_14daca03`;
+        
+        // Log the URL for debugging
+        console.log('BioDigital URL:', iframeSrc);
         
         // Set the iframe source
-        document.getElementById('embedded-human').src = iframeSrc;
+        const iframe = document.getElementById('embedded-human');
+        iframe.src = iframeSrc;
+        
+        // Add error handling
+        iframe.onerror = function(e) {
+            console.error('Iframe failed to load:', e);
+            console.error('URL was:', iframeSrc);
+        };
         
         let lastSelectedId = null;
         let isFirstLoad = true;

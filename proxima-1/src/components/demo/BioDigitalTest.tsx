@@ -12,7 +12,7 @@ export function BioDigitalTest() {
   
   useEffect(() => {
     // Test 1: Widget endpoint with be parameter
-    addLog('Test 1: Widget with be=6F0C')
+    addLog('Test 1: Widget with be=6JKq')
   }, [])
   
   return (
@@ -22,9 +22,9 @@ export function BioDigitalTest() {
       <div className="grid grid-cols-2 gap-4 mb-4">
         {/* Test 1: Widget with be parameter */}
         <div className="border border-gray-700 p-4">
-          <h2 className="text-lg font-semibold mb-2">Test 1: Widget with be=6F0C</h2>
+          <h2 className="text-lg font-semibold mb-2">Test 1: Widget with be=6JKq</h2>
           <iframe
-            src="https://human.biodigital.com/widget/?be=6F0C&dk=4a7eb63719c66a365c746afeae476870503ba4be"
+            src="https://human.biodigital.com/widget/?be=6JKq&dk=3cbb6a7f38981892550f66544f254f8e9dd158ee"
             className="w-full h-96 bg-gray-900"
             onLoad={() => addLog('Widget iframe loaded')}
             onError={() => addLog('Widget iframe error')}
@@ -33,9 +33,9 @@ export function BioDigitalTest() {
         
         {/* Test 2: Viewer with id parameter */}
         <div className="border border-gray-700 p-4">
-          <h2 className="text-lg font-semibold mb-2">Test 2: Viewer with id=6F0C</h2>
+          <h2 className="text-lg font-semibold mb-2">Test 2: Viewer with id=6JKq</h2>
           <iframe
-            src="https://human.biodigital.com/viewer/?id=6F0C&dk=4a7eb63719c66a365c746afeae476870503ba4be"
+            src="https://human.biodigital.com/viewer/?id=6JKq&dk=3cbb6a7f38981892550f66544f254f8e9dd158ee"
             className="w-full h-96 bg-gray-900"
             onLoad={() => addLog('Viewer iframe loaded')}
             onError={() => addLog('Viewer iframe error')}
@@ -48,7 +48,7 @@ export function BioDigitalTest() {
         <h2 className="text-lg font-semibold mb-2">Test 3: Click Detection</h2>
         <div className="relative">
           <iframe
-            src="https://human.biodigital.com/viewer/?id=6F0C&dk=4a7eb63719c66a365c746afeae476870503ba4be"
+            src="https://human.biodigital.com/viewer/?id=6JKq&dk=3cbb6a7f38981892550f66544f254f8e9dd158ee"
             className="w-full h-96 bg-gray-900"
           />
           <div

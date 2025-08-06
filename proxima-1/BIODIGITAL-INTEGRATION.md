@@ -131,15 +131,17 @@ window.addEventListener('message', (event) => {
 ## Available Models
 
 BioDigital provides various models that can be loaded:
-- `6F0C` - Full body anatomy model (currently used)
+- Male: `6JKq` (uaid: `MA20I`)
+- Female: `6JK0` (uaid: `MA1zy`)
+- Account ID (paid): `o_14daca03`
 - `cochlear_implant` - Ear/cochlear implant model
 - `production/maleAdult/heart.json` - Heart model
 - `production/maleAdult/artery.json` - Artery model
 
 ## Credentials
 
-- **Developer Key**: `4a7eb63719c66a365c746afeae476870503ba4be`
-- **Developer Secret**: `80a85fae95e37b584000cc0b205214df3c0bbd8d`
+- **Developer Key**: `3cbb6a7f38981892550f66544f254f8e9dd158ee`
+- **Developer Secret**: `eb72614575eb59e5d0ea464bdfe6308011dbd79d`
 
 ## Troubleshooting
 
