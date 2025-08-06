@@ -34,6 +34,11 @@ import {
   Clock,
   Users
 } from 'lucide-react';
+import { detectSpecialty, extractSpecialtyData } from '@/utils/specialtyDetector';
+import { CardiologySpecialistReport } from './specialties/CardiologySpecialistReport';
+import { NeurologySpecialistReport } from './specialties/NeurologySpecialistReport';
+import { PsychiatrySpecialistReport } from './specialties/PsychiatrySpecialistReport';
+import { OncologySpecialistReport } from './specialties/OncologySpecialistReport';
 import { SymptomTimeline } from './SymptomTimeline';
 import { ClinicalScales } from './ClinicalScales';
 import { TreatmentPlan } from './TreatmentPlan';
@@ -147,6 +152,42 @@ const specialtyConfig = {
     textColor: 'text-teal-600',
     title: 'Urology Consultation Report'
   },
+  nephrology: {
+    icon: Activity,
+    color: 'sky',
+    gradient: 'from-sky-600 to-blue-600',
+    bgLight: 'bg-sky-50',
+    borderColor: 'border-sky-200',
+    textColor: 'text-sky-600',
+    title: 'Nephrology Consultation Report'
+  },
+  gynecology: {
+    icon: Users,
+    color: 'pink',
+    gradient: 'from-pink-600 to-rose-600',
+    bgLight: 'bg-pink-50',
+    borderColor: 'border-pink-200',
+    textColor: 'text-pink-600',
+    title: 'Gynecology Consultation Report'
+  },
+  oncology: {
+    icon: Shield,
+    color: 'purple',
+    gradient: 'from-purple-600 to-violet-600',
+    bgLight: 'bg-purple-50',
+    borderColor: 'border-purple-200',
+    textColor: 'text-purple-600',
+    title: 'Oncology Consultation Report'
+  },
+  'physical-therapy': {
+    icon: Activity,
+    color: 'emerald',
+    gradient: 'from-emerald-600 to-green-600',
+    bgLight: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    textColor: 'text-emerald-600',
+    title: 'Physical Therapy Consultation Report'
+  },
   'infectious-disease': {
     icon: AlertCircle,
     color: 'rose',
@@ -167,14 +208,26 @@ const specialtyConfig = {
   }
 };
 
+// Mapping for specialty field names (backend uses inconsistent naming)
+const specialtyFieldMap = {
+  'cardiology': { assessment: 'cardiology_assessment', findings: 'cardiologist_specific_findings' },
+  'neurology': { assessment: 'neurology_assessment', findings: 'neurologist_specific_findings' },
+  'dermatology': { assessment: 'dermatology_assessment', findings: 'dermatologist_specific_findings' },
+  'orthopedics': { assessment: 'orthopedic_assessment', findings: 'orthopedist_specific_findings' },
+  'psychiatry': { assessment: 'psychiatry_assessment', findings: 'psychiatrist_specific_findings' },
+  'gastroenterology': { assessment: 'gastroenterology_assessment', findings: 'gastroenterologist_specific_findings' },
+  'endocrinology': { assessment: 'endocrine_assessment', findings: 'endocrinologist_specific_findings' },
+  'pulmonology': { assessment: 'pulmonary_assessment', findings: 'pulmonologist_specific_findings' },
+  'rheumatology': { assessment: 'rheumatologic_assessment', findings: 'rheumatologist_specific_findings' },
+  'nephrology': { assessment: 'nephrology_assessment', findings: null },
+  'urology': { assessment: 'urology_assessment', findings: null },
+  'gynecology': { assessment: 'gynecologic_assessment', findings: null },
+  'oncology': { assessment: null, findings: null }, // Uses general structure
+  'physical-therapy': { assessment: null, findings: null }, // Uses general structure
+  'primary-care': { special: true } // Uses different structure entirely
+} as const;
+
 export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) => {
-  // Start with all sections expanded
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set([
-    'actionable', 'summary', 'clinical', 'specialty', 'diagnostics', 
-    'tests', 'treatment', 'billing', 'coordination', 'quality'
-  ]));
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  
   console.log('=== SPECIALIST REPORT COMPONENT ===');
   console.log('Full Report:', report);
   console.log('Report Type:', report.report_type);
@@ -182,18 +235,48 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
   console.log('Report Specialty from report:', report.specialty);
   console.log('Report Data Keys:', Object.keys(report.report_data || {}));
   
+  // Use the new specialty detector utility
+  const detectedSpecialty = detectSpecialty(report);
+  console.log('Detected Specialty using utility:', detectedSpecialty);
+  
+  // Route to appropriate specialty component
+  switch (detectedSpecialty) {
+    case 'cardiology':
+      return <CardiologySpecialistReport report={report} />;
+    case 'neurology':
+      return <NeurologySpecialistReport report={report} />;
+    case 'psychiatry':
+      return <PsychiatrySpecialistReport report={report} />;
+    case 'oncology':
+      return <OncologySpecialistReport report={report} />;
+    // TODO: Add other specialty components as they are created
+    default:
+      // Fall back to the generic specialist report for now
+      return <GenericSpecialistReport report={report} />;
+  }
+};
+
+// Generic specialist report component (the original implementation)
+const GenericSpecialistReport: React.FC<SpecialistReportProps> = ({ report }) => {
+  // Start with all sections expanded
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set([
+    'actionable', 'summary', 'clinical', 'specialty', 'diagnostics', 
+    'tests', 'treatment', 'billing', 'coordination', 'quality'
+  ]));
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  
   const data = report.report_data;
   
-  // Detect specialty from report data
-  const detectSpecialty = () => {
-    // FIRST: Check if specialty is directly in the report
-    if (report.specialty) {
+  // Detect specialty from report data (for the generic component)
+  const detectSpecialtyLegacy = () => {
+    // FIRST: Check if specialty is directly in the report (but not generic "specialist")
+    if (report.specialty && report.specialty !== 'specialist') {
       console.log('Found specialty in report:', report.specialty);
       return report.specialty;
     }
     
-    // SECOND: Check if report_type contains the specialty
-    if (report.report_type && report.report_type !== 'specialist') {
+    // SECOND: Check if report_type contains the specialty (but not generic "specialist_focused")
+    if (report.report_type && report.report_type !== 'specialist_focused' && report.report_type !== 'specialist') {
       console.log('Found specialty in report_type:', report.report_type);
       return report.report_type;
     }
@@ -237,8 +320,8 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
     return 'specialist'; // Generic specialist as safest default
   };
   
-  const specialty = detectSpecialty();
-  console.log('Detected Specialty:', specialty);
+  const specialty = detectSpecialtyLegacy();
+  console.log('Detected Specialty (Legacy):', specialty);
   
   // Add fallback for unknown specialties
   const config = specialtyConfig[specialty as keyof typeof specialtyConfig] || {
@@ -251,9 +334,35 @@ export const SpecialistReport: React.FC<SpecialistReportProps> = ({ report }) =>
     title: `${specialty?.charAt(0).toUpperCase() + specialty?.slice(1) || 'Medical'} Consultation Report`
   };
   const Icon = config.icon;
-  const specialtyData = data[`${specialty}_specific`] || data[`${specialty}_assessment`] || {};
   
-  console.log('Specialty Data:', specialtyData);
+  // Get the correct field names for this specialty
+  const fieldMapping = specialtyFieldMap[specialty as keyof typeof specialtyFieldMap];
+  let specialtyAssessment = {};
+  let specialtyFindings = {};
+  
+  if (fieldMapping && !('special' in fieldMapping)) {
+    if (fieldMapping.assessment) {
+      specialtyAssessment = data[fieldMapping.assessment] || {};
+    }
+    if (fieldMapping.findings) {
+      specialtyFindings = data[fieldMapping.findings] || {};
+    }
+  } else if (specialty === 'primary-care') {
+    // Primary care uses different structure
+    specialtyAssessment = data.preventive_care_gaps || {};
+    specialtyFindings = data.chronic_disease_assessment || {};
+  } else {
+    // Fallback to old naming convention
+    specialtyAssessment = data[`${specialty}_assessment`] || data[`${specialty}_specific`] || {};
+    specialtyFindings = data[`${specialty}_specific_findings`] || {};
+  }
+  
+  // Combine assessment and findings for display
+  const specialtyData = { ...specialtyAssessment, ...specialtyFindings };
+  
+  console.log('Specialty Assessment:', specialtyAssessment);
+  console.log('Specialty Findings:', specialtyFindings);
+  console.log('Combined Specialty Data:', specialtyData);
   console.log('Config:', config);
   
   const toggleSection = (section: string) => {

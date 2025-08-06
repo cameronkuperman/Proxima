@@ -27,10 +27,14 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
   const processedReportData = report.report_data || {};
 
   // Convert GeneratedReport to the format expected by ReportViewer
+  // Use the full_report if available (which has the complete backend response)
+  const fullReport = (report as any).full_report || report;
+  
   const reportData = {
     report_id: report.id,
-    report_type: report.report_type || 'comprehensive',
-    generated_at: report.created_at,
+    report_type: fullReport.report_type || report.report_type || 'specialist_focused',
+    specialty: fullReport.specialty || (report as any).specialty,
+    generated_at: fullReport.generated_at || report.created_at,
     report_data: processedReportData,
     confidence_score: report.confidence_score || 85,
     user_id: report.user_id,

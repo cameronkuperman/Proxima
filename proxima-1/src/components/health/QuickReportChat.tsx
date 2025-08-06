@@ -236,13 +236,18 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
   };
 
   const toggleInteractionSelection = (interactionId: string) => {
+    console.log('🔴 TOGGLING INTERACTION:', interactionId);
+    
     setSelectedInteractions(prev => {
       const newSet = new Set(prev);
       if (newSet.has(interactionId)) {
         newSet.delete(interactionId);
+        console.log('❌ REMOVED interaction:', interactionId);
       } else {
         newSet.add(interactionId);
+        console.log('✅ ADDED interaction:', interactionId);
       }
+      console.log('📋 Total selected:', newSet.size, 'IDs:', Array.from(newSet));
       return newSet;
     });
   };
@@ -265,8 +270,12 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
     const deepDiveIds: string[] = [];
     const photoSessionIds: string[] = [];
     
+    console.log('🚀 GENERATING REPORT WITH SELECTIONS:');
+    console.log('  Selected interaction IDs:', Array.from(selectedInteractions));
+    
     healthInteractions.forEach(interaction => {
       if (selectedInteractions.has(interaction.id)) {
+        console.log(`  Processing ${interaction.type}:`, interaction.id);
         if (interaction.type === 'quick_scan') {
           quickScanIds.push(interaction.id);
         } else if (interaction.type === 'deep_dive') {
@@ -276,55 +285,159 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
         }
       }
     });
+    
+    console.log('📦 FINAL IDs TO SEND:');
+    console.log('  Quick Scan IDs:', quickScanIds);
+    console.log('  Deep Dive IDs:', deepDiveIds);
+    console.log('  Photo Session IDs:', photoSessionIds);
 
     // Generate report based on context and selected interactions
     try {
-      const timeFrame = selectedOption.purpose === 'annual_checkup' 
-        ? { start: new Date(new Date().getFullYear(), 0, 1).toISOString(), end: new Date().toISOString() }
-        : { start: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), end: new Date().toISOString() };
-
-      const result = await generateReport({
+      console.log('🔥 ALWAYS USING SPECIALIST FLOW WITH SELECTED IDs ONLY');
+      
+      // First, run triage to determine specialty based on selected assessments
+      const triageBody = {
         user_id: user?.id,
-        context: {
-          purpose: selectedOption.purpose,
-          time_frame: timeFrame,
-          target_audience: selectedOption.purpose === 'specialist_referral' ? 'specialist' : 'self',
-        },
-        available_data: {
-          quick_scan_ids: quickScanIds,
-          deep_dive_ids: deepDiveIds,
-          photo_session_ids: photoSessionIds,
-        },
+        quick_scan_ids: quickScanIds.length > 0 ? quickScanIds : [],
+        deep_dive_ids: deepDiveIds.length > 0 ? deepDiveIds : [],
+        photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : []
+      };
+      console.log('📨 Sending to triage:', JSON.stringify(triageBody, null, 2));
+      
+      const triageResponse = await fetch(`${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/report/specialty-triage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(triageBody)
       });
-
-      // If report generation successful, save it
-      if (result?.report) {
-        const reportId = result.report.report_id || `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const triageData = await triageResponse.json();
+      console.log('📋 Triage response:', JSON.stringify(triageData, null, 2));
+      
+      const specialty = triageData.triage_result?.primary_specialty || triageData.primary_specialty || 'primary-care';
+      console.log('✅ Triage determined specialty:', specialty);
+      
+      // If triage couldn't determine a specialty, log why
+      if (specialty === 'primary-care' && triageData.triage_result?.reasoning) {
+        console.log('ℹ️ Triage reasoning:', triageData.triage_result.reasoning);
+      }
+      
+      // Let the backend create the analysis record - it knows the structure
+      const analysisId = crypto.randomUUID();
+      console.log('📝 Using analysis ID:', analysisId);
+      
+      // Generate specialist report with ONLY selected IDs
+      console.log('🚀 Generating report with ONLY these IDs:');
+      console.log('  Quick Scans:', quickScanIds);
+      console.log('  Deep Dives:', deepDiveIds);
+      console.log('  Photo Sessions:', photoSessionIds);
+      
+      const specialistUrl = `${process.env.NEXT_PUBLIC_ORACLE_API_URL}/api/report/${specialty}`;
+      console.log('📡 Calling specialist endpoint:', specialistUrl);
+      
+      const requestBody = {
+        analysis_id: analysisId,
+        user_id: user?.id,
+        specialty: specialty,
+        quick_scan_ids: quickScanIds,
+        deep_dive_ids: deepDiveIds,
+        photo_session_ids: photoSessionIds,
+        general_assessment_ids: [],
+        general_deep_dive_ids: [],
+        flash_assessment_ids: []
+      };
+      
+      console.log('=== SPECIALIST ENDPOINT REQUEST ===');
+      console.log('URL:', specialistUrl);
+      console.log('Method: POST');
+      console.log('Headers:', { 'Content-Type': 'application/json' });
+      console.log('Request Body:', JSON.stringify(requestBody, null, 2));
+      console.log('Specifically sending:');
+      console.log('  - Analysis ID:', analysisId);
+      console.log('  - User ID:', user?.id);
+      console.log('  - Specialty:', specialty);
+      console.log('  - Quick Scan IDs:', quickScanIds);
+      console.log('  - Deep Dive IDs:', deepDiveIds);
+      console.log('  - Photo Session IDs:', photoSessionIds);
+      
+      const specialistResponse = await fetch(specialistUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log('=== SPECIALIST ENDPOINT RESPONSE ===');
+      console.log('Status:', specialistResponse.status);
+      console.log('Status Text:', specialistResponse.statusText);
+      console.log('Headers:', Object.fromEntries(specialistResponse.headers.entries()));
+      
+      if (!specialistResponse.ok) {
+        const errorText = await specialistResponse.text();
+        console.error('❌ ERROR RESPONSE BODY:', errorText);
+        throw new Error(`Specialist report failed: ${errorText}`);
+      }
+      
+      const report = await specialistResponse.json();
+      console.log('✅ SUCCESS RESPONSE BODY:', JSON.stringify(report, null, 2));
+      console.log('Report structure:');
+      console.log('  - Has report_id:', !!report.report_id);
+      console.log('  - Has report_type:', !!report.report_type, '→', report.report_type);
+      console.log('  - Has specialty:', !!report.specialty, '→', report.specialty);
+      console.log('  - Has report_data:', !!report.report_data);
+      console.log('  - Report data keys:', report.report_data ? Object.keys(report.report_data) : 'N/A');
+      report.specialty = specialty; // Ensure specialty is included
+      
+      // Save and display the report
+      if (report && report.report_data) {
+        const reportId = report.report_id || `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Create a complete report object with all the data
+        const fullReport = {
+          ...report,
+          specialty: report.specialty || specialty, // Use backend's specialty or fallback
+        };
+        
         const generatedReport: GeneratedReport = {
           id: reportId,
           user_id: user?.id || 'user-123',
-          report_type: result.report.report_type,
-          title: `${selectedOption.label} - ${new Date().toLocaleDateString()}`,
-          created_at: new Date().toISOString(),
-          executive_summary: result.report.report_data?.executive_summary?.one_page_summary || '',
-          confidence_score: result.report.confidence_score || 85,
+          report_type: report.report_type || 'specialist_focused',
+          title: `${specialty.charAt(0).toUpperCase() + specialty.slice(1)} Report - ${new Date().toLocaleDateString()}`,
+          created_at: report.generated_at || new Date().toISOString(),
+          executive_summary: report.report_data?.executive_summary?.one_page_summary || '',
+          confidence_score: report.confidence_score || 85,
           source_data: {
             quick_scan_ids: quickScanIds,
             deep_dive_ids: deepDiveIds,
             photo_session_ids: photoSessionIds,
           },
-          report_data: result.report.report_data,
-          tags: [selectedOption.id, 'selected-data']
+          report_data: report.report_data,
+          specialty: report.specialty || specialty,
+          full_report: fullReport, // Store the complete report
+          tags: [selectedOption.id, 'selected-data', specialty]
         };
         
         // Store the report for viewing
         setViewingReport(generatedReport);
+        console.log('✅ Report generated successfully with specialty:', specialty);
+        
+        // Add success message to chat
+        const successMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ Your ${specialty} report has been generated successfully! The report is now displayed below.`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, successMessage]);
+      } else {
+        throw new Error('Report generated but missing data');
       }
     } catch (err) {
+      console.error('❌ REPORT GENERATION ERROR:', err);
+      const errorDetails = err instanceof Error ? err.message : 'Unknown error';
+      
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I encountered an error generating your report. Please try again or contact support if the issue persists.",
+        content: `I encountered an error generating your report: ${errorDetails}. Please try again or contact support if the issue persists.`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -759,10 +872,13 @@ export const QuickReportChat: React.FC<QuickReportChatProps> = ({ isOpen, onClos
       )}
     </AnimatePresence>
 
-    {/* Report Viewer Modal */}
+    {/* Report Viewer Modal - Show when we have a report */}
     <ReportViewerModal
-      isOpen={showReportViewer}
-      onClose={() => setShowReportViewer(false)}
+      isOpen={!!viewingReport}
+      onClose={() => {
+        setViewingReport(null);
+        setShowReportViewer(false);
+      }}
       report={viewingReport}
     />
   </>

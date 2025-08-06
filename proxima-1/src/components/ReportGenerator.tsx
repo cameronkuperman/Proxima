@@ -119,41 +119,53 @@ export function ReportGenerator({
   };
   
   const toggleScan = (scanId: string, type: 'quick' | 'deep' | 'flash' | 'general' | 'generalDeep') => {
+    console.log('🔴 TOGGLING ASSESSMENT:', { scanId, type });
+    
     switch (type) {
       case 'quick':
-        setSelectedQuickScans(prev => 
-          prev.includes(scanId) 
+        setSelectedQuickScans(prev => {
+          const newSelection = prev.includes(scanId) 
             ? prev.filter(id => id !== scanId)
-            : [...prev, scanId]
-        );
+            : [...prev, scanId];
+          console.log('✅ Quick Scans Selected:', newSelection);
+          return newSelection;
+        });
         break;
       case 'deep':
-        setSelectedDeepDives(prev => 
-          prev.includes(scanId) 
+        setSelectedDeepDives(prev => {
+          const newSelection = prev.includes(scanId) 
             ? prev.filter(id => id !== scanId)
-            : [...prev, scanId]
-        );
+            : [...prev, scanId];
+          console.log('✅ Deep Dives Selected:', newSelection);
+          return newSelection;
+        });
         break;
       case 'flash':
-        setSelectedFlashAssessments(prev => 
-          prev.includes(scanId) 
+        setSelectedFlashAssessments(prev => {
+          const newSelection = prev.includes(scanId) 
             ? prev.filter(id => id !== scanId)
-            : [...prev, scanId]
-        );
+            : [...prev, scanId];
+          console.log('✅ Flash Assessments Selected:', newSelection);
+          return newSelection;
+        });
         break;
       case 'general':
-        setSelectedGeneralAssessments(prev => 
-          prev.includes(scanId) 
+        setSelectedGeneralAssessments(prev => {
+          const newSelection = prev.includes(scanId) 
             ? prev.filter(id => id !== scanId)
-            : [...prev, scanId]
-        );
+            : [...prev, scanId];
+          console.log('✅ General Assessments Selected:', newSelection);
+          return newSelection;
+        });
         break;
       case 'generalDeep':
-        setSelectedGeneralDeepDives(prev => 
-          prev.includes(scanId) 
+        setSelectedGeneralDeepDives(prev => {
+          const newSelection = prev.includes(scanId) 
             ? prev.filter(id => id !== scanId)
-            : [...prev, scanId]
-        );
+            : [...prev, scanId];
+          console.log('✅ General Deep Dives Selected:', newSelection);
+          return newSelection;
+        });
         break;
     }
   };
@@ -383,24 +395,42 @@ export function ReportGenerator({
       console.log('Using analysis_id from database:', analysisId);
       console.log('Sending EXACT same IDs:', idsToUse);
       
+      // Log EXACTLY what we're sending to the backend
+      const requestPayload = {
+        quick_scan_ids: idsToUse.quick_scan_ids || [],
+        deep_dive_ids: idsToUse.deep_dive_ids || [],
+        flash_assessment_ids: idsToUse.flash_assessment_ids || [],
+        general_assessment_ids: idsToUse.general_assessment_ids || [],
+        general_deep_dive_ids: idsToUse.general_deep_dive_ids || [],
+        photo_session_ids: photoSessionIds || []
+      };
+      
+      console.log('🚀 SENDING TO BACKEND:');
+      console.log('  Quick Scan IDs:', requestPayload.quick_scan_ids);
+      console.log('  Deep Dive IDs:', requestPayload.deep_dive_ids);
+      console.log('  Flash Assessment IDs:', requestPayload.flash_assessment_ids);
+      console.log('  General Assessment IDs:', requestPayload.general_assessment_ids);
+      console.log('  General Deep Dive IDs:', requestPayload.general_deep_dive_ids);
+      console.log('  Photo Session IDs:', requestPayload.photo_session_ids);
+      
       const report = await reportService.generateSpecialistReport(
         specialtyToUse,
         analysisId,  // Use the ID we just created and verified
         userId,
-        {
-          quick_scan_ids: idsToUse.quick_scan_ids.length > 0 ? idsToUse.quick_scan_ids : undefined,
-          deep_dive_ids: idsToUse.deep_dive_ids.length > 0 ? idsToUse.deep_dive_ids : undefined,
-          flash_assessment_ids: idsToUse.flash_assessment_ids && idsToUse.flash_assessment_ids.length > 0 ? idsToUse.flash_assessment_ids : undefined,
-          general_assessment_ids: idsToUse.general_assessment_ids && idsToUse.general_assessment_ids.length > 0 ? idsToUse.general_assessment_ids : undefined,
-          general_deep_dive_ids: idsToUse.general_deep_dive_ids && idsToUse.general_deep_dive_ids.length > 0 ? idsToUse.general_deep_dive_ids : undefined,
-          photo_session_ids: photoSessionIds.length > 0 ? photoSessionIds : undefined
-        }
+        requestPayload
       );
 
       console.log('Step 6: Report generated successfully:', report);
-      setGeneratedReport(report);
+      
+      // Ensure the report has the specialty field
+      const reportWithSpecialty = {
+        ...report,
+        specialty: specialtyToUse // Ensure specialty is included
+      };
+      
+      setGeneratedReport(reportWithSpecialty);
       setStep('complete');
-      onComplete?.(report);
+      onComplete?.(reportWithSpecialty);
     } catch (err) {
       console.error('Report Generation Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate report');

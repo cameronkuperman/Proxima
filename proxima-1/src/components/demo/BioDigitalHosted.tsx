@@ -2,10 +2,15 @@
 
 import React, { useEffect, useState } from 'react'
 
+interface BioDigitalHostedProps {
+  gender?: 'male' | 'female';
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function BioDigitalHosted() {
+export function BioDigitalHosted({ gender = 'male' }: BioDigitalHostedProps) {
   const [selectedPart, setSelectedPart] = useState<any>(null)
   const [logs, setLogs] = useState<string[]>([])
+  const [currentGender, setCurrentGender] = useState<'male' | 'female'>(gender)
   
   const addLog = (msg: string) => {
     console.log(msg)
@@ -35,7 +40,21 @@ export function BioDigitalHosted() {
     <div className="h-screen flex flex-col bg-black text-white">
       <div className="p-4 border-b border-gray-800">
         <h1 className="text-2xl font-bold">BioDigital Hosted Integration</h1>
-        <p className="text-gray-400">This loads BioDigital from a local HTML file where we have full control</p>
+        <p className="text-gray-400">Select gender and interact with the 3D model</p>
+        <div className="mt-4 flex gap-4">
+          <button
+            onClick={() => setCurrentGender('male')}
+            className={`px-4 py-2 rounded ${currentGender === 'male' ? 'bg-blue-600' : 'bg-gray-700'}`}
+          >
+            Male Model
+          </button>
+          <button
+            onClick={() => setCurrentGender('female')}
+            className={`px-4 py-2 rounded ${currentGender === 'female' ? 'bg-pink-600' : 'bg-gray-700'}`}
+          >
+            Female Model
+          </button>
+        </div>
       </div>
       
       {selectedPart && (
@@ -54,13 +73,17 @@ export function BioDigitalHosted() {
             <div>
               <span className="text-gray-400">Screen Position:</span> {JSON.stringify(selectedPart.screenPos)}
             </div>
+            <div>
+              <span className="text-gray-400">Gender:</span> {selectedPart.gender || currentGender}
+            </div>
           </div>
         </div>
       )}
       
       <div className="flex-1 relative">
         <iframe
-          src="/biodigital-host.html"
+          key={currentGender}
+          src={`/biodigital-${currentGender}.html`}
           className="w-full h-full"
           style={{ border: 'none' }}
         />

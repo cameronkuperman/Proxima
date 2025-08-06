@@ -385,7 +385,7 @@ export const reportService = {
   // Direct specialist report generation
   async generateSpecialistReport(
     specialty: 'cardiology' | 'neurology' | 'psychiatry' | 'dermatology' | 
-    'gastroenterology' | 'endocrinology' | 'pulmonology' | 'primary-care',
+    'gastroenterology' | 'endocrinology' | 'pulmonology' | 'primary-care' | string,
     analysisId: string,
     userId?: string,
     selectedIds?: {
@@ -401,6 +401,7 @@ export const reportService = {
     const requestBody: any = {
       analysis_id: analysisId,
       user_id: userId,
+      specialty: specialty, // Explicitly include specialty in request
       ...(selectedIds || {})
     };
 
@@ -434,6 +435,7 @@ export const reportService = {
       return {
         report_id: `report-${Date.now()}`,
         report_type: 'specialist_focused',
+        specialty: specialty, // INCLUDE THE ACTUAL SPECIALTY!
         generated_at: new Date().toISOString(),
         report_data: result,
         confidence_score: result.confidence_score || 85,
@@ -442,6 +444,11 @@ export const reportService = {
         analysis_id: analysisId,
         status: 'success'
       };
+    }
+    
+    // Even if the result has the expected fields, add specialty if missing
+    if (!result.specialty) {
+      result.specialty = specialty;
     }
     
     return result;

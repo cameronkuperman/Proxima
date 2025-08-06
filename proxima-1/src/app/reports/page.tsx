@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, ArrowLeft, Plus, Sparkles } from 'lucide-react';
+import { FileText, ArrowLeft, Plus, Sparkles, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PastReports } from '@/components/health/PastReports';
 import { ReportViewerModal } from '@/components/health/ReportViewerModal';

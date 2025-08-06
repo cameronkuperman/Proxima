@@ -157,6 +157,21 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report, onBack }) =>
       );
     
     case 'specialist_focused':
+    case 'cardiology':
+    case 'neurology':
+    case 'psychiatry':
+    case 'dermatology':
+    case 'gastroenterology':
+    case 'endocrinology':
+    case 'pulmonology':
+    case 'primary-care':
+    case 'orthopedics':
+    case 'rheumatology':
+    case 'urology':
+    case 'infectious-disease':
+    case 'oncology':
+    case 'nephrology':
+    case 'hematology':
       return (
         <div className="max-w-6xl mx-auto">
           <ReportHeader />

@@ -155,21 +155,39 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
   generalDeepDives = []
 }) => {
   const [primaryConcern, setPrimaryConcern] = useState(initialConcern);
-  const [selectedQuickScans, setSelectedQuickScans] = useState<string[]>(quickScans.map(scan => scan.id));
-  const [selectedDeepDives, setSelectedDeepDives] = useState<string[]>(deepDives.map(dive => dive.id));
-  const [selectedFlashAssessments, setSelectedFlashAssessments] = useState<string[]>(flashAssessments.map(a => a.id));
-  const [selectedGeneralAssessments, setSelectedGeneralAssessments] = useState<string[]>(generalAssessments.map(a => a.id));
-  const [selectedGeneralDeepDives, setSelectedGeneralDeepDives] = useState<string[]>(generalDeepDives.map(a => a.id));
+  // These are the assessments user ALREADY SELECTED in the previous screen
+  // We'll use them directly without showing selection UI
+  const [selectedQuickScans] = useState<string[]>(quickScans.map(scan => scan.id));
+  const [selectedDeepDives] = useState<string[]>(deepDives.map(dive => dive.id));
+  const [selectedFlashAssessments] = useState<string[]>(flashAssessments.map(a => a.id));
+  const [selectedGeneralAssessments] = useState<string[]>(generalAssessments.map(a => a.id));
+  const [selectedGeneralDeepDives] = useState<string[]>(generalDeepDives.map(a => a.id));
   const [isLoading, setIsLoading] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autoTriageRun, setAutoTriageRun] = useState(false);
   const [expandedSections, setExpandedSections] = useState({ 
-    quickScans: true, 
-    deepDives: true,
-    flashAssessments: true,
-    generalAssessments: true,
-    generalDeepDives: true
+    quickScans: false, 
+    deepDives: false,
+    flashAssessments: false,
+    generalAssessments: false,
+    generalDeepDives: false
   });
+
+  // Auto-run triage when component mounts with selected assessments
+  useEffect(() => {
+    const hasSelections = selectedQuickScans.length > 0 || 
+                         selectedDeepDives.length > 0 || 
+                         selectedFlashAssessments.length > 0 || 
+                         selectedGeneralAssessments.length > 0 || 
+                         selectedGeneralDeepDives.length > 0;
+    
+    if (hasSelections && !autoTriageRun && !triageResult) {
+      console.log('Auto-running triage with pre-selected assessments');
+      setAutoTriageRun(true);
+      runTriage();
+    }
+  }, []); // Run once on mount
 
   const runTriage = async () => {
     // Check if ANY assessments are selected
@@ -451,11 +469,50 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
         </p>
       </div>
 
-      {/* Input Section */}
-      {!triageResult && (
+      {/* Auto-run triage on mount */}
+      {!triageResult && !autoTriageRun && (
+        <div className="text-center py-8">
+          <p className="text-gray-600 mb-4">Analyzing your selected health data...</p>
+          <button
+            onClick={() => {
+              setAutoTriageRun(true);
+              runTriage();
+            }}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Analyze Selected Assessments
+          </button>
+        </div>
+      )}
+
+      {/* Show what was selected (read-only) */}
+      {!triageResult && autoTriageRun && (
         <div className="space-y-6">
-          {/* Quick Scan Selection */}
-          {quickScans.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-900 mb-2">Analyzing These Assessments:</h3>
+            <div className="space-y-2 text-sm">
+              {selectedQuickScans.length > 0 && (
+                <p className="text-blue-800">• {selectedQuickScans.length} Quick Scan(s)</p>
+              )}
+              {selectedDeepDives.length > 0 && (
+                <p className="text-blue-800">• {selectedDeepDives.length} Deep Dive(s)</p>
+              )}
+              {selectedFlashAssessments.length > 0 && (
+                <p className="text-blue-800">• {selectedFlashAssessments.length} Flash Assessment(s)</p>
+              )}
+              {selectedGeneralAssessments.length > 0 && (
+                <p className="text-blue-800">• {selectedGeneralAssessments.length} General Assessment(s)</p>
+              )}
+              {selectedGeneralDeepDives.length > 0 && (
+                <p className="text-blue-800">• {selectedGeneralDeepDives.length} General Deep Dive(s)</p>
+              )}
+            </div>
+          </div>
+
+          {/* HIDDEN: Original selection UI - keeping for reference but not showing */}
+          <div style={{ display: 'none' }}>
+            {/* Quick Scan Selection */}
+            {quickScans.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -851,69 +908,24 @@ export const SpecialtyTriage: React.FC<SpecialtyTriageProps> = ({
             </motion.div>
           )}
 
-          {/* Additional Context */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-          >
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Additional Information (Optional)
-            </label>
-            <textarea
-              value={primaryConcern}
-              onChange={(e) => setPrimaryConcern(e.target.value)}
-              placeholder="Any other details you'd like to add about your symptoms or concerns..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-              rows={4}
-            />
-            
-            {symptoms.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm text-gray-600 mb-2">Additional symptoms detected:</p>
-                <div className="flex flex-wrap gap-2">
-                  {symptoms.map((symptom, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
-                      {symptom}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {error && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
-            
-            <button
-              onClick={runTriage}
-              disabled={isLoading || (
-                selectedQuickScans.length === 0 && 
-                selectedDeepDives.length === 0 && 
-                selectedFlashAssessments.length === 0 &&
-                selectedGeneralAssessments.length === 0 &&
-                selectedGeneralDeepDives.length === 0 &&
-                !primaryConcern.trim()
-              )}
-              className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Analyzing your health data...
-                </>
-              ) : (
-                <>
-                  Get Specialist Recommendation
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </motion.div>
+          </div>
+          {/* End of hidden selection UI */}
+          
+          {/* Loading state */}
+          {isLoading && (
+            <div className="text-center py-8">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+              <p className="text-lg text-gray-700">Analyzing your health data...</p>
+              <p className="text-sm text-gray-500 mt-2">Determining the most appropriate specialist</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-800">{error}</p>
+            </div>
+          )}
         </div>
       )}
 
