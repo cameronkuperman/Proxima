@@ -23,23 +23,23 @@
     </iframe>
     
     <!-- Load the HumanAPI SDK -->
-    <script src="https://developer.biodigital.com/builds/api/human-api-3.0.0.min.js"></script>
+    <script src="https://human-api.biodigital.com/build/1.2.1/human-api-1.2.1.min.js"></script>
     
     <script>
         // Get gender parameter from URL
         const urlParams = new URLSearchParams(window.location.search);
         const gender = urlParams.get('gender') || 'male'; // Default to male
         
-        // Configure models based on gender
+        // Configure models based on gender with YOUR new models
         const models = {
             male: {
-                id: '6Gv7',
-                uaid: 'M8K4i',
+                id: '6JJy',
+                uaid: 'M9yqM',
                 audio: 'false'
             },
             female: {
-                id: '6Gv9',
-                uaid: 'M8K4o',
+                id: '6JK0',
+                uaid: 'M9yrN',
                 audio: 'true'
             }
         };
@@ -47,8 +47,8 @@
         // Get the model configuration (default to male if not specified)
         const model = models[gender] || models.male;
         
-        // Build the iframe URL with all parameters
-        const iframeSrc = `https://human.biodigital.com/viewer/?id=${model.id}&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=false&ui-audio=${model.audio}&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&dk=ee9a8650aef671b33ba4918a8256059e2260c6ca&uaid=${model.uaid}&paid=o_149e818b`;
+        // Build the iframe URL with YOUR developer key
+        const iframeSrc = `https://human.biodigital.com/viewer/?id=${model.id}&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=false&ui-audio=${model.audio}&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&uaid=${model.uaid}&paid=o_14daca03`;
         
         // Set the iframe source
         document.getElementById('embedded-human').src = iframeSrc;
@@ -73,8 +73,10 @@
                     return;
                 }
                 
-                // Create HumanAPI instance with the iframe ID
-                human = new HumanAPI("embedded-human");
+                // Create HumanAPI instance with YOUR developer key
+                human = new HumanAPI.Human("embedded-human", {
+                    developerKey: '4a7eb63719c66a365c746afeae476870503ba4be'
+                });
                 
                 // Wait for the API to be ready
                 human.on('human.ready', function() {

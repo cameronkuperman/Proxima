@@ -27,7 +27,7 @@
     
     <iframe 
         id="biodigital-iframe" 
-        src="https://human.biodigital.com/viewer/?id=6F0C&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=true&ui-audio=true&ui-chapter-list=false&ui-fullscreen=true&ui-help=true&ui-info=true&ui-label-list=true&ui-layers=true&ui-skin-layers=true&ui-loader=circle&ui-media-controls=full&ui-menu=true&ui-nav=true&ui-search=true&ui-tools=true&ui-tutorial=false&ui-undo=true&ui-whiteboard=true&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&paid=o_24754ad1"
+        src="https://human.biodigital.com/viewer/?id=6JJy&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=false&ui-audio=false&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&uaid=M9yqM&paid=o_14daca03&dk=4a7eb63719c66a365c746afeae476870503ba4be"
         width="100%" 
         height="100%"
         frameborder="0"
@@ -56,7 +56,9 @@
                 log('SDK loaded, initializing Human...');
                 
                 try {
-                    var human = new HumanAPI.Human('biodigital-iframe');
+                    var human = new HumanAPI.Human('biodigital-iframe', {
+                        developerKey: '4a7eb63719c66a365c746afeae476870503ba4be'
+                    });
                     
                     human.on('ready', function() {
                         log('✓ BioDigital Human READY!');
