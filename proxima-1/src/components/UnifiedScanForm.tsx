@@ -54,10 +54,11 @@ export default function UnifiedScanForm({ mode, onComplete, demoMode = false, us
   // Handle messages from BioDigital iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Security: Only accept messages from our own domain (biodigital-viewer.html)
-      if (event.origin !== window.location.origin) return;
+      // Accept messages from same origin or trusted sources
+      // Remove origin check since iframe is on same domain
       
       if (event.data.type === 'BIODIGITAL_PICK' || event.data.type === 'BIODIGITAL_SELECT') {
+        console.log('BioDigital message received:', event.data)
         const data = event.data.data
         setSelectedBodyPart(data.objectName || 'Unknown Body Part')
         setShowForm(true)

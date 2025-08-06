@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 
 const securityHeaders = [
   {
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN' // Allows your own site to iframe content (for modals, etc.)
-  },
-  {
     key: 'X-Content-Type-Options',
     value: 'nosniff' // Prevents MIME type sniffing
   },
@@ -42,8 +38,8 @@ const ContentSecurityPolicy = `
     http://localhost:8000 
     https://human.biodigital.com 
     https://developer.biodigital.com;
-  frame-src 'self' https://human.biodigital.com;
-  frame-ancestors 'none';
+  frame-src *;
+  frame-ancestors *;
   base-uri 'self';
   form-action 'self';
   object-src 'none';
