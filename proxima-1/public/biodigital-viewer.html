@@ -23,14 +23,14 @@
     </iframe>
     
     <!-- Load the HumanAPI SDK -->
-    <script src="https://human-api.biodigital.com/build/1.2.1/human-api-1.2.1.min.js"></script>
+    <script src="https://developer.biodigital.com/builds/api/human-api-3.0.0.min.js"></script>
     
     <script>
         // Get gender parameter from URL
         const urlParams = new URLSearchParams(window.location.search);
         const gender = urlParams.get('gender') || 'male'; // Default to male
         
-        // Configure models based on gender with YOUR new models
+        // Configure models based on gender
         const models = {
             male: {
                 id: '6JPs',
@@ -73,10 +73,8 @@
                     return;
                 }
                 
-                // Create HumanAPI instance with YOUR developer key
-                human = new HumanAPI.Human("embedded-human", {
-                    developerKey: '4a7eb63719c66a365c746afeae476870503ba4be'
-                });
+                // Create HumanAPI instance with the iframe ID
+                human = new HumanAPI("embedded-human");
                 
                 // Wait for the API to be ready
                 human.on('human.ready', function() {
