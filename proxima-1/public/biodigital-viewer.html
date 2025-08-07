@@ -33,13 +33,13 @@
         // Configure models based on gender with YOUR new models
         const models = {
             male: {
-                id: '6JJy',
-                uaid: 'M9yqM',
+                id: '6JPs',
+                uaid: 'MA2YS',
                 audio: 'false'
             },
             female: {
-                id: '6JK0',
-                uaid: 'M9yrN',
+                id: '6JPo',
+                uaid: 'MA2WY',
                 audio: 'true'
             }
         };
@@ -47,8 +47,8 @@
         // Get the model configuration (default to male if not specified)
         const model = models[gender] || models.male;
         
-        // Build the iframe URL with YOUR developer key
-        const iframeSrc = `https://human.biodigital.com/viewer/?id=${model.id}&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=false&ui-audio=${model.audio}&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&dk=4a7eb63719c66a365c746afeae476870503ba4be&uaid=${model.uaid}&paid=o_14daca03`;
+        // Build the iframe URL with all parameters (matching exact embed format)
+        const iframeSrc = `https://human.biodigital.com/viewer/?id=${model.id}&ui-anatomy-descriptions=true&ui-anatomy-pronunciations=true&ui-anatomy-labels=false&ui-audio=${model.audio}&ui-chapter-list=false&ui-fullscreen=false&ui-help=false&ui-info=false&ui-label-list=true&ui-layers=false&ui-skin-layers=false&ui-loader=circle&ui-media-controls=none&ui-menu=false&ui-nav=false&ui-search=false&ui-tools=false&ui-tutorial=false&ui-undo=false&ui-whiteboard=false&initial.none=true&disable-scroll=false&uaid=${model.uaid}&paid=o_14daca03`;
         
         // Set the iframe source
         document.getElementById('embedded-human').src = iframeSrc;
@@ -89,6 +89,7 @@
                     
                     // Primary pick event handler
                     human.on('scene.picked', function(pickEvent) {
+                        console.log('Scene picked event:', pickEvent);
                         handlePickEvent(pickEvent);
                     });
                     
@@ -186,6 +187,7 @@
         }
         
         function getObjectInfo(objectId, pickEvent) {
+            console.log('Getting object info for:', objectId)
             // Get detailed info about the picked object
             human.send('scene.info', objectId, function(info) {
                 if (info && info[objectId]) {
@@ -194,6 +196,7 @@
                     const formattedName = formatAnatomicalName(rawName);
                     
                     // Send to parent window
+                    console.log('Sending message to parent:', formattedName);
                     window.parent.postMessage({
                         type: 'BIODIGITAL_PICK',
                         data: {
