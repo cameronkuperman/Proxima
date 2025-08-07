@@ -315,7 +315,7 @@ form-data: Updated to secure version
 - [ ] Implement backup and disaster recovery
 
 ### Compliance & Privacy
-- [ ] Ensure HIPAA compliance for health data
+- [ ] Ensure privacy compliance for health data
 - [ ] Implement GDPR requirements
 - [ ] Add privacy policy and terms of service
 - [ ] Implement consent management
@@ -393,13 +393,13 @@ The application has significant security vulnerabilities that must be addressed 
 ## ⚠️ Legal & Compliance Notice
 
 This application handles sensitive health information and MUST comply with:
-- **HIPAA** (Health Insurance Portability and Accountability Act)
+- **Healthcare Privacy Standards** (industry best practices)
 - **GDPR** (General Data Protection Regulation)
 - **State Privacy Laws** (CCPA, etc.)
 
 Failure to address these security issues could result in:
 - Legal liability
-- Regulatory fines (up to $50,000 per violation for HIPAA)
+- Regulatory fines and legal liability
 - Loss of user trust
 - Data breach notification requirements
 

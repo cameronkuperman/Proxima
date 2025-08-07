@@ -4,7 +4,7 @@
 
 Proxima-1 now has comprehensive audit logging to track critical security events and user actions. This system helps with:
 - Security investigations
-- Compliance requirements (HIPAA, GDPR)
+- Compliance requirements (healthcare privacy standards, GDPR)
 - Debugging user issues
 - Usage analytics
 

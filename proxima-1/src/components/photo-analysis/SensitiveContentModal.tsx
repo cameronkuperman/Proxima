@@ -145,7 +145,7 @@ export default function SensitiveContentModal({
 
             {/* Info */}
             <p className="text-xs text-gray-500 text-center mt-4">
-              All analyses are encrypted and HIPAA compliant
+              All analyses are encrypted with enterprise-grade security
             </p>
           </div>
         </motion.div>

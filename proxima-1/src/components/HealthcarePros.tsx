@@ -45,7 +45,7 @@ export default function HealthcarePros() {
                   <h3 className="text-2xl font-semibold text-white mb-2">Dr. Leonard Goldschmidt</h3>
                   <p className="text-purple-400 mb-4">M.D., J.D.</p>
                   <p className="text-gray-400 leading-relaxed">
-Guides our medical-legal strategy and oversees our HIPAA compliance and privacy policies, ensuring we maintain patient trust while keeping their data secure.                  </p>
+Guides our medical-legal strategy and oversees our security compliance and privacy policies, ensuring we maintain patient trust while keeping their data secure.                  </p>
                 </div>
               </div>
             </div>

@@ -185,7 +185,7 @@ export default function Features() {
                   </div>
                   <div>
                     <h4 className="text-white font-medium mb-1">Privacy-First</h4>
-                    <p className="text-gray-500 text-sm">HIPAA compliant with end-to-end encryption</p>
+                    <p className="text-gray-500 text-sm">Secure and encrypted with enterprise-grade privacy</p>
                   </div>
                 </div>
               </div>

@@ -256,7 +256,7 @@ export default function AccountSettings() {
         <div className="flex flex-wrap gap-6 text-xs text-gray-500">
           <a href="#" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
           <a href="#" className="hover:text-gray-300 transition-colors">Terms of Service</a>
-          <a href="#" className="hover:text-gray-300 transition-colors">HIPAA Compliance</a>
+          <a href="#" className="hover:text-gray-300 transition-colors">Security & Compliance</a>
           <a href="#" className="hover:text-gray-300 transition-colors">Contact Support</a>
         </div>
       </div>

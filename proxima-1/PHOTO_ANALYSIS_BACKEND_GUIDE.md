@@ -896,10 +896,10 @@ logger.error(f"AI analysis failed: session={session_id}, error={error}")
 
 ## Compliance & Privacy
 
-### HIPAA Compliance
+### Healthcare Privacy Compliance
 - Encrypt all photo data at rest and in transit
 - Implement audit logs for all photo access
-- Ensure proper BAA with cloud storage provider
+- Ensure proper security agreements with cloud storage providers
 - Regular security assessments
 
 ### Privacy Features

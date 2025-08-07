@@ -74,7 +74,7 @@ export default function Contact() {
             <div className="flex items-center gap-6 text-sm">
               <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</a>
               <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Terms</a>
-              <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">HIPAA</a>
+              <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Security</a>
             </div>
           </div>
           
