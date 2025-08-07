@@ -411,6 +411,7 @@ export function usePhotoAnalysisV2() {
     sessions,
     activeSession,
     isLoading: isLoading || sessionsLoading,
+    sessionsLoading, // Expose sessions loading state separately
     error,
     
     // Timeline and analysis data (from React Query)

@@ -260,6 +260,43 @@ class SupabaseAIPredictionsService {
   }
 
   /**
+   * Get immediate predictions only (for 7-day predictions page)
+   */
+  async getImmediatePredictionsOnly(userId: string): Promise<{
+    status: 'success' | 'not_found' | 'needs_data';
+    predictions?: any[];
+    data_quality_score?: number;
+  }> {
+    try {
+      // First get the current predictions
+      const result = await this.getCurrentPredictions(userId);
+      
+      if (result.status === 'success' && result.predictions) {
+        // Filter for immediate predictions
+        const immediatePredictions = result.predictions.predictions?.filter(
+          (p: any) => p.type === 'immediate'
+        ) || [];
+        
+        return {
+          status: immediatePredictions.length > 0 ? 'success' : 'needs_data',
+          predictions: immediatePredictions,
+          data_quality_score: result.predictions.data_quality_score
+        };
+      }
+      
+      // Check if we need more data
+      if (result.status === 'needs_initial') {
+        return { status: 'needs_data' };
+      }
+      
+      return { status: 'not_found' };
+    } catch (error) {
+      console.error('Error fetching immediate predictions:', error);
+      return { status: 'not_found' };
+    }
+  }
+
+  /**
    * Get prediction by type
    */
   async getPredictionsByType(

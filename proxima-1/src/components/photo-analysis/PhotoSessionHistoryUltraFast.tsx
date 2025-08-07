@@ -94,24 +94,43 @@ const SessionCardFast = React.memo(({
 
 SessionCardFast.displayName = 'SessionCardFast';
 
-export default function PhotoSessionHistoryUltraFast({ onSelectSession, showContinueButton = false }: Props) {
-  const { data: sessions, isLoading, error, isLoadingCounts } = usePhotoSessionsFast(false, 20);
+export default function PhotoSessionHistoryUltraFast({ 
+  onSelectSession, 
+  showContinueButton = false
+}: Props) {
+  // Fetch sessions directly
+  const { data: sessions, isLoading, error, isLoadingCounts } = usePhotoSessionsFast(!showContinueButton, 20);
+  
 
-  // Show skeleton loader for initial load
+  // Show skeleton loader while loading
   if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-6">
-          <div className="h-8 w-48 bg-gray-800 rounded animate-pulse" />
-          <div className="h-5 w-24 bg-gray-800 rounded animate-pulse" />
+          <div className="h-8 w-48 bg-gradient-to-r from-gray-800 to-gray-700 rounded animate-pulse" />
+          <div className="h-5 w-24 bg-gradient-to-r from-gray-800 to-gray-700 rounded animate-pulse" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
-              <div className="aspect-video rounded-lg bg-gray-800 mb-4 animate-pulse" />
-              <div className="h-6 bg-gray-800 rounded mb-2 animate-pulse" />
-              <div className="h-4 bg-gray-800 rounded w-3/4 animate-pulse" />
-            </div>
+            <motion.div 
+              key={i} 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.05 }}
+              className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 relative overflow-hidden"
+            >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/[0.05] to-transparent" />
+              
+              <div className="aspect-video rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 mb-4" />
+              <div className="h-6 bg-gradient-to-r from-gray-800 to-gray-700 rounded mb-2" />
+              <div className="h-4 bg-gradient-to-r from-gray-800 to-gray-700 rounded w-3/4" />
+              
+              <div className="mt-4 space-y-2">
+                <div className="h-3 bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded w-1/2" />
+                <div className="h-3 bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded w-2/3" />
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -127,7 +146,8 @@ export default function PhotoSessionHistoryUltraFast({ onSelectSession, showCont
     );
   }
 
-  if (sessions.length === 0) {
+  // Show empty state when no sessions exist
+  if (!sessions || sessions.length === 0) {
     return (
       <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-12 text-center">
         <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />

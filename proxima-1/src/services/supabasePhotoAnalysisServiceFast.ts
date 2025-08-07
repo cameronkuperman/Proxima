@@ -33,8 +33,7 @@ class SupabasePhotoAnalysisServiceFast {
       const { data: sessions, error } = await query;
 
       if (error) {
-        console.error('Error fetching photo sessions:', error.message || 'Unknown error');
-        // Return empty array instead of throwing to prevent blocking
+        console.error('Error fetching photo sessions:', error);
         return [];
       }
 

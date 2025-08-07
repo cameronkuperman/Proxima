@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { aiPredictionsApi, aiPredictionCache } from '@/lib/api/aiPredictions';
 import { PredictionsResponse, ImmediatePrediction } from '@/types/aiPredictions';
+import supabaseAIPredictionsService from '@/services/supabaseAIPredictionsService';
 
 export function useAIImmediatePredictions() {
   const { user } = useAuth();
@@ -36,24 +37,55 @@ export function useAIImmediatePredictions() {
         setIsLoading(true);
       }
 
-      const response = await aiPredictionsApi.getImmediatePredictions(user.id, forceRefresh);
+      // First try Supabase (faster)
+      const supabaseResult = await supabaseAIPredictionsService.getImmediatePredictionsOnly(user.id);
       
-      // Handle legacy field names
-      if (response.predictions) {
-        response.predictions = response.predictions.map(p => ({
-          ...p,
-          type: 'immediate' as const,
-          prevention_protocol: p.prevention_protocol || p.preventionProtocols || [],
-          subtitle: p.subtitle || p.description,
-          gradient: p.gradient || getDefaultGradient(p.severity || 'info')
-        }));
-      }
-      
-      setData(response);
-      
-      // Cache successful responses
-      if (response.status === 'success' || response.status === 'cached') {
-        aiPredictionCache.set(cacheKey, response, 5);
+      if (supabaseResult.status === 'success' && supabaseResult.predictions) {
+        // Format the response to match expected structure
+        const formattedResponse: PredictionsResponse<ImmediatePrediction> = {
+          status: 'success',
+          predictions: supabaseResult.predictions.map(p => ({
+            ...p,
+            type: 'immediate' as const,
+            prevention_protocol: p.prevention_protocol || p.preventionProtocols || [],
+            subtitle: p.subtitle || p.description,
+            gradient: p.gradient || getDefaultGradient(p.severity || 'info')
+          })),
+          data_quality_score: supabaseResult.data_quality_score || 0
+        };
+        
+        setData(formattedResponse);
+        
+        // Cache the response
+        aiPredictionCache.set(cacheKey, formattedResponse, 5);
+      } else if (supabaseResult.status === 'needs_data') {
+        // Not enough data, show appropriate message
+        setData({
+          status: 'needs_data',
+          predictions: [],
+          data_quality_score: supabaseResult.data_quality_score || 0
+        });
+      } else {
+        // Fallback to backend API
+        const response = await aiPredictionsApi.getImmediatePredictions(user.id, forceRefresh);
+        
+        // Handle legacy field names
+        if (response.predictions) {
+          response.predictions = response.predictions.map(p => ({
+            ...p,
+            type: 'immediate' as const,
+            prevention_protocol: p.prevention_protocol || p.preventionProtocols || [],
+            subtitle: p.subtitle || p.description,
+            gradient: p.gradient || getDefaultGradient(p.severity || 'info')
+          }));
+        }
+        
+        setData(response);
+        
+        // Cache successful responses
+        if (response.status === 'success' || response.status === 'cached') {
+          aiPredictionCache.set(cacheKey, response, 5);
+        }
       }
     } catch (err) {
       setError(err as Error);

@@ -40,10 +40,7 @@ export default function PhotoAnalysisPage() {
     refetchSessions
   } = usePhotoAnalysis();
   
-  // Preload sessions immediately on page load for instant access
-  React.useEffect(() => {
-    refetchSessions?.();
-  }, []);
+  // Sessions are loaded by the child components when needed
 
   // Listen for privacy info event
   React.useEffect(() => {
