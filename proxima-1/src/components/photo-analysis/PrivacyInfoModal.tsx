@@ -126,7 +126,7 @@ export default function PrivacyInfoModal({ isOpen, onClose }: PrivacyInfoModalPr
                     <Database className="w-4 h-4 text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">HIPAA Compliant</p>
+                    <p className="text-sm font-medium text-white">Enterprise Security</p>
                     <p className="text-xs text-gray-400">Medical-grade security standards</p>
                   </div>
                 </div>
@@ -213,7 +213,7 @@ export default function PrivacyInfoModal({ isOpen, onClose }: PrivacyInfoModalPr
             <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <Shield className="w-4 h-4" />
-                <span>SOC 2 Certified</span>
+                <span>Enterprise Security</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <Lock className="w-4 h-4" />

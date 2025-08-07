@@ -267,7 +267,7 @@ export default function HealthDataSummary({ onConfigureClick, refreshTrigger }: 
           <div>
             <p className="text-sm text-purple-300 font-medium">Your data is secure</p>
             <p className="text-xs text-gray-400 mt-1">
-              All health information is encrypted and HIPAA compliant. We never share your data.
+              All health information is encrypted with enterprise-grade security. We never share your data.
             </p>
           </div>
         </div>

@@ -83,7 +83,7 @@ export default function About() {
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">Privacy First</h3>
             <p className="text-gray-400 text-sm">
-              HIPAA compliant with end-to-end encryption for your peace of mind
+              Secure and encrypted with enterprise-grade privacy for your peace of mind
             </p>
           </motion.div>
         </div>
