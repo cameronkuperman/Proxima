@@ -1,0 +1,168 @@
+'use client';
+
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Clock, Camera, FileText, ChevronRight, Bell, AlertCircle, Loader } from 'lucide-react';
+import { PhotoSession } from '@/types/photo-analysis';
+import { usePhotoSessionsFast } from '@/hooks/queries/usePhotoQueriesFast';
+import { PhotoSessionWithCounts } from '@/services/supabasePhotoAnalysisServiceFast';
+
+interface Props {
+  onSelectSession: (session: PhotoSession) => void;
+  showContinueButton?: boolean;
+}
+
+// Ultra-lightweight session card
+const SessionCardFast = React.memo(({ 
+  session, 
+  index,
+  onSelect,
+  showContinueButton
+}: {
+  session: PhotoSessionWithCounts;
+  index: number;
+  onSelect: () => void;
+  showContinueButton: boolean;
+}) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.02 }} // Super fast animation
+      whileHover={{ scale: 1.02 }}
+      onClick={onSelect}
+      className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all group relative"
+    >
+      {/* Simple icon placeholder - no image loading */}
+      <div className="aspect-video rounded-lg bg-gray-800 mb-4 flex items-center justify-center">
+        <Camera className="w-12 h-12 text-gray-600" />
+      </div>
+
+      {/* Session info */}
+      <h3 className="text-lg font-semibold text-white mb-2 truncate">
+        {session.condition_name}
+      </h3>
+      
+      {session.description && (
+        <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+          {session.description}
+        </p>
+      )}
+
+      {/* Minimal metadata */}
+      <div className="space-y-1 mb-4">
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <Clock className="w-3 h-3" />
+          <span>Started {formatDate(session.created_at)}</span>
+        </div>
+        {/* Show counts only if loaded */}
+        {(session.photo_count > 0 || session.analysis_count > 0) && (
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            <span className="flex items-center gap-1">
+              <Camera className="w-3 h-3" />
+              {session.photo_count}
+            </span>
+            <span className="flex items-center gap-1">
+              <FileText className="w-3 h-3" />
+              {session.analysis_count}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Action */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-orange-400">
+          {showContinueButton ? 'Continue' : 'View'}
+        </span>
+        <ChevronRight className="w-4 h-4 text-orange-400 group-hover:translate-x-1 transition-transform" />
+      </div>
+    </motion.div>
+  );
+});
+
+SessionCardFast.displayName = 'SessionCardFast';
+
+export default function PhotoSessionHistoryUltraFast({ onSelectSession, showContinueButton = false }: Props) {
+  const { data: sessions, isLoading, error, isLoadingCounts } = usePhotoSessionsFast(false, 20);
+
+  // Show skeleton loader for initial load
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-8 w-48 bg-gray-800 rounded animate-pulse" />
+          <div className="h-5 w-24 bg-gray-800 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+              <div className="aspect-video rounded-lg bg-gray-800 mb-4 animate-pulse" />
+              <div className="h-6 bg-gray-800 rounded mb-2 animate-pulse" />
+              <div className="h-4 bg-gray-800 rounded w-3/4 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-12 text-center">
+        <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <p className="text-gray-400">Unable to load sessions. Please refresh.</p>
+      </div>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-12 text-center">
+        <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-white mb-2">No Photo Sessions</h3>
+        <p className="text-gray-400">Start your first photo analysis</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-white">Your Photo Sessions</h2>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400">{sessions.length} sessions</span>
+          {isLoadingCounts && (
+            <span className="text-xs text-gray-500 flex items-center gap-1">
+              <Loader className="w-3 h-3 animate-spin" />
+              Loading details...
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sessions.map((session, index) => (
+          <SessionCardFast
+            key={session.id}
+            session={session}
+            index={index}
+            onSelect={() => onSelectSession(session)}
+            showContinueButton={showContinueButton}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

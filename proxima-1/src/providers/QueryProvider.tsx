@@ -4,13 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ReactNode, useState } from 'react';
 
-// Configure default options for all queries
+// Configure default options for all queries with optimized caching
 const queryClientOptions = {
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes - data is considered fresh
-      gcTime: 1000 * 60 * 30, // 30 minutes - keep in cache (formerly cacheTime)
+      staleTime: 1000 * 60 * 30, // 30 minutes - data is considered fresh (increased for better performance)
+      gcTime: 1000 * 60 * 60 * 2, // 2 hours - keep in cache longer
       refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnReconnect: 'always', // Refetch when reconnecting
       retry: 2, // Retry failed requests twice
       retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     },

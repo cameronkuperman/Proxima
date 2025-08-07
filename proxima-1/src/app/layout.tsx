@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { TutorialProvider } from "@/contexts/TutorialContext";
-import { QueryProvider } from "@/providers/QueryProvider";
+import { QueryProviderWithPersistence } from "@/providers/QueryProviderWithPersistence";
 import SessionSync from "@/components/SessionSync";
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,7 @@ export default function RootLayout({
       <body
         className={`${bodyFont.variable} ${headingFont.variable} antialiased bg-[#0a0a0a] text-white`}
       >
-        <QueryProvider>
+        <QueryProviderWithPersistence>
           <AuthProvider>
             <OnboardingProvider>
               <TutorialProvider>
@@ -43,7 +43,7 @@ export default function RootLayout({
               </TutorialProvider>
             </OnboardingProvider>
           </AuthProvider>
-        </QueryProvider>
+        </QueryProviderWithPersistence>
       </body>
     </html>
   );

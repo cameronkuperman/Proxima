@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import supabaseAIPredictionsService from '@/services/supabaseAIPredictionsService';
 
 interface WeeklyPredictions {
   id: string;
@@ -94,19 +95,33 @@ export function useWeeklyAIPredictions() {
     
     try {
       setIsLoading(true);
-      const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
-      const response = await fetch(
-        `${API_URL}/api/ai/weekly/${user.id}`
-      );
       
-      const data = await response.json();
-      setStatus(data.status);
+      // First try to fetch from Supabase (faster)
+      const supabaseResult = await supabaseAIPredictionsService.getCurrentPredictions(user.id);
       
-      if (data.status === 'success' && data.predictions) {
-        setPredictions(data.predictions);
-      } else if (data.status === 'needs_initial' || data.status === 'not_found') {
-        // Automatically generate initial predictions
+      if (supabaseResult.status === 'success' && supabaseResult.predictions) {
+        setPredictions(supabaseResult.predictions);
+        setStatus('success');
+      } else if (supabaseResult.status === 'needs_initial') {
+        // No predictions exist, generate initial ones
+        setStatus('needs_initial');
         await generateInitialPredictions();
+      } else {
+        // Try backend API as fallback
+        const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
+        const response = await fetch(
+          `${API_URL}/api/ai/weekly/${user.id}`
+        );
+        
+        const data = await response.json();
+        setStatus(data.status);
+        
+        if (data.status === 'success' && data.predictions) {
+          setPredictions(data.predictions);
+        } else if (data.status === 'needs_initial' || data.status === 'not_found') {
+          // Automatically generate initial predictions
+          await generateInitialPredictions();
+        }
       }
     } catch (error) {
       console.error('Error fetching weekly predictions:', error);

@@ -67,49 +67,77 @@ class SupabasePhotoAnalysisService {
    */
   async fetchPhotoSessions(
     userId: string, 
-    includeSensitive: boolean = false
+    includeSensitive: boolean = false,
+    limit: number = 20
   ): Promise<PhotoSessionWithCounts[]> {
     try {
+      // First, fetch sessions without counts for speed
       let query = supabase
         .from('photo_sessions')
-        .select(`
-          *,
-          photo_uploads!inner(count),
-          photo_analyses!inner(count)
-        `)
+        .select('*')
         .eq('user_id', userId)
         .is('deleted_at', null)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .limit(limit);
       
       // Filter out sensitive sessions for continue tracking
       if (!includeSensitive) {
         query = query.eq('is_sensitive', false);
       }
 
-      const { data, error } = await query;
+      const { data: sessions, error } = await query;
 
       if (error) {
         console.error('Error fetching photo sessions:', error);
         throw error;
       }
 
-      // Transform the data to include counts
-      const sessions = (data || []).map(session => {
-        // Get photo count from the joined data
-        const photoCount = session.photo_uploads?.length || 0;
-        const analysisCount = session.photo_analyses?.length || 0;
-        
-        // Remove the joined data from the session object
-        const { photo_uploads, photo_analyses, ...sessionData } = session;
-        
-        return {
-          ...sessionData,
-          photo_count: photoCount,
-          analysis_count: analysisCount
-        };
-      });
+      if (!sessions || sessions.length === 0) {
+        return [];
+      }
 
-      return sessions;
+      // Get session IDs for batch count query
+      const sessionIds = sessions.map(s => s.id);
+
+      // Fetch counts separately using aggregate functions (much faster)
+      const [photoCountsResult, analysisCountsResult] = await Promise.all([
+        // Get photo counts
+        supabase
+          .from('photo_uploads')
+          .select('session_id, count:id.count()')
+          .in('session_id', sessionIds)
+          .is('deleted_at', null),
+        
+        // Get analysis counts  
+        supabase
+          .from('photo_analyses')
+          .select('session_id, count:id.count()')
+          .in('session_id', sessionIds)
+      ]);
+
+      // Create count maps for quick lookup
+      const photoCounts = new Map(
+        (photoCountsResult.data || []).map(item => [
+          item.session_id,
+          parseInt(item.count as any) || 0
+        ])
+      );
+
+      const analysisCounts = new Map(
+        (analysisCountsResult.data || []).map(item => [
+          item.session_id,
+          parseInt(item.count as any) || 0
+        ])
+      );
+
+      // Combine sessions with their counts
+      const sessionsWithCounts = sessions.map(session => ({
+        ...session,
+        photo_count: photoCounts.get(session.id) || 0,
+        analysis_count: analysisCounts.get(session.id) || 0
+      }));
+
+      return sessionsWithCounts;
     } catch (error) {
       console.error('Error in fetchPhotoSessions:', error);
       return [];

@@ -20,29 +20,31 @@ export const photoQueryKeys = {
 
 /**
  * Fetch all photo sessions for the current user
- * Cache for 5 minutes
+ * Cache for 30 minutes (sessions rarely change)
  */
-export function usePhotoSessions(includeSensitive: boolean = false) {
+export function usePhotoSessions(includeSensitive: boolean = false, limit: number = 20) {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: photoQueryKeys.sessions(user?.id || ''),
-    queryFn: () => supabasePhotoAnalysisService.fetchPhotoSessions(user!.id, includeSensitive),
+    queryKey: [...photoQueryKeys.sessions(user?.id || ''), limit],
+    queryFn: () => supabasePhotoAnalysisService.fetchPhotoSessions(user!.id, includeSensitive, limit),
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 30, // 30 minutes - sessions don't change often
+    gcTime: 1000 * 60 * 60 * 2, // 2 hours in cache
   });
 }
 
 /**
  * Get details for a specific session
- * Cache for 2 minutes
+ * Cache for 10 minutes
  */
 export function useSessionDetails(sessionId: string | null) {
   return useQuery({
     queryKey: photoQueryKeys.sessionDetails(sessionId || ''),
     queryFn: () => supabasePhotoAnalysisService.getSessionById(sessionId!),
     enabled: !!sessionId,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes in cache
   });
 }
 
@@ -75,27 +77,29 @@ export function usePhotoUrl(photoPath: string | null) {
 
 /**
  * Get analyses for a session
- * Cache for 10 minutes
+ * Cache for 1 hour (historical data)
  */
 export function useSessionAnalyses(sessionId: string | null) {
   return useQuery({
     queryKey: photoQueryKeys.analyses(sessionId || ''),
     queryFn: () => supabasePhotoAnalysisService.getAnalysesBySession(sessionId!),
     enabled: !!sessionId,
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 60, // 1 hour - analyses are historical
+    gcTime: 1000 * 60 * 60 * 2, // 2 hours in cache
   });
 }
 
 /**
  * Get analysis history for a session
- * Cache for 10 minutes
+ * Cache for 1 hour (historical data)
  */
 export function useAnalysisHistory(sessionId: string | null, currentAnalysisId?: string) {
   return useQuery({
     queryKey: [...photoQueryKeys.analysisHistory(sessionId || ''), currentAnalysisId],
     queryFn: () => supabasePhotoAnalysisService.getAnalysisHistory(sessionId!, currentAnalysisId),
     enabled: !!sessionId,
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 60, // 1 hour - historical data
+    gcTime: 1000 * 60 * 60 * 2, // 2 hours in cache
   });
 }
 

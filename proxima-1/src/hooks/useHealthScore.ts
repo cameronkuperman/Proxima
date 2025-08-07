@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { HealthScoreResponse } from '@/types/health-score';
+import supabaseHealthScoreService from '@/services/supabaseHealthScoreService';
 
 interface UseHealthScoreReturn {
   scoreData: HealthScoreResponse | null;
@@ -174,7 +175,23 @@ export function useHealthScore(): UseHealthScoreReturn {
         return;
       }
       
-      // 3. No cache available, fetch from API
+      // 3. Try Supabase cache (still faster than API)
+      const supabaseCached = supabaseHealthScoreService.getCachedHealthScore(user.id);
+      if (supabaseCached) {
+        console.log('🗄️ Using Supabase cached health score');
+        setScoreData(supabaseCached);
+        const cacheEntry = {
+          data: supabaseCached,
+          timestamp: Date.now(),
+          weekOf: supabaseCached.week_of
+        };
+        healthScoreCache.set(user.id, cacheEntry);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+      
+      // 4. No cache available, fetch from API
       fetchHealthScore();
     } else {
       setIsLoading(false);
@@ -220,6 +237,34 @@ export function useHealthScore(): UseHealthScoreReturn {
         setError(null);
         fetchInProgress.current = false;
         return;
+      }
+      
+      // Try Supabase directly (faster than backend API)
+      console.log('🗄️ Fetching health score from Supabase...');
+      const supabaseResult = await supabaseHealthScoreService.getCurrentHealthScore(user.id);
+      
+      if (supabaseResult.status === 'success' && supabaseResult.data) {
+        const loadTime = performance.now() - startTime;
+        console.log(`✅ Supabase fetch successful! Loaded in ${loadTime.toFixed(2)}ms`);
+        
+        // Cache the result
+        const cacheEntry = {
+          data: supabaseResult.data,
+          timestamp: Date.now(),
+          weekOf: supabaseResult.data.week_of
+        };
+        healthScoreCache.set(user.id, cacheEntry);
+        saveToStorage(user.id, supabaseResult.data);
+        supabaseHealthScoreService.cacheHealthScore(user.id, supabaseResult.data);
+        
+        setScoreData(supabaseResult.data);
+        setIsLoading(false);
+        setError(null);
+        fetchInProgress.current = false;
+        return;
+      } else if (supabaseResult.status === 'expired') {
+        console.log('⏰ Health score expired, generating new one...');
+        // Continue to backend API to generate new score
       }
     } else {
       // Force refresh - clear caches

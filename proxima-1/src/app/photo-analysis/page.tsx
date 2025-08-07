@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 import PhotoUploadZone from '@/components/photo-analysis/PhotoUploadZone';
 import PhotoAnalysisResults from '@/components/photo-analysis/PhotoAnalysisResults';
-import PhotoSessionHistory from '@/components/photo-analysis/PhotoSessionHistory';
+import PhotoSessionHistoryUltraFast from '@/components/photo-analysis/PhotoSessionHistoryUltraFast';
 import SensitiveContentModal from '@/components/photo-analysis/SensitiveContentModal';
 import PhotoQualityModal from '@/components/photo-analysis/PhotoQualityModal';
 import ReminderOptIn from '@/components/photo-analysis/ReminderOptIn';
@@ -36,8 +36,14 @@ export default function PhotoAnalysisPage() {
     addFollowUpPhotos,
     configureReminder,
     getMonitoringSuggestions,
-    getProgressionAnalysis
+    getProgressionAnalysis,
+    refetchSessions
   } = usePhotoAnalysis();
+  
+  // Preload sessions immediately on page load for instant access
+  React.useEffect(() => {
+    refetchSessions?.();
+  }, []);
 
   // Listen for privacy info event
   React.useEffect(() => {
@@ -467,8 +473,7 @@ export default function PhotoAnalysisPage() {
                       </div>
                     </div>
                   ) : (
-                    <PhotoSessionHistory
-                      sessions={sessions.filter(s => s.photo_count && s.photo_count > 0)}
+                    <PhotoSessionHistoryUltraFast
                       onSelectSession={(session) => {
                         if (session.id) {
                           continueSession(session.id);
@@ -488,8 +493,7 @@ export default function PhotoAnalysisPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
-                  <PhotoSessionHistory
-                    sessions={sessions}
+                  <PhotoSessionHistoryUltraFast
                     onSelectSession={(session) => router.push(`/photo-analysis/session/${session.id}`)}
                     showContinueButton={false}
                   />

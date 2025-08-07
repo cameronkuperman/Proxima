@@ -1,5 +1,6 @@
 // Health Story Service for Next.js Frontend
 import { getSupabaseClient } from './supabase-client';
+import { supabase } from './supabase';
 
 const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
 console.log('Health Story API URL:', API_URL);
@@ -338,6 +339,134 @@ export const healthStoryService = {
       start: startDate.toISOString(),
       end: endDate.toISOString()
     });
+  },
+
+  // Direct Supabase read methods (faster than API)
+  async getHealthStoriesFromSupabase(userId: string): Promise<HealthStoryData[]> {
+    try {
+      const { data, error } = await supabase
+        .from('health_stories')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching health stories from Supabase:', error);
+        return [];
+      }
+
+      return (data || []).map(story => ({
+        id: story.id,
+        user_id: story.user_id,
+        header: story.header || story.title || 'Health Story',
+        subtitle: story.subtitle,
+        story_text: extractStoryContent(story.story_text),
+        generated_date: story.generated_date || story.created_at,
+        date_range: story.date_range,
+        data_sources: story.data_sources,
+        created_at: story.created_at,
+        metadata: {
+          title: story.title,
+          subtitle: story.subtitle
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching health stories:', error);
+      return [];
+    }
+  },
+
+  async getLatestHealthStoryFromSupabase(userId: string): Promise<HealthStoryData | null> {
+    try {
+      const { data, error } = await supabase
+        .from('health_stories')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No stories found
+          return null;
+        }
+        console.error('Error fetching latest health story:', error);
+        return null;
+      }
+
+      if (data) {
+        return {
+          id: data.id,
+          user_id: data.user_id,
+          header: data.header || data.title || 'Health Story',
+          subtitle: data.subtitle,
+          story_text: extractStoryContent(data.story_text),
+          generated_date: data.generated_date || data.created_at,
+          date_range: data.date_range,
+          data_sources: data.data_sources,
+          created_at: data.created_at,
+          metadata: {
+            title: data.title,
+            subtitle: data.subtitle
+          }
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching latest health story:', error);
+      return null;
+    }
+  },
+
+  async getHealthStoryByDateRange(
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<HealthStoryData | null> {
+    try {
+      const { data, error } = await supabase
+        .from('health_stories')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        console.error('Error fetching health story by date range:', error);
+        return null;
+      }
+
+      if (data) {
+        return {
+          id: data.id,
+          user_id: data.user_id,
+          header: data.header || data.title || 'Health Story',
+          subtitle: data.subtitle,
+          story_text: extractStoryContent(data.story_text),
+          generated_date: data.generated_date || data.created_at,
+          date_range: data.date_range,
+          data_sources: data.data_sources,
+          created_at: data.created_at,
+          metadata: {
+            title: data.title,
+            subtitle: data.subtitle
+          }
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching health story by date range:', error);
+      return null;
+    }
   },
 
   async getHealthStories(userId: string): Promise<HealthStoryData[]> {

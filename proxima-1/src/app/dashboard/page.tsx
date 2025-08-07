@@ -253,10 +253,16 @@ function DashboardContent() {
       
       setHealthStoryLoading(true);
       try {
-        const stories = await healthStoryService.getHealthStories(user.id);
-        if (stories.length > 0) {
-          // Get the most recent story
-          setLatestHealthStory(stories[0]);
+        // Use new Supabase method for faster loading
+        const latestStory = await healthStoryService.getLatestHealthStoryFromSupabase(user.id);
+        if (latestStory) {
+          setLatestHealthStory(latestStory);
+        } else {
+          // Fallback to original method if needed
+          const stories = await healthStoryService.getHealthStories(user.id);
+          if (stories.length > 0) {
+            setLatestHealthStory(stories[0]);
+          }
         }
       } catch (error) {
         console.error('Error fetching health story:', error);
@@ -595,10 +601,15 @@ function DashboardContent() {
             const reports = await reportsService.fetchUserReports(user.id);
             setHealthTimelineData(reports.slice(0, 10));
             
-            // Refresh health story
-            const stories = await healthStoryService.getHealthStories(user.id);
-            if (stories.length > 0) {
-              setLatestHealthStory(stories[0]);
+            // Refresh health story (use Supabase for faster loading)
+            const latestStory = await healthStoryService.getLatestHealthStoryFromSupabase(user.id);
+            if (latestStory) {
+              setLatestHealthStory(latestStory);
+            } else {
+              const stories = await healthStoryService.getHealthStories(user.id);
+              if (stories.length > 0) {
+                setLatestHealthStory(stories[0]);
+              }
             }
           } catch (error) {
             console.error('Error refreshing data:', error);
