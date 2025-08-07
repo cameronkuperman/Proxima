@@ -27,7 +27,7 @@ import { DashboardItem } from '@/services/trackingService';
 import HistoryModal from '@/components/HistoryModal';
 import AssessmentModal from '@/components/modals/AssessmentModal';
 import { formatDistanceToNow, format } from 'date-fns';
-import { reportsService, GeneratedReport } from '@/services/reportsService';
+import { supabaseReportsService as reportsService, GeneratedReport } from '@/services/supabaseReportsService';
 import { healthStoryService } from '@/lib/health-story';
 import type { HealthStoryData } from '@/lib/health-story';
 

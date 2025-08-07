@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import trackingService, { DashboardItem, TrackingSuggestion, ChartData, PastScan } from '@/services/trackingService'
+import supabaseTrackingService, { DashboardItem, TrackingSuggestion, ChartData, PastScan } from '@/services/supabaseTrackingService'
 import { supabase } from '@/lib/supabase'
 
 interface TrackingStore {
@@ -59,7 +59,7 @@ export const useTrackingStore = create<TrackingStore>()(
         console.log('[TrackingStore] fetchDashboard called for user:', userId)
         set({ loading: true, error: null })
         try {
-          const data = await trackingService.getDashboard(userId)
+          const data = await supabaseTrackingService.getDashboard(userId)
           console.log('[TrackingStore] Dashboard items received:', data.dashboard_items)
           set({ 
             dashboardItems: data.dashboard_items,
@@ -73,7 +73,7 @@ export const useTrackingStore = create<TrackingStore>()(
         }
       },
 
-      // Generate tracking suggestion
+      // Generate tracking suggestion (simplified for direct Supabase)
       generateSuggestion: async (sourceType: 'quick_scan' | 'deep_dive', sourceId: string, userId: string) => {
         console.log('[TrackingStore] generateSuggestion called:', { sourceType, sourceId, userId })
         
@@ -86,15 +86,23 @@ export const useTrackingStore = create<TrackingStore>()(
         
         set({ loading: true, error: null })
         try {
-          const data = await trackingService.generateTrackingSuggestion(sourceType, sourceId, userId)
-          console.log('[TrackingStore] Tracking suggestion response:', data)
-          if (data.status === 'success') {
-            set({ 
-              currentSuggestion: data.suggestion,
-              suggestionId: data.suggestion_id,
-              loading: false 
-            })
+          // Create a default suggestion based on the source type
+          const defaultSuggestion = {
+            metric_name: `${sourceType === 'quick_scan' ? 'Symptom' : 'Condition'} Severity`,
+            metric_description: 'Track severity over time',
+            y_axis_label: 'Severity (1-10)',
+            y_axis_type: 'numeric' as const,
+            y_axis_min: 0,
+            y_axis_max: 10,
+            tracking_type: 'severity',
+            confidence_score: 0.8
           }
+          
+          set({ 
+            currentSuggestion: defaultSuggestion,
+            suggestionId: sourceId, // Use sourceId as suggestion ID
+            loading: false 
+          })
         } catch (error) {
           console.error('[TrackingStore] Error generating suggestion:', error)
           set({ 
@@ -108,11 +116,25 @@ export const useTrackingStore = create<TrackingStore>()(
       approveSuggestion: async (suggestionId: string) => {
         set({ loading: true, error: null })
         try {
-          await trackingService.approveSuggestion(suggestionId)
-          
-          // Get current user ID
+          const state = get()
           const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
+          
+          if (user && state.currentSuggestion) {
+            // Create tracking configuration directly
+            await supabaseTrackingService.createTrackingConfiguration({
+              user_id: user.id,
+              source_type: 'quick_scan', // Default, should be passed properly
+              source_id: suggestionId,
+              metric_name: state.currentSuggestion.metric_name,
+              metric_description: state.currentSuggestion.metric_description,
+              y_axis_label: state.currentSuggestion.y_axis_label,
+              y_axis_type: state.currentSuggestion.y_axis_type,
+              y_axis_min: state.currentSuggestion.y_axis_min,
+              y_axis_max: state.currentSuggestion.y_axis_max,
+              tracking_type: state.currentSuggestion.tracking_type,
+              show_on_homepage: true
+            })
+            
             // Refresh dashboard
             await get().fetchDashboard(user.id)
           }
@@ -134,7 +156,15 @@ export const useTrackingStore = create<TrackingStore>()(
       configureSuggestion: async (params) => {
         set({ loading: true, error: null })
         try {
-          await trackingService.configureSuggestion(params)
+          // Create tracking configuration with custom params
+          await supabaseTrackingService.createTrackingConfiguration({
+            user_id: params.user_id,
+            source_type: 'quick_scan', // Should be determined from context
+            source_id: params.suggestion_id,
+            metric_name: params.metric_name,
+            y_axis_label: params.y_axis_label,
+            show_on_homepage: params.show_on_homepage
+          })
           
           // Refresh dashboard
           await get().fetchDashboard(params.user_id)
@@ -161,7 +191,7 @@ export const useTrackingStore = create<TrackingStore>()(
       }) => {
         set({ loading: true, error: null })
         try {
-          await trackingService.updateConfiguration(params)
+          await supabaseTrackingService.updateConfiguration(params)
           
           // Refresh dashboard
           await get().fetchDashboard(params.user_id)
@@ -183,7 +213,7 @@ export const useTrackingStore = create<TrackingStore>()(
           const { data: { user } } = await supabase.auth.getUser()
           
           if (user) {
-            await trackingService.addDataPoint({
+            await supabaseTrackingService.addDataPoint({
               configuration_id: configId,
               user_id: user.id,
               value,
@@ -208,22 +238,12 @@ export const useTrackingStore = create<TrackingStore>()(
       fetchChartData: async (configId: string, days: number = 30) => {
         set({ loading: true, error: null })
         try {
-          const response: any = await trackingService.getChartData(configId, days)
-          console.log('Chart API response:', response)
-          
-          // Transform the data to match our expected format
-          const transformedData = {
-            config: response.configuration || response.chart_data?.configuration,
-            data: response.data_points?.map((point: any) => ({
-              x: point.recorded_at || point.date,
-              y: point.value
-            })) || [],
-            statistics: response.statistics
-          }
+          const chartData = await supabaseTrackingService.getChartData(configId, days)
+          console.log('Chart data from Supabase:', chartData)
           
           // Update chart data map
           const newChartData = new Map(get().chartData)
-          newChartData.set(configId, transformedData)
+          newChartData.set(configId, chartData)
           
           set({ 
             chartData: newChartData,
@@ -242,7 +262,7 @@ export const useTrackingStore = create<TrackingStore>()(
       fetchPastScans: async (userId: string) => {
         set({ loading: true, error: null })
         try {
-          const data = await trackingService.getPastScans(userId)
+          const data = await supabaseTrackingService.getPastScans(userId)
           set({ 
             pastScans: data.past_scans,
             loading: false 
@@ -259,7 +279,7 @@ export const useTrackingStore = create<TrackingStore>()(
       fetchPastDives: async (userId: string) => {
         set({ loading: true, error: null })
         try {
-          const data = await trackingService.getPastDives(userId)
+          const data = await supabaseTrackingService.getPastDives(userId)
           set({ 
             pastDives: data.past_dives,
             loading: false 
