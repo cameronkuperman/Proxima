@@ -1363,7 +1363,11 @@ function LegalAgreementStep({
         <div 
           ref={privacyRef}
           onScroll={handlePrivacyScroll}
-          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 hover:border-white/[0.1] transition-all max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 hover:border-white/[0.1] transition-all max-h-48 overflow-y-auto scrollbar-hide"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent'
+          }}
         >
           <div className="text-gray-300 text-sm space-y-3">
             <p>
@@ -1412,7 +1416,11 @@ function LegalAgreementStep({
         <div 
           ref={tosRef}
           onScroll={handleTosScroll}
-          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 hover:border-white/[0.1] transition-all max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 hover:border-white/[0.1] transition-all max-h-48 overflow-y-auto scrollbar-hide"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent'
+          }}
         >
           <div className="text-gray-300 text-sm space-y-3">
             <p>
