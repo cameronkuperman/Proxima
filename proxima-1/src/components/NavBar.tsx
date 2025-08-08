@@ -26,19 +26,19 @@ export default function NavBar() {
           
           {/* Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+            <Link href="/#features" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
               Features
             </Link>
-            <Link href="#how-it-works" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+            <Link href="/#how-it-works" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
               How it Works
             </Link>
-            <Link href="#ai-partners" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+            <Link href="/#ai-partners" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
               AI Partners
             </Link>
-            <Link href="#about" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+            <Link href="/#about" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
               About
             </Link>
-            <Link href="#contact" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+            <Link href="/#contact" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
               Contact
             </Link>
           </div>

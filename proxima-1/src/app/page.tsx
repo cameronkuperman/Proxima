@@ -37,7 +37,11 @@ function HomeContent() {
       // Check if this is from OAuth callback
       const isOAuthCallback = searchParams.get('oauth_callback') === 'true';
       
-      if (isOAuthCallback || window.location.hash) {
+      // Only treat hash as OAuth if it contains access_token or error (OAuth response)
+      const hashIsOAuth = window.location.hash && 
+        (window.location.hash.includes('access_token') || window.location.hash.includes('error='));
+      
+      if (isOAuthCallback || hashIsOAuth) {
         console.log('OAuth callback detected, waiting for session...');
         
         // Give Supabase time to process the auth
