@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Camera, FileText, ChevronRight, Bell, AlertCircle, Loader } from 'lucide-react';
 import { PhotoSession } from '@/types/photo-analysis';
-import { useAuth } from '@/contexts/AuthContext';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
+import { usePhotoSessions } from '@/hooks/queries/usePhotoQueries';
+import { PhotoSessionWithCounts } from '@/services/supabasePhotoAnalysisService';
 
 interface Props {
   onSelectSession: (session: PhotoSession) => void;
@@ -20,7 +19,7 @@ const SessionCardFast = React.memo(({
   onSelect,
   showContinueButton
 }: {
-  session: PhotoSession;
+  session: PhotoSessionWithCounts;
   index: number;
   onSelect: () => void;
   showContinueButton: boolean;
@@ -45,9 +44,23 @@ const SessionCardFast = React.memo(({
       onClick={onSelect}
       className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all group relative"
     >
-      {/* Simple icon placeholder - no image loading */}
-      <div className="aspect-video rounded-lg bg-gray-800 mb-4 flex items-center justify-center">
-        <Camera className="w-12 h-12 text-gray-600" />
+      {/* Session thumbnail or placeholder */}
+      <div className="aspect-video rounded-lg bg-gray-800 mb-4 overflow-hidden">
+        {session.thumbnail_url ? (
+          <img 
+            src={session.thumbnail_url} 
+            alt={session.condition_name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // If image fails to load, show placeholder
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <div className={`${session.thumbnail_url ? 'hidden' : ''} w-full h-full flex items-center justify-center`}>
+          <Camera className="w-12 h-12 text-gray-600" />
+        </div>
       </div>
 
       {/* Session info */}
@@ -55,9 +68,9 @@ const SessionCardFast = React.memo(({
         {session.condition_name}
       </h3>
       
-      {session.description && (
+      {(session.latest_summary || session.description) && (
         <p className="text-sm text-gray-400 mb-3 line-clamp-2">
-          {session.description}
+          {session.latest_summary || session.description}
         </p>
       )}
 
@@ -67,16 +80,16 @@ const SessionCardFast = React.memo(({
           <Clock className="w-3 h-3" />
           <span>Started {formatDate(session.created_at)}</span>
         </div>
-        {/* Show counts only if loaded */}
-        {(session.photo_count > 0 || session.analysis_count > 0) && (
+        {/* Show counts */}
+        {(session.photo_count !== undefined || session.analysis_count !== undefined) && (
           <div className="flex items-center gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1">
               <Camera className="w-3 h-3" />
-              {session.photo_count}
+              {session.photo_count || 0}
             </span>
             <span className="flex items-center gap-1">
               <FileText className="w-3 h-3" />
-              {session.analysis_count}
+              {session.analysis_count || 0}
             </span>
           </div>
         )}
@@ -99,76 +112,8 @@ export default function PhotoSessionHistoryUltraFast({
   onSelectSession, 
   showContinueButton = false
 }: Props) {
-  const { user } = useAuth();
-  const [sessions, setSessions] = useState<PhotoSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Fetch sessions from backend with caching
-  useEffect(() => {
-    const fetchSessions = async () => {
-      if (!user?.id) {
-        setIsLoading(false);
-        return;
-      }
-      
-      // Check localStorage cache first
-      const cacheKey = `photo_sessions_${user.id}_${showContinueButton ? 'continue' : 'all'}`;
-      const cached = localStorage.getItem(cacheKey);
-      
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          // Use cache if less than 30 minutes old
-          if (Date.now() - timestamp < 30 * 60 * 1000) {
-            setSessions(data);
-            setIsLoading(false);
-            // Still fetch fresh data in background
-            fetchFreshData(false);
-            return;
-          }
-        } catch (e) {
-          console.error('Cache parse error:', e);
-        }
-      }
-      
-      // Fetch fresh data
-      await fetchFreshData(true);
-    };
-    
-    const fetchFreshData = async (showLoading: boolean) => {
-      if (showLoading) setIsLoading(true);
-      
-      try {
-        const response = await fetch(`${API_URL}/api/photo-analysis/sessions?user_id=${user!.id}&limit=20`);
-        if (!response.ok) throw new Error('Failed to fetch sessions');
-        
-        const data = await response.json();
-        const sessions = data.sessions || [];
-        
-        // Filter sensitive if needed for continue tracking
-        const filtered = showContinueButton 
-          ? sessions.filter((s: PhotoSession) => !s.is_sensitive)
-          : sessions;
-        
-        setSessions(filtered);
-        
-        // Cache the results
-        const cacheKey = `photo_sessions_${user!.id}_${showContinueButton ? 'continue' : 'all'}`;
-        localStorage.setItem(cacheKey, JSON.stringify({
-          data: filtered,
-          timestamp: Date.now()
-        }));
-      } catch (err) {
-        console.error('Error fetching sessions:', err);
-        setError('Failed to load photo sessions');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchSessions();
-  }, [user?.id, showContinueButton]);
+  // Use React Query hooks for optimized data fetching - exact same as PhotoSessionHistoryV2
+  const { data: sessions = [], isLoading, error } = usePhotoSessions(false); // Don't include sensitive sessions
 
   // Show skeleton loader while loading
   if (isLoading) {
@@ -242,11 +187,6 @@ export default function PhotoSessionHistoryUltraFast({
             index={index}
             onSelect={() => onSelectSession(session)}
             showContinueButton={showContinueButton}
-            onMouseEnter={() => {
-              // Prefetch session data on hover for instant navigation
-              const id = session.id || session.session_id;
-              if (id) prefetchSession(id);
-            }}
           />
         ))}
       </div>
