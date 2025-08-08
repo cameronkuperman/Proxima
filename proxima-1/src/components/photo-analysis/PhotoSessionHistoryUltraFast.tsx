@@ -180,7 +180,7 @@ export default function PhotoSessionHistoryUltraFast({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sessions.map((session, index) => (
+        {sessions.map((session: any, index: number) => (
           <SessionCardFast
             key={session.id || session.session_id}
             session={session}

@@ -307,12 +307,19 @@ class SupabaseTrackingService {
 
       if (error) throw error
 
+      // Get current count first
+      const { data: configData } = await supabase
+        .from('tracking_configurations')
+        .select('data_points_count')
+        .eq('id', params.configuration_id)
+        .single();
+
       // Update configuration's last_data_point and data_points_count
       const { error: updateError } = await supabase
         .from('tracking_configurations')
         .update({
           last_data_point: params.recorded_at || new Date().toISOString(),
-          data_points_count: supabase.sql`data_points_count + 1`,
+          data_points_count: (configData?.data_points_count || 0) + 1,
           updated_at: new Date().toISOString()
         })
         .eq('id', params.configuration_id)

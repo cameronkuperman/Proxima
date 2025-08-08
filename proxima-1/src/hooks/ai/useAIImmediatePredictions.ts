@@ -57,7 +57,7 @@ export function useAIImmediatePredictions() {
         // Format the response to match expected structure
         const formattedResponse: PredictionsResponse<ImmediatePrediction> = {
           status: supabaseResult.cache_valid === false ? 'cached' : 'success',
-          predictions: supabaseResult.predictions.map(p => ({
+          predictions: (supabaseResult.predictions || []).map(p => ({
             ...p,
             type: 'immediate' as const,
             prevention_protocol: p.prevention_protocol || p.preventionProtocols || [],
@@ -84,7 +84,7 @@ export function useAIImmediatePredictions() {
       } else if (supabaseResult.status === 'needs_data') {
         // Not enough data, show appropriate message
         setData({
-          status: 'needs_data',
+          status: 'insufficient_data',
           predictions: [],
           data_quality_score: supabaseResult.data_quality_score || 0
         });

@@ -1,5 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import EmailSignupForm from './EmailSignupForm';
 
 export default function Contact() {
@@ -72,7 +73,7 @@ export default function Contact() {
               © 2025 Proxima-1. All rights reserved.
             </div>
             <div className="flex items-center gap-6 text-sm">
-              <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</a>
+              <Link href="/privacy" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</Link>
               <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Terms</a>
               <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Security</a>
             </div>

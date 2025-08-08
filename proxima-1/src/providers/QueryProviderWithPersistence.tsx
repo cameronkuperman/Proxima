@@ -19,7 +19,7 @@ const queryClientOptions = {
       staleTime: 1000 * 60 * 30, // 30 minutes - sessions rarely change
       gcTime: 1000 * 60 * 60 * 24, // 24 hours - keep in cache for a full day
       refetchOnWindowFocus: false,
-      refetchOnReconnect: 'always',
+      refetchOnReconnect: true,
       retry: 2,
       retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
       // Enable network-only refetch for data integrity

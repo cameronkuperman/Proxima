@@ -11,7 +11,7 @@ const queryClientOptions = {
       staleTime: 1000 * 60 * 30, // 30 minutes - data is considered fresh (increased for better performance)
       gcTime: 1000 * 60 * 60 * 2, // 2 hours - keep in cache longer
       refetchOnWindowFocus: false, // Don't refetch on window focus
-      refetchOnReconnect: 'always', // Refetch when reconnecting
+      refetchOnReconnect: true, // Refetch when reconnecting
       retry: 2, // Retry failed requests twice
       retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     },

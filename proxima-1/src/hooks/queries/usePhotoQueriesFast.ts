@@ -31,7 +31,7 @@ export function usePhotoSessionsFast(includeSensitive: boolean = false, limit: n
   });
 
   // Get session IDs for count loading
-  const sessionIds = sessionsQuery.data?.map(s => s.id) || [];
+  const sessionIds = sessionsQuery.data?.map(s => s.id).filter((id): id is string => id !== undefined) || [];
 
   // Load counts in background (non-blocking)
   const countsQuery = useQuery({
@@ -46,7 +46,7 @@ export function usePhotoSessionsFast(includeSensitive: boolean = false, limit: n
   useEffect(() => {
     if (countsQuery.data && sessionsQuery.data) {
       const updatedSessions = sessionsQuery.data.map(session => {
-        const counts = countsQuery.data.get(session.id);
+        const counts = session.id ? countsQuery.data.get(session.id) : undefined;
         if (counts) {
           return {
             ...session,

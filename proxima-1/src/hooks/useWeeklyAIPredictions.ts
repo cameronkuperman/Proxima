@@ -100,7 +100,7 @@ export function useWeeklyAIPredictions() {
       const supabaseResult = await supabaseAIPredictionsService.getCurrentPredictions(user.id);
       
       if (supabaseResult.status === 'success' && supabaseResult.predictions) {
-        setPredictions(supabaseResult.predictions);
+        setPredictions(supabaseResult.predictions as WeeklyPredictions);
         setStatus('success');
       } else if (supabaseResult.status === 'needs_initial') {
         // No predictions exist, generate initial ones

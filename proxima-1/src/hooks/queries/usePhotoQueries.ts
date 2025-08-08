@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabasePhotoAnalysisService } from '@/services/supabasePhotoAnalysisService';
 import { useAuth } from '@/contexts/AuthContext';
+import { PhotoSession } from '@/types/photo-analysis';
 
 // Query keys factory for better organization
 export const photoQueryKeys = {

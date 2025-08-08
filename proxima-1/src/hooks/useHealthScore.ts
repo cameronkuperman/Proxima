@@ -179,9 +179,17 @@ export function useHealthScore(): UseHealthScoreReturn {
       const supabaseCached = supabaseHealthScoreService.getCachedHealthScore(user.id);
       if (supabaseCached) {
         console.log('🗄️ Using Supabase cached health score');
-        setScoreData(supabaseCached);
+        setScoreData({
+          ...supabaseCached,
+          generated_at: new Date().toISOString(),
+          cached: true
+        } as HealthScoreResponse);
         const cacheEntry = {
-          data: supabaseCached,
+          data: {
+            ...supabaseCached,
+            generated_at: new Date().toISOString(),
+            cached: true
+          } as HealthScoreResponse,
           timestamp: Date.now(),
           weekOf: supabaseCached.week_of
         };
@@ -249,15 +257,24 @@ export function useHealthScore(): UseHealthScoreReturn {
         
         // Cache the result
         const cacheEntry = {
-          data: supabaseResult.data,
+          data: {
+            ...supabaseResult.data,
+            generated_at: new Date().toISOString(),
+            cached: false
+          } as HealthScoreResponse,
           timestamp: Date.now(),
           weekOf: supabaseResult.data.week_of
         };
         healthScoreCache.set(user.id, cacheEntry);
-        saveToStorage(user.id, supabaseResult.data);
+        const enhancedData = {
+          ...supabaseResult.data,
+          generated_at: new Date().toISOString(),
+          cached: false
+        } as HealthScoreResponse;
+        saveToStorage(user.id, enhancedData);
         supabaseHealthScoreService.cacheHealthScore(user.id, supabaseResult.data);
         
-        setScoreData(supabaseResult.data);
+        setScoreData(enhancedData);
         setIsLoading(false);
         setError(null);
         fetchInProgress.current = false;

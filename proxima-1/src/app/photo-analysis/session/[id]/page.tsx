@@ -321,7 +321,7 @@ export default function PhotoSessionDetailPage() {
                               {key.replace(/_/g, ' ')}
                             </span>
                             <span className="text-white font-medium">
-                              {value}
+                              {String(value)}
                               {key.includes('size') ? 'mm' : ''}
                             </span>
                           </div>
@@ -356,7 +356,7 @@ export default function PhotoSessionDetailPage() {
               >
                 <div className="text-center text-gray-400 mb-4">
                   {compareAnalysis 
-                    ? `Comparing Analysis #${currentAnalysisIndex + 1} with Analysis #${compareIndex + 1}`
+                    ? `Comparing Analysis #${currentAnalysisIndex + 1} with Analysis #${compareIndex !== null ? compareIndex + 1 : ''}`
                     : 'Click on a timeline point to select a comparison photo'
                   }
                 </div>

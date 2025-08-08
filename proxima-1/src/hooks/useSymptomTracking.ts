@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useUser } from '@/contexts/UserContext'
+import { useAuth } from '@/contexts/AuthContext'
 import supabaseSymptomService, { SymptomData, SymptomTrend, SymptomSummary } from '@/services/supabaseSymptomService'
 import supabaseTrackingService from '@/services/supabaseTrackingService'
 
 export function useSymptomTracking() {
-  const { user } = useUser()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [symptomHistory, setSymptomHistory] = useState<SymptomData[]>([])

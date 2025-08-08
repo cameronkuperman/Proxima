@@ -309,8 +309,8 @@ class SupabasePhotoAnalysisService {
             id: analysis.id,
             analysis_id: analysis.id,
             date: analysis.created_at,
-            photo_url: photoUrl,
-            thumbnail_url: thumbnailUrl,
+            photo_url: photoUrl || undefined,
+            thumbnail_url: thumbnailUrl || undefined,
             primary_assessment: analysis.analysis_data?.primary_assessment || '',
             confidence: analysis.analysis_data?.confidence || 0,
             key_metrics: {
@@ -467,7 +467,7 @@ class SupabasePhotoAnalysisService {
             id: photo.id,
             category: photo.category as any,
             stored: true,
-            preview_url: photo.preview_url
+            preview_url: (photo as any).preview_url || ''
           }],
           status: 'completed'
         });
@@ -540,7 +540,7 @@ class SupabasePhotoAnalysisService {
       return {
         session,
         timeline_events: events,
-        next_action,
+        next_action: nextAction,
         overall_trend: overallTrend
       };
     } catch (error) {
