@@ -145,7 +145,7 @@ export default function TermsOfService() {
                   If you have questions about these Terms, contact us at:
                 </p>
                 <p className="text-gray-300">
-                  Email: <a href="mailto:legal@seimeo.health" className="text-purple-400 hover:text-purple-300 underline">legal@seimeo.health</a>
+                  Email: <a href="mailto:help@seimeo.com" className="text-purple-400 hover:text-purple-300 underline">help@seimeo.com</a>
                 </p>
               </section>
             </div>

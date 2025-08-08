@@ -279,7 +279,7 @@ export default function LiquidGlassLogin() {
               {isSignup ? 'Create your account' : 'Welcome back'}
             </h1>
             <p className="text-gray-400 text-sm">
-              {isSignup ? 'Join Proxima for instant health insights' : 'Sign in to your Proxima account'}
+              {isSignup ? 'Join Seimeo for instant health insights' : 'Sign in to your Seimeo account'}
             </p>
           </div>
 

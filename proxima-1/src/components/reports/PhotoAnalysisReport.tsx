@@ -253,7 +253,7 @@ export default function PhotoAnalysisReport({
       <div className="mt-12 pt-8 border-t-2 border-gray-200">
         <div className="flex items-center justify-between text-sm text-gray-600">
           <div>
-            <p className="font-medium">Proxima-1 Health Intelligence Platform</p>
+            <p className="font-medium">Seimeo-1 Health Intelligence Platform</p>
             <p>AI-Powered Photo Analysis Report</p>
           </div>
           <div className="text-right">

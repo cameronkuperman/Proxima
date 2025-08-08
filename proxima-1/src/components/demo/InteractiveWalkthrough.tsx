@@ -192,7 +192,7 @@ export function InteractiveWalkthrough() {
                     >
                       <Sparkles className="w-16 h-16 mx-auto mb-4 text-purple-500" />
                       <h1 className="text-5xl font-bold text-white mb-4">
-                        Welcome to Proxima
+                        Welcome to Seimeo
                       </h1>
                       <p className="text-xl text-gray-300">
                         Your AI-powered health intelligence platform

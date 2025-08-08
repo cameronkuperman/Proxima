@@ -290,7 +290,7 @@ export default function PrivacyPolicy() {
                 <h2 className="text-2xl font-semibold text-white mb-4">15. Contact</h2>
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
                   <p className="text-white font-semibold mb-2">Seimeo Privacy Team</p>
-                  <p className="text-gray-300">Email: <a href="mailto:privacy@seimeo.com" className="text-blue-400 hover:text-blue-300">privacy@seimeo.com</a></p>
+                  <p className="text-gray-300">Email: <a href="mailto:help@seimeo.com" className="text-blue-400 hover:text-blue-300">help@seimeo.com</a></p>
                 </div>
               </section>
             </div>

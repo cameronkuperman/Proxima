@@ -33,7 +33,7 @@ export default function HelpMenu() {
     {
       id: 'navigation',
       title: 'Platform Navigation',
-      description: 'Discover all the features and how to navigate Proxima',
+      description: 'Discover all the features and how to navigate Seimeo',
       icon: <Navigation className="w-5 h-5" />,
       color: 'from-purple-600/20 to-pink-600/20',
       iconColor: 'text-purple-400'

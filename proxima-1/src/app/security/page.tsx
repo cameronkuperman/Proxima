@@ -277,8 +277,8 @@ export default function Security() {
                   </p>
                   <div className="bg-black/50 rounded-lg p-4 mb-4">
                     <p className="text-white font-medium mb-2">Please email us at:</p>
-                    <a href="mailto:security@seimeo.health" className="text-purple-400 hover:text-purple-300 font-mono">
-                      security@seimeo.health
+                    <a href="mailto:help@seimeo.com" className="text-purple-400 hover:text-purple-300 font-mono">
+                      help@seimeo.com
                     </a>
                   </div>
                   <p className="text-gray-400 text-sm">
@@ -318,8 +318,8 @@ export default function Security() {
                     <Mail className="w-6 h-6 text-purple-400 mt-1" />
                     <div>
                       <p className="text-white font-medium mb-2">For security concerns or questions:</p>
-                      <a href="mailto:security@seimeo.health" className="text-purple-400 hover:text-purple-300 text-lg font-mono">
-                        security@seimeo.health
+                      <a href="mailto:help@seimeo.com" className="text-purple-400 hover:text-purple-300 text-lg font-mono">
+                        help@seimeo.com
                       </a>
                       <p className="text-gray-400 text-sm mt-2">
                         We take all security reports seriously and will respond within 48 hours.

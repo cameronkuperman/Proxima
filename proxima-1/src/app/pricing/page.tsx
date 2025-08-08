@@ -23,7 +23,7 @@ export default function PricingPage() {
 
     if (tierName === 'enterprise') {
       // Redirect to contact form or calendly
-      window.open('mailto:enterprise@seimeohealth.ai?subject=Enterprise Plan Inquiry', '_blank');
+      window.open('mailto:help@seimeo.com?subject=Enterprise Plan Inquiry', '_blank');
       return;
     }
 

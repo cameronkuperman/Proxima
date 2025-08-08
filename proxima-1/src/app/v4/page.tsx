@@ -12,7 +12,7 @@ function EditorialHero() {
   return (
     <section className="relative w-full min-h-[92vh] bg-[#0a0a0a]">
       <div className="max-w-6xl mx-auto px-6 pt-32">
-        <p className="text-sm tracking-widest text-gray-500 uppercase mb-6">Proxima</p>
+        <p className="text-sm tracking-widest text-gray-500 uppercase mb-6">Seimeo</p>
         <h1 className="text-[42px] sm:text-[64px] leading-[1.05] font-semibold mb-6 text-white">
           One place for symptom clarity
         </h1>

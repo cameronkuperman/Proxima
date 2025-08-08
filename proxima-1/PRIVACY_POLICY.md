@@ -191,8 +191,8 @@ We may update this Privacy Policy from time to time. We will notify you of any c
 
 For questions about this Privacy Policy or our privacy practices, please contact us at:
 
-**Proxima-1 Privacy Team**  
-Email: privacy@proxima-1.com  
+**Seimeo-1 Privacy Team**  
+Email: help@seimeo.com  
 Address: [Your Company Address]
 
 ## 15. Additional Provisions
@@ -208,4 +208,4 @@ For enterprise customers, we offer Data Processing Agreements (DPAs) upon reques
 
 ---
 
-By using Proxima-1, you acknowledge that you have read and understood this Privacy Policy and agree to its terms.
+By using Seimeo-1, you acknowledge that you have read and understood this Privacy Policy and agree to its terms.

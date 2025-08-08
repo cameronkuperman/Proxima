@@ -56,7 +56,7 @@ export default function TutorialWelcome({ isOpen, onClose, onStartTour }: Tutori
     },
     {
       id: 'navigation',
-      title: 'Navigate Proxima',
+      title: 'Navigate Seimeo',
       description: 'Find your way around the platform',
       icon: <Navigation className="w-6 h-6" />,
       color: 'from-purple-600/20 to-pink-600/20',
@@ -90,7 +90,7 @@ export default function TutorialWelcome({ isOpen, onClose, onStartTour }: Tutori
                 className="text-center mb-8"
               >
                 <h1 className="text-4xl font-bold text-white mb-4">
-                  Welcome to Proxima
+                  Welcome to Seimeo
                 </h1>
                 <p className="text-xl text-gray-400">
                   Your AI-powered health intelligence platform
