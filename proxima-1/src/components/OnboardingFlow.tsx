@@ -23,6 +23,12 @@ const steps = [
     title: 'Health Profile',
     description: 'Help us understand your health better',
     fields: ['medications', 'personal_health_context', 'family_history', 'allergies']
+  },
+  {
+    id: 'legal',
+    title: 'Legal Agreements',
+    description: 'Review and accept our terms',
+    fields: ['tos_agreed', 'privacy_agreed']
   }
 ];
 
@@ -44,7 +50,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     medications: [],
     personal_health_context: '',
     family_history: [],
-    allergies: []
+    allergies: [],
+    tos_agreed: false,
+    privacy_agreed: false,
+    tos_agreed_at: '',
+    privacy_agreed_at: ''
   });
 
 
@@ -98,6 +108,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           (element as HTMLElement).focus();
         }
       }, 100);
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if legal agreements are accepted (required)
+    if (!formData.tos_agreed || !formData.privacy_agreed) {
+      setError('You must agree to the Terms of Service and Privacy Policy to continue.');
       setIsLoading(false);
       return;
     }
@@ -249,6 +266,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       // Race and gender are optional fields
       if (field === 'race' || field === 'is_male') {
         return true; // Always valid since these are optional
+      }
+      
+      // Legal agreement fields
+      if (field === 'tos_agreed' || field === 'privacy_agreed') {
+        return value === true;
       }
       
       return value !== undefined && value !== null && value !== '';
@@ -406,6 +428,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   removeFamilyHistory={removeFamilyHistory}
                   addAllergy={addAllergy}
                   removeAllergy={removeAllergy}
+                />
+              )}
+              
+              {currentStep === 2 && (
+                <LegalAgreementStep
+                  formData={formData}
+                  setFormData={setFormData}
                 />
               )}
             </motion.div>
@@ -1252,6 +1281,216 @@ function HealthProfileStep({
                 </button>
               </motion.span>
             ))}
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
+// Legal Agreement Step Component
+function LegalAgreementStep({ 
+  formData, 
+  setFormData
+}: {
+  formData: Partial<OnboardingData>;
+  setFormData: React.Dispatch<React.SetStateAction<Partial<OnboardingData>>>;
+}) {
+  const [privacyScrolledToBottom, setPrivacyScrolledToBottom] = useState(false);
+  const [tosScrolledToBottom, setTosScrolledToBottom] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  const privacyRef = useRef<HTMLDivElement>(null);
+  const tosRef = useRef<HTMLDivElement>(null);
+
+  const handlePrivacyScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.target as HTMLDivElement;
+    const isAtBottom = Math.abs(element.scrollHeight - element.scrollTop - element.clientHeight) < 10;
+    setPrivacyScrolledToBottom(isAtBottom);
+  };
+
+  const handleTosScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.target as HTMLDivElement;
+    const isAtBottom = Math.abs(element.scrollHeight - element.scrollTop - element.clientHeight) < 10;
+    setTosScrolledToBottom(isAtBottom);
+  };
+
+  const handleAgreementChange = (checked: boolean) => {
+    setAgreedToTerms(checked);
+    if (checked) {
+      const timestamp = new Date().toISOString();
+      setFormData((prev: Partial<OnboardingData>) => ({ 
+        ...prev, 
+        tos_agreed: true,
+        tos_agreed_at: timestamp,
+        privacy_agreed: true,
+        privacy_agreed_at: timestamp
+      }));
+    } else {
+      setFormData((prev: Partial<OnboardingData>) => ({ 
+        ...prev, 
+        tos_agreed: false,
+        tos_agreed_at: '',
+        privacy_agreed: false,
+        privacy_agreed_at: ''
+      }));
+    }
+  };
+
+  const canAgree = privacyScrolledToBottom && tosScrolledToBottom;
+
+  return (
+    <div className="space-y-4">
+      {/* Privacy Policy Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">Privacy Policy Summary</h2>
+          <a 
+            href="/privacy" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-purple-400 hover:text-purple-300 text-sm underline"
+          >
+            View Full Policy
+          </a>
+        </div>
+        
+        <div 
+          ref={privacyRef}
+          onScroll={handlePrivacyScroll}
+          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 hover:border-white/[0.1] transition-all max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+        >
+          <div className="text-gray-300 text-sm space-y-3">
+            <p>
+              We collect and use your personal health information, photos, and account details to provide personalized AI-driven health insights and symptom tracking. Your health data is treated with strict confidentiality and is only shared with trusted AI providers (such as OpenAI, Google, and others) in a way that does not include your name or personally identifying information. These providers process your data solely to generate insights and do not store or use it to train their AI models.
+            </p>
+            <p>
+              We use cookies and similar technologies to maintain your session, measure platform usage, and improve performance, but we do not use tracking or advertising cookies. You have full control over your data — you can access, download, correct, or delete your information and uploaded photos at any time through your account settings.
+            </p>
+            <p>
+              By continuing, you agree to our full Privacy Policy which explains in detail how your data is collected, used, shared, and protected.
+            </p>
+          </div>
+          {!privacyScrolledToBottom && (
+            <div className="mt-2 text-center">
+              <motion.div
+                animate={{ y: [0, 5, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="text-gray-500 text-xs"
+              >
+                ↓ Scroll to continue ↓
+              </motion.div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Terms of Service Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">Terms of Service Summary</h2>
+          <a 
+            href="/terms" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-purple-400 hover:text-purple-300 text-sm underline"
+          >
+            View Full Terms
+          </a>
+        </div>
+        
+        <div 
+          ref={tosRef}
+          onScroll={handleTosScroll}
+          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 hover:border-white/[0.1] transition-all max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+        >
+          <div className="text-gray-300 text-sm space-y-3">
+            <p>
+              Proxima provides AI-powered tools designed to help you better understand your symptoms and health information. However, we do not provide medical advice, diagnosis, or treatment. Our services are for informational purposes only and should never replace consultation with a qualified healthcare professional.
+            </p>
+            <p>
+              You must be at least 18 years old to use Proxima. By using our services, you agree to comply with our guidelines and not misuse or interfere with the platform. You retain ownership of the information you submit, but grant us a license to use it to provide and improve our services.
+            </p>
+            <p>
+              Proxima disclaims liability for any damages resulting from your use of the service, including any decisions made based on the information provided. Our total liability is limited to a nominal amount. Please read the full Terms of Service for complete details.
+            </p>
+          </div>
+          {!tosScrolledToBottom && (
+            <div className="mt-2 text-center">
+              <motion.div
+                animate={{ y: [0, 5, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="text-gray-500 text-xs"
+              >
+                ↓ Scroll to continue ↓
+              </motion.div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Agreement Checkbox */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="space-y-3"
+      >
+        {!canAgree && (
+          <div className="backdrop-blur-[20px] bg-yellow-500/[0.05] border border-yellow-500/[0.2] rounded-xl p-3">
+            <p className="text-yellow-400 text-sm text-center">
+              Please scroll to the bottom of both agreements to continue
+            </p>
+          </div>
+        )}
+        
+        <div className={`backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 hover:border-white/[0.1] transition-all ${!canAgree ? 'opacity-50 pointer-events-none' : ''}`}>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => handleAgreementChange(e.target.checked)}
+              disabled={!canAgree}
+              className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 focus:ring-2 cursor-pointer"
+            />
+            <span className="text-sm text-white">
+              I have read and agree to the{' '}
+              <a 
+                href="/privacy" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:text-purple-300 underline"
+              >
+                Privacy Policy
+              </a>
+              {' '}and{' '}
+              <a 
+                href="/terms" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:text-purple-300 underline"
+              >
+                Terms of Service
+              </a>
+            </span>
+          </label>
+        </div>
+
+        {canAgree && (
+          <div className="backdrop-blur-[20px] bg-green-500/[0.05] border border-green-500/[0.2] rounded-xl p-3">
+            <p className="text-green-400 text-sm text-center">
+              ✓ You have reviewed both agreements and can now proceed
+            </p>
           </div>
         )}
       </motion.div>

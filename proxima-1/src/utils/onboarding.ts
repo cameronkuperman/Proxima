@@ -33,6 +33,10 @@ export interface OnboardingData {
   emergency_contact_relation?: string;
   emergency_contact_phone?: string;
   emergency_contact_email?: string;
+  tos_agreed?: boolean;
+  tos_agreed_at?: string;
+  privacy_agreed?: boolean;
+  privacy_agreed_at?: string;
 }
 
 // Fetch user's medical profile
@@ -179,6 +183,15 @@ export function validateOnboardingData(data: Partial<OnboardingData>): {
     errors.push('Personal Health Context is required');
   }
 
+  // Validate legal agreements are accepted
+  if (!data.tos_agreed) {
+    errors.push('You must agree to the Terms of Service');
+  }
+  
+  if (!data.privacy_agreed) {
+    errors.push('You must agree to the Privacy Policy');
+  }
+
   return {
     valid: errors.length === 0,
     errors
@@ -231,7 +244,11 @@ export async function completeOnboarding(
         emergency_contact_name: data.emergency_contact_name || '',
         emergency_contact_relation: data.emergency_contact_relation || '',
         emergency_contact_phone: data.emergency_contact_phone || '',
-        emergency_contact_email: data.emergency_contact_email || ''
+        emergency_contact_email: data.emergency_contact_email || '',
+        tos_agreed: data.tos_agreed || false,
+        tos_agreed_at: data.tos_agreed_at || null,
+        privacy_agreed: data.privacy_agreed || false,
+        privacy_agreed_at: data.privacy_agreed_at || null
       })
       .select()
       .single();
