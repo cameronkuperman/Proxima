@@ -19,6 +19,7 @@ export interface PhotoSession {
   condition_name: string;
   description?: string;
   created_at: string;
+  updated_at?: string;
   last_photo_at?: string;
   photo_count?: number;
   analysis_count?: number;

@@ -8,11 +8,11 @@
 
 ## Frontend Updates (Implemented)
 
-### 1. Response Handlingasas
+### 1. Response Handling
 ✅ Handles new backend response format:
 - Continues with new questions when available
 - Shows progress info (current → target confidence)
-- Handles max qusestions reached gracefully
+- Handles max questions reached gracefully
 - Suggests Ultra Think when target not reached
 - Auto-completes when target achieved
 

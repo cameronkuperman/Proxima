@@ -24,10 +24,25 @@ export const photoQueryKeys = {
  */
 export function usePhotoSessions(includeSensitive: boolean = false, limit: number = 20) {
   const { user } = useAuth();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
   
   return useQuery({
-    queryKey: [...photoQueryKeys.sessions(user?.id || ''), limit],
-    queryFn: () => supabasePhotoAnalysisService.fetchPhotoSessions(user!.id, includeSensitive, limit),
+    queryKey: [...photoQueryKeys.sessions(user?.id || ''), includeSensitive, limit],
+    queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      // Use backend API which returns sessions with thumbnail URLs
+      const response = await fetch(`${API_URL}/api/photo-analysis/sessions?user_id=${user.id}&limit=${limit}`);
+      if (!response.ok) throw new Error('Failed to fetch sessions');
+      
+      const data = await response.json();
+      const sessions = data.sessions || [];
+      
+      // Filter sensitive if needed
+      return includeSensitive 
+        ? sessions 
+        : sessions.filter((s: PhotoSession) => !s.is_sensitive);
+    },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 30, // 30 minutes - sessions don't change often
     gcTime: 1000 * 60 * 60 * 2, // 2 hours in cache

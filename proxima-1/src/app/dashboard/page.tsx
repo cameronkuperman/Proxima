@@ -147,7 +147,6 @@ function DashboardContent() {
   const [timelineData, setTimelineData] = useState<TimelineEntry[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [timelineOffset, setTimelineOffset] = useState(0);
   const [timelineHasMore, setTimelineHasMore] = useState(true);
   const [timelineLoadingMore, setTimelineLoadingMore] = useState(false);
@@ -759,44 +758,7 @@ function DashboardContent() {
   // const maxValue = Math.max(...currentGraph.data.map(d => d.value));
   // const minValue = Math.min(...currentGraph.data.map(d => d.value));
 
-  // Master loading state - check if all critical data is loaded (only on initial load)
-  const isInitialLoading = isInitialLoad && (
-    profileLoading || 
-    timelineLoading || 
-    healthScoreLoading || 
-    alertLoading || 
-    healthTimelineLoading || 
-    healthStoryLoading ||
-    trackingLoading
-  );
-
-  // Set initial load to false once all data is loaded
-  useEffect(() => {
-    if (isInitialLoad && 
-        !profileLoading && 
-        !timelineLoading && 
-        !healthScoreLoading && 
-        !alertLoading && 
-        !healthTimelineLoading && 
-        !healthStoryLoading &&
-        !trackingLoading) {
-      setIsInitialLoad(false);
-    }
-  }, [isInitialLoad, profileLoading, timelineLoading, healthScoreLoading, alertLoading, healthTimelineLoading, healthStoryLoading, trackingLoading]);
-
-  // Show loading screen while data is loading
-  if (isInitialLoading) {
-    return (
-      <UnifiedAuthGuard requireAuth={true}>
-        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-12 h-12 border-3 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white text-sm">Loading dashboard...</p>
-          </div>
-        </div>
-      </UnifiedAuthGuard>
-    );
-  }
+  // Remove the initial loading screen - dashboard loads progressively
 
   return (
     <UnifiedAuthGuard requireAuth={true}>
@@ -889,7 +851,7 @@ function DashboardContent() {
             
             {/* Timeline entries */}
             <div ref={timelineRef} className="flex-1 overflow-y-auto pl-4 pr-2 pt-4 pb-4 timeline-scrollbar relative min-h-0" style={{ paddingRight: '8px' }}>
-              {timelineLoading && isInitialLoad ? (
+              {timelineLoading ? (
                 // Loading state
                 <div className="space-y-8">
                   {[...Array(5)].map((_, i) => (
@@ -1919,7 +1881,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black flex items-center justify-center"><div className="text-white">Loading...</div></div>}>
+    <Suspense fallback={null}>
       <DashboardContent />
     </Suspense>
   );

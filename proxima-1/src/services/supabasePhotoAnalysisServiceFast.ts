@@ -16,28 +16,38 @@ class SupabasePhotoAnalysisServiceFast {
     includeSensitive: boolean = false,
     limit: number = 20
   ): Promise<PhotoSessionWithCounts[]> {
+    console.log('[PhotoSessionsFast] Fetching for user:', userId, { includeSensitive, limit });
+    
     try {
+      // Ensure userId is in UUID format (remove any quotes if present)
+      const cleanUserId = userId.replace(/["']/g, '');
+      
       // Simple, fast query - no joins, no counts
       let query = supabaseOptimized
         .from('photo_sessions')
-        .select('id, condition_name, description, created_at, updated_at, last_photo_at, is_sensitive, latest_summary, thumbnail_url')
-        .eq('user_id', userId)
+        .select('id, condition_name, description, created_at, updated_at, last_photo_at, is_sensitive')
+        .eq('user_id', cleanUserId)  // Supabase handles UUID casting automatically
+        .is('deleted_at', null)  // Exclude deleted sessions
         .order('updated_at', { ascending: false })
         .limit(limit);
       
-      // Filter sensitive if needed
+      // Filter sensitive if needed - exclude sensitive for continue tracking
       if (!includeSensitive) {
-        query = query.eq('is_sensitive', false);
+        query = query.or('is_sensitive.eq.false,is_sensitive.is.null');
       }
 
       const { data: sessions, error } = await query;
 
       if (error) {
-        console.error('Error fetching photo sessions:', error);
+        console.error('[PhotoSessionsFast] Supabase error:', error.message || error);
+        console.error('[PhotoSessionsFast] Full error object:', error);
         return [];
       }
 
+      console.log('[PhotoSessionsFast] Found', sessions?.length || 0, 'sessions');
+      
       if (!sessions || sessions.length === 0) {
+        console.log('[PhotoSessionsFast] No sessions found for user:', cleanUserId);
         return [];
       }
 

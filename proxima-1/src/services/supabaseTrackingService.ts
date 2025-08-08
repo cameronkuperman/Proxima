@@ -148,21 +148,51 @@ class SupabaseTrackingService {
         })
       }
 
-      // Fetch pending tracking suggestions
-      const { data: suggestions, error: suggestionError } = await supabase
+      // Fetch pending tracking suggestions (unactioned)
+      // First try to get recent unactioned suggestions
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      
+      let { data: suggestions, error: suggestionError } = await supabase
         .from('tracking_suggestions')
         .select('*')
         .eq('user_id', userId)
-        .eq('action_taken', null)
-        .gt('expires_at', new Date().toISOString())
+        .is('action_taken', null)
+        .is('actioned_at', null)
+        .gte('created_at', sevenDaysAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(3)
+        .limit(5)
+      
+      // If no recent suggestions, try to get ANY unactioned suggestions
+      if (!suggestions || suggestions.length === 0) {
+        const result = await supabase
+          .from('tracking_suggestions')
+          .select('*')
+          .eq('user_id', userId)
+          .is('action_taken', null)
+          .order('created_at', { ascending: false })
+          .limit(5)
+        
+        suggestions = result.data
+        suggestionError = result.error
+      }
 
-      if (suggestionError) throw suggestionError
+      if (suggestionError) {
+        console.error('Error fetching suggestions:', suggestionError)
+        throw suggestionError
+      }
+
+      console.log(`[SupabaseTrackingService] Found ${suggestions?.length || 0} suggestions for user ${userId}`)
 
       // Add suggestions to dashboard
       for (const suggestion of suggestions || []) {
-        const suggestionData = suggestion.suggestions?.[0]
+        console.log('[SupabaseTrackingService] Processing suggestion:', suggestion.id, suggestion.suggestions)
+        
+        // Handle both array and single suggestion format
+        const suggestionData = Array.isArray(suggestion.suggestions) 
+          ? suggestion.suggestions[0] 
+          : suggestion.suggestions
+          
         if (suggestionData) {
           dashboardItems.push({
             type: 'suggestion',
@@ -171,7 +201,7 @@ class SupabaseTrackingService {
             description: suggestionData.metric_description,
             y_axis_label: suggestionData.y_axis_label,
             source_type: suggestion.source_type,
-            confidence_score: suggestionData.confidence_score,
+            confidence_score: suggestionData.confidence_score || suggestion.confidence_scores?.[0],
             created_at: suggestion.created_at
           })
         }

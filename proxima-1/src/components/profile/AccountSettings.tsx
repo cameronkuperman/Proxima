@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import Link from 'next/link';
 import { Bell, Mail, MessageSquare, Calendar } from 'lucide-react';
 
 interface SettingItem {
@@ -255,7 +254,7 @@ export default function AccountSettings() {
       {/* Legal Links */}
       <div className="mt-8 pt-6 border-t border-white/[0.05]">
         <div className="flex flex-wrap gap-6 text-xs text-gray-500">
-          <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
+          <a href="#" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
           <a href="#" className="hover:text-gray-300 transition-colors">Terms of Service</a>
           <a href="#" className="hover:text-gray-300 transition-colors">Security & Compliance</a>
           <a href="#" className="hover:text-gray-300 transition-colors">Contact Support</a>

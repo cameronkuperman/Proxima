@@ -4,8 +4,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Camera, FileText, ChevronRight, Bell, AlertCircle, Loader } from 'lucide-react';
 import { PhotoSession } from '@/types/photo-analysis';
-import { usePhotoSessionsFast } from '@/hooks/queries/usePhotoQueriesFast';
-import { PhotoSessionWithCounts } from '@/services/supabasePhotoAnalysisServiceFast';
+import { usePhotoSessions } from '@/hooks/queries/usePhotoQueries';
+import { PhotoSessionWithCounts } from '@/services/supabasePhotoAnalysisService';
 
 interface Props {
   onSelectSession: (session: PhotoSession) => void;
@@ -44,9 +44,23 @@ const SessionCardFast = React.memo(({
       onClick={onSelect}
       className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all group relative"
     >
-      {/* Simple icon placeholder - no image loading */}
-      <div className="aspect-video rounded-lg bg-gray-800 mb-4 flex items-center justify-center">
-        <Camera className="w-12 h-12 text-gray-600" />
+      {/* Session thumbnail or placeholder */}
+      <div className="aspect-video rounded-lg bg-gray-800 mb-4 overflow-hidden">
+        {session.thumbnail_url ? (
+          <img 
+            src={session.thumbnail_url} 
+            alt={session.condition_name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // If image fails to load, show placeholder
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <div className={`${session.thumbnail_url ? 'hidden' : ''} w-full h-full flex items-center justify-center`}>
+          <Camera className="w-12 h-12 text-gray-600" />
+        </div>
       </div>
 
       {/* Session info */}
@@ -54,9 +68,9 @@ const SessionCardFast = React.memo(({
         {session.condition_name}
       </h3>
       
-      {session.description && (
+      {(session.latest_summary || session.description) && (
         <p className="text-sm text-gray-400 mb-3 line-clamp-2">
-          {session.description}
+          {session.latest_summary || session.description}
         </p>
       )}
 
@@ -66,16 +80,16 @@ const SessionCardFast = React.memo(({
           <Clock className="w-3 h-3" />
           <span>Started {formatDate(session.created_at)}</span>
         </div>
-        {/* Show counts only if loaded */}
-        {(session.photo_count > 0 || session.analysis_count > 0) && (
+        {/* Show counts */}
+        {(session.photo_count !== undefined || session.analysis_count !== undefined) && (
           <div className="flex items-center gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1">
               <Camera className="w-3 h-3" />
-              {session.photo_count}
+              {session.photo_count || 0}
             </span>
             <span className="flex items-center gap-1">
               <FileText className="w-3 h-3" />
-              {session.analysis_count}
+              {session.analysis_count || 0}
             </span>
           </div>
         )}
@@ -98,9 +112,8 @@ export default function PhotoSessionHistoryUltraFast({
   onSelectSession, 
   showContinueButton = false
 }: Props) {
-  // Fetch sessions directly
-  const { data: sessions, isLoading, error, isLoadingCounts } = usePhotoSessionsFast(!showContinueButton, 20);
-  
+  // Use React Query hooks for optimized data fetching - exact same as PhotoSessionHistoryV2
+  const { data: sessions = [], isLoading, error } = usePhotoSessions(false); // Don't include sensitive sessions
 
   // Show skeleton loader while loading
   if (isLoading) {
@@ -163,19 +176,13 @@ export default function PhotoSessionHistoryUltraFast({
         <h2 className="text-2xl font-semibold text-white">Your Photo Sessions</h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-400">{sessions.length} sessions</span>
-          {isLoadingCounts && (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
-              <Loader className="w-3 h-3 animate-spin" />
-              Loading details...
-            </span>
-          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sessions.map((session, index) => (
           <SessionCardFast
-            key={session.id}
+            key={session.id || session.session_id}
             session={session}
             index={index}
             onSelect={() => onSelectSession(session)}

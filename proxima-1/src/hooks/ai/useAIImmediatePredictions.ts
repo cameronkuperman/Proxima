@@ -19,10 +19,11 @@ export function useAIImmediatePredictions() {
 
     const cacheKey = aiPredictionCache.keys.immediatePredictions(user.id);
     
-    // Check cache first unless force refresh
+    // Layer 1: Check memory cache first unless force refresh
     if (!forceRefresh) {
       const cached = aiPredictionCache.get<PredictionsResponse<ImmediatePrediction>>(cacheKey);
       if (cached) {
+        console.log('Using memory cached predictions');
         setData(cached);
         setIsLoading(false);
         return;
@@ -37,13 +38,25 @@ export function useAIImmediatePredictions() {
         setIsLoading(true);
       }
 
-      // First try Supabase (faster)
+      // Layer 2: Try Supabase (database cache)
       const supabaseResult = await supabaseAIPredictionsService.getImmediatePredictionsOnly(user.id);
       
-      if (supabaseResult.status === 'success' && supabaseResult.predictions) {
+      // Check cache validity and status
+      const shouldUseSupabaseData = 
+        (supabaseResult.status === 'success' || supabaseResult.status === 'expired') && 
+        supabaseResult.predictions && 
+        supabaseResult.predictions.length > 0;
+      
+      const shouldCallBackend = 
+        forceRefresh || 
+        supabaseResult.status === 'needs_backend' ||
+        (supabaseResult.status === 'expired' && !supabaseResult.predictions?.length) ||
+        (!shouldUseSupabaseData && supabaseResult.status !== 'needs_data');
+
+      if (shouldUseSupabaseData) {
         // Format the response to match expected structure
         const formattedResponse: PredictionsResponse<ImmediatePrediction> = {
-          status: 'success',
+          status: supabaseResult.cache_valid === false ? 'cached' : 'success',
           predictions: supabaseResult.predictions.map(p => ({
             ...p,
             type: 'immediate' as const,
@@ -56,8 +69,18 @@ export function useAIImmediatePredictions() {
         
         setData(formattedResponse);
         
-        // Cache the response
-        aiPredictionCache.set(cacheKey, formattedResponse, 5);
+        // Cache the response in memory (shorter TTL for expired data)
+        const cacheTTL = supabaseResult.cache_valid === false ? 2 : 5;
+        aiPredictionCache.set(cacheKey, formattedResponse, cacheTTL);
+        
+        // If cache is expired but we have data, trigger background refresh
+        if (supabaseResult.status === 'expired' && !forceRefresh) {
+          console.log('Cache expired, triggering background refresh');
+          // Don't await - let it run in background
+          aiPredictionsApi.getImmediatePredictions(user.id, true).catch(err => 
+            console.error('Background refresh failed:', err)
+          );
+        }
       } else if (supabaseResult.status === 'needs_data') {
         // Not enough data, show appropriate message
         setData({
@@ -65,8 +88,9 @@ export function useAIImmediatePredictions() {
           predictions: [],
           data_quality_score: supabaseResult.data_quality_score || 0
         });
-      } else {
-        // Fallback to backend API
+      } else if (shouldCallBackend) {
+        // Layer 3: Fallback to backend API
+        console.log('Calling backend for predictions, status:', supabaseResult.status);
         const response = await aiPredictionsApi.getImmediatePredictions(user.id, forceRefresh);
         
         // Handle legacy field names
@@ -90,6 +114,13 @@ export function useAIImmediatePredictions() {
     } catch (err) {
       setError(err as Error);
       console.error('Error fetching immediate predictions:', err);
+      
+      // Try to use any stale data we might have
+      const staleData = aiPredictionCache.get<PredictionsResponse<ImmediatePrediction>>(cacheKey, true);
+      if (staleData) {
+        console.log('Using stale cached data due to error');
+        setData({ ...staleData, status: 'cached' });
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
