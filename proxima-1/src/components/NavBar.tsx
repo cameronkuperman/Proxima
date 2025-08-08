@@ -26,11 +26,11 @@ export default function NavBar() {
           
           {/* Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/#features" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
-              Features
-            </Link>
             <Link href="/#how-it-works" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
               How it Works
+            </Link>
+            <Link href="/#features" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              Features
             </Link>
             <Link href="/#ai-partners" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
               AI Partners

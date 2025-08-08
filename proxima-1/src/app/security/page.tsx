@@ -332,7 +332,7 @@ export default function Security() {
               {/* Last Updated */}
               <div className="text-center pt-8 border-t border-gray-800">
                 <p className="text-gray-500 text-sm">
-                  Last updated: January 8, 2025
+                  Last updated: August 7, 2025
                 </p>
               </div>
             </div>

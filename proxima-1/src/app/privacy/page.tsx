@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-4xl font-bold text-white mb-2">Privacy Policy</h1>
-            <p className="text-gray-400 mb-8">Last updated: January 8, 2025</p>
+            <p className="text-gray-400 mb-8">Last updated: August 7, 2025</p>
 
             <div className="prose prose-invert max-w-none">
               <section className="mb-10">
