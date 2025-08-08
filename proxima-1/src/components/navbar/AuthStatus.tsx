@@ -26,6 +26,12 @@ export default function AuthStatus() {
           </span>
         </div>
         <button
+          onClick={() => router.push('/dashboard')}
+          className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
+        >
+          Dashboard
+        </button>
+        <button
           onClick={() => signOut()}
           className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-gray-700 hover:bg-gray-900/70 rounded-lg transition-all duration-200"
         >

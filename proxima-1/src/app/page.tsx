@@ -85,12 +85,13 @@ function HomeContent() {
         return;
       }
       
-      // Check if we have an existing session
+      // Check if we have an existing session - but don't redirect
+      // Allow authenticated users to view the landing page
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
-        console.log('Existing session found, redirecting to dashboard...');
-        router.push('/dashboard');
+        console.log('User is authenticated but can stay on landing page');
+        // Don't redirect - let them browse the landing page
       }
     };
     

@@ -2,8 +2,10 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import EmailSignupForm from "./EmailSignupForm";
 import { staggerContainer } from '@/utils/animations';
+import { useAuth } from '@/contexts/AuthContext';
 
 const TYPING_QUERIES = [
   "Does this mole look suspicious?",
@@ -15,6 +17,8 @@ const TYPING_QUERIES = [
 ];
 
 export default function Hero() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [currentQuery, setCurrentQuery] = useState('');
   const [queryIndex, setQueryIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(true);
@@ -144,23 +148,55 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1, ease: [0.22, 1, 0.36, 1] }}
           >
-            <EmailSignupForm />
-            
-            <motion.a
-              href="https://www.youtube.com/watch?v=OT21T8Za0vs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full px-8 py-4 text-gray-400 border border-gray-800 rounded-lg hover:bg-gray-900/50 hover:border-gray-700 transition-all duration-200 flex items-center justify-center gap-3 group"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Meet Proxima
-            </motion.a>
+            {user ? (
+              <>
+                <motion.button
+                  onClick={() => router.push('/dashboard')}
+                  className="w-full px-8 py-4 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  Go to Dashboard
+                </motion.button>
+                
+                <motion.button
+                  onClick={() => router.push('/scan')}
+                  className="w-full px-8 py-4 text-gray-400 border border-gray-800 rounded-lg hover:bg-gray-900/50 hover:border-gray-700 transition-all duration-200 flex items-center justify-center gap-3"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  Start Quick Scan
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <EmailSignupForm />
+                
+                <motion.a
+                  href="https://www.youtube.com/watch?v=OT21T8Za0vs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full px-8 py-4 text-gray-400 border border-gray-800 rounded-lg hover:bg-gray-900/50 hover:border-gray-700 transition-all duration-200 flex items-center justify-center gap-3 group"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Meet Proxima
+                </motion.a>
+              </>
+            )}
           </motion.div>
           
           {/* Trust badges */}

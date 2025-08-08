@@ -3,8 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import AuthStatus from "./navbar/AuthStatus";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function NavBar() {
+  const { user } = useAuth();
+  
   return (
     <motion.nav 
       className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-gray-800"
@@ -43,9 +46,11 @@ export default function NavBar() {
           {/* Dynamic Auth Status and CTA */}
           <div className="flex items-center gap-4">
             <AuthStatus />
-            <Link href="/demo" className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200">
-              Try Demo
-            </Link>
+            {!user && (
+              <Link href="/demo" className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200">
+                Try Demo
+              </Link>
+            )}
           </div>
         </div>
       </div>
