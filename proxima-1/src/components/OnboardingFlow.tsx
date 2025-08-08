@@ -1424,13 +1424,13 @@ function LegalAgreementStep({
         >
           <div className="text-gray-300 text-sm space-y-3">
             <p>
-              Proxima provides AI-powered tools designed to help you better understand your symptoms and health information. However, we do not provide medical advice, diagnosis, or treatment. Our services are for informational purposes only and should never replace consultation with a qualified healthcare professional.
+              Seimeo provides AI-powered tools designed to help you better understand your symptoms and health information. However, we do not provide medical advice, diagnosis, or treatment. Our services are for informational purposes only and should never replace consultation with a qualified healthcare professional.
             </p>
             <p>
-              You must be at least 18 years old to use Proxima. By using our services, you agree to comply with our guidelines and not misuse or interfere with the platform. You retain ownership of the information you submit, but grant us a license to use it to provide and improve our services.
+              You must be at least 18 years old to use Seimeo. By using our services, you agree to comply with our guidelines and not misuse or interfere with the platform. You retain ownership of the information you submit, but grant us a license to use it to provide and improve our services.
             </p>
             <p>
-              Proxima disclaims liability for any damages resulting from your use of the service, including any decisions made based on the information provided. Our total liability is limited to a nominal amount. Please read the full Terms of Service for complete details.
+              Seimeo disclaims liability for any damages resulting from your use of the service, including any decisions made based on the information provided. Our total liability is limited to a nominal amount. Please read the full Terms of Service for complete details.
             </p>
           </div>
           {!tosScrolledToBottom && (

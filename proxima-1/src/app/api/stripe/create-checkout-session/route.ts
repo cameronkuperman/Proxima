@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type Stripe from 'stripe';
 import { stripe, STRIPE_CONFIG, getStripePriceId } from '@/lib/stripe';
 import { createClient } from '@/utils/supabase/server';
 
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
         },
       ],
       mode,
-      payment_method_types: STRIPE_CONFIG.paymentMethods,
+      payment_method_types: STRIPE_CONFIG.paymentMethods as Stripe.Checkout.SessionCreateParams.PaymentMethodType[],
       billing_address_collection: 'auto',
       shipping_address_collection: {
         allowed_countries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'JP'],

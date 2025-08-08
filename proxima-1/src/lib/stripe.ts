@@ -1,18 +1,17 @@
 // Stripe configuration for server-side
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
-}
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-11-20.acacia',
+// Create a dummy stripe instance if env var is not set (for build time)
+export const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2025-07-30.basil',
   typescript: true,
   appInfo: {
-    name: 'Proxima Health',
+    name: 'Seimeo Health',
     version: '1.0.0',
   },
-});
+})
+  : null as any;
 
 // Stripe configuration constants
 export const STRIPE_CONFIG = {

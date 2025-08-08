@@ -170,7 +170,7 @@ export function InteractiveDemo() {
             <div className="flex items-center justify-between h-16">
               {/* Left side - Logo */}
               <div className="flex items-center">
-                <Image src="/widelogoforbanner.png" alt="Proxima" width={200} height={50} priority className="h-10 w-auto" />
+                <Image src="/widelogoforbanner.png" alt="Seimeo" width={200} height={50} priority className="h-10 w-auto" />
               </div>
               
               {/* Center - Demo title and progress */}
@@ -245,7 +245,7 @@ export function InteractiveDemo() {
                     transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                     className="text-5xl sm:text-6xl md:text-7xl font-semibold text-white mb-6 tracking-tight"
                   >
-                    Welcome to Proxima
+                    Welcome to Seimeo
                   </motion.h1>
                   
                   <motion.p
@@ -342,7 +342,7 @@ export function InteractiveDemo() {
                       whileTap={{ scale: 0.98 }}
                       transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     >
-                      Get Started with Proxima
+                      Get Started with Seimeo
                     </motion.button>
                   </motion.div>
                 )}

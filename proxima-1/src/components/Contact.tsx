@@ -49,11 +49,11 @@ export default function Contact() {
 
         {/* Contact Options */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mb-20">
-          <a href="mailto:hello@proxima.health" className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+          <a href="mailto:hello@seimeo.health" className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            hello@proxima.health
+            hello@seimeo.health
           </a>
           
           <span className="text-gray-600 hidden sm:block">•</span>
@@ -70,7 +70,7 @@ export default function Contact() {
         <div className="pt-20 border-t border-gray-800">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="text-gray-500 text-sm">
-              © 2025 Proxima-1. All rights reserved.
+              © 2025 Seimeo-1. All rights reserved.
             </div>
             <div className="flex items-center gap-6 text-sm">
               <Link href="/privacy" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</Link>

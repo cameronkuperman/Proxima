@@ -1,7 +1,7 @@
-# Proxima-1: AI-Powered Health Intelligence Platform
+# Seimeo-1: AI-Powered Health Intelligence Platform
 
 ## Project Overview
-Proxima-1 is a next-generation health technology platform that combines 3D body visualization, advanced AI reasoning, and intelligent photo analysis to provide instant, accurate health insights. Think of it as your personal health AI that helps you understand symptoms before deciding if you need to see a doctor.
+Seimeo-1 is a next-generation health technology platform that combines 3D body visualization, advanced AI reasoning, and intelligent photo analysis to provide instant, accurate health insights. Think of it as your personal health AI that helps you understand symptoms before deciding if you need to see a doctor.
 
 ## Core Value Proposition
 **"Point. Describe. Understand."** - Get instant AI-powered health insights through intuitive 3D body mapping and photo analysis.
@@ -99,7 +99,7 @@ Inspired by Linear and Stripe - clean, modern, and trustworthy with smooth anima
 - Mental health modules
 
 ---
-*This document serves as the source of truth for Proxima-1's product vision and implementation guidelines.*
+*This document serves as the source of truth for Seimeo-1's product vision and implementation guidelines.*
 
 # Important Implementation Instructions
 

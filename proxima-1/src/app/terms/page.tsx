@@ -12,7 +12,7 @@ export default function TermsOfService() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/widelogoforbanner.png" alt="Proxima" width={200} height={50} priority className="h-12 w-auto" />
+              <Image src="/widelogoforbanner.png" alt="Seimeo" width={200} height={50} priority className="h-12 w-auto" />
             </Link>
           </div>
         </div>
@@ -44,7 +44,7 @@ export default function TermsOfService() {
               <section className="mb-10">
                 <h2 className="text-2xl font-semibold text-white mb-4">1. Acceptance of Terms</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  By accessing or using Proxima's website, mobile app, or services ("Services"), you agree to be bound by these Terms of Service ("Terms"). 
+                  By accessing or using Seimeo's website, mobile app, or services ("Services"), you agree to be bound by these Terms of Service ("Terms"). 
                   If you don't agree, do not use our Services.
                 </p>
               </section>
@@ -61,7 +61,7 @@ export default function TermsOfService() {
               <section className="mb-10">
                 <h2 className="text-2xl font-semibold text-white mb-4">3. Our Services</h2>
                 <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-                  <li>Proxima provides AI-powered tools to help you understand your symptoms and health information.</li>
+                  <li>Seimeo provides AI-powered tools to help you understand your symptoms and health information.</li>
                   <li>We do not provide medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.</li>
                   <li>The Services are for informational purposes only.</li>
                 </ul>
@@ -93,7 +93,7 @@ export default function TermsOfService() {
               <section className="mb-10">
                 <h2 className="text-2xl font-semibold text-white mb-4">6. Intellectual Property</h2>
                 <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-                  <li>All content, trademarks, and software in the Services belong to Proxima or our licensors.</li>
+                  <li>All content, trademarks, and software in the Services belong to Seimeo or our licensors.</li>
                   <li>You may not copy, distribute, or create derivative works without permission.</li>
                 </ul>
               </section>
@@ -104,7 +104,7 @@ export default function TermsOfService() {
                 <div className="bg-red-900/20 border border-red-800/50 rounded-lg p-4">
                   <p className="text-red-400 font-semibold mb-2">Important Medical Notice:</p>
                   <p className="text-gray-300 leading-relaxed mb-3">
-                    Proxima is not a medical provider. Information provided is not a substitute for professional medical advice, diagnosis, or treatment.
+                    Seimeo is not a medical provider. Information provided is not a substitute for professional medical advice, diagnosis, or treatment.
                   </p>
                   <p className="text-gray-300 leading-relaxed font-semibold">
                     If you have a medical emergency, call your local emergency number immediately.
@@ -117,7 +117,7 @@ export default function TermsOfService() {
                 <h2 className="text-2xl font-semibold text-white mb-4">8. Limitation of Liability</h2>
                 <p className="text-gray-300 leading-relaxed mb-3">To the fullest extent permitted by law:</p>
                 <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-                  <li>Proxima is not liable for indirect, incidental, or consequential damages.</li>
+                  <li>Seimeo is not liable for indirect, incidental, or consequential damages.</li>
                   <li>Our total liability to you will not exceed $100.</li>
                 </ul>
               </section>
@@ -145,7 +145,7 @@ export default function TermsOfService() {
                   If you have questions about these Terms, contact us at:
                 </p>
                 <p className="text-gray-300">
-                  Email: <a href="mailto:legal@proxima.health" className="text-purple-400 hover:text-purple-300 underline">legal@proxima.health</a>
+                  Email: <a href="mailto:legal@seimeo.health" className="text-purple-400 hover:text-purple-300 underline">legal@seimeo.health</a>
                 </p>
               </section>
             </div>

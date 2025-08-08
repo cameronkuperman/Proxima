@@ -1063,7 +1063,7 @@ function DashboardContent() {
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-8">
                 <div>
-                  <h1 className="text-4xl font-bold text-white mb-2">Welcome to Proxima</h1>
+                  <h1 className="text-4xl font-bold text-white mb-2">Welcome to Seimeo</h1>
                   <p className="text-gray-400">
                     {user?.user_metadata?.name || user?.user_metadata?.full_name ? 
                       `Good to see you, ${user.user_metadata?.name || user.user_metadata?.full_name}` : 

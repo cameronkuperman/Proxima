@@ -12,7 +12,7 @@ export default function PrivacyPolicy() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/widelogoforbanner.png" alt="Proxima" width={200} height={50} priority className="h-12 w-auto" />
+              <Image src="/widelogoforbanner.png" alt="Seimeo" width={200} height={50} priority className="h-12 w-auto" />
             </Link>
           </div>
         </div>
@@ -33,17 +33,17 @@ export default function PrivacyPolicy() {
               <section className="mb-10">
                 <h2 className="text-2xl font-semibold text-white mb-4">1. Introduction</h2>
                 <p className="text-gray-300 leading-relaxed mb-4">
-                  Welcome to Proxima. We are committed to protecting your personal information and your right to privacy.
+                  Welcome to Seimeo. We are committed to protecting your personal information and your right to privacy.
                 </p>
                 <p className="text-gray-300 leading-relaxed mb-4">
-                  This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered health intelligence platform. By using Proxima, you agree to this Privacy Policy.
+                  This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered health intelligence platform. By using Seimeo, you agree to this Privacy Policy.
                 </p>
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 my-6">
                   <p className="text-yellow-400 font-semibold mb-2">Important:</p>
                   <ul className="list-disc list-inside text-gray-300 space-y-2">
-                    <li>Proxima is not HIPAA or SOC 2 compliant.</li>
+                    <li>Seimeo is not HIPAA or SOC 2 compliant.</li>
                     <li>We follow industry-standard security practices to protect your information.</li>
-                    <li>Proxima is not a medical device and does not replace professional medical advice.</li>
+                    <li>Seimeo is not a medical device and does not replace professional medical advice.</li>
                   </ul>
                 </div>
               </section>
@@ -265,7 +265,7 @@ export default function PrivacyPolicy() {
               <section className="mb-10">
                 <h2 className="text-2xl font-semibold text-white mb-4">12. Children's Privacy</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  Proxima is not intended for individuals under 18. We do not knowingly collect their information.
+                  Seimeo is not intended for individuals under 18. We do not knowingly collect their information.
                 </p>
               </section>
 
@@ -274,7 +274,7 @@ export default function PrivacyPolicy() {
                 <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
                   <p className="text-red-400 font-semibold mb-2">Important:</p>
                   <p className="text-gray-300">
-                    Proxima provides informational insights only and is not a substitute for professional medical advice, diagnosis, or treatment. In emergencies, call local emergency services.
+                    Seimeo provides informational insights only and is not a substitute for professional medical advice, diagnosis, or treatment. In emergencies, call local emergency services.
                   </p>
                 </div>
               </section>
@@ -289,8 +289,8 @@ export default function PrivacyPolicy() {
               <section className="mb-10">
                 <h2 className="text-2xl font-semibold text-white mb-4">15. Contact</h2>
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-                  <p className="text-white font-semibold mb-2">Proxima Privacy Team</p>
-                  <p className="text-gray-300">Email: <a href="mailto:privacy@proxima.com" className="text-blue-400 hover:text-blue-300">privacy@proxima.com</a></p>
+                  <p className="text-white font-semibold mb-2">Seimeo Privacy Team</p>
+                  <p className="text-gray-300">Email: <a href="mailto:privacy@seimeo.com" className="text-blue-400 hover:text-blue-300">privacy@seimeo.com</a></p>
                 </div>
               </section>
             </div>

@@ -20,7 +20,7 @@ export default function NavBar() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/widelogoforbanner.png" alt="Proxima" width={200} height={50} priority className="h-12.5 w-auto" />
+              <Image src="/widelogoforbanner.png" alt="Seimeo" width={200} height={50} priority className="h-12.5 w-auto" />
             </Link>
           </div>
           

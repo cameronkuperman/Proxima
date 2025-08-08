@@ -23,7 +23,7 @@ export default function PricingPage() {
 
     if (tierName === 'enterprise') {
       // Redirect to contact form or calendly
-      window.open('mailto:enterprise@proximahealth.ai?subject=Enterprise Plan Inquiry', '_blank');
+      window.open('mailto:enterprise@seimeohealth.ai?subject=Enterprise Plan Inquiry', '_blank');
       return;
     }
 
@@ -205,7 +205,7 @@ export default function PricingPage() {
                 {/* Subscribe Button */}
                 <button
                   onClick={() => handleSubscribe(tier.name)}
-                  disabled={isLoading !== null || isCurrentPlan(tier.name)}
+                  disabled={Boolean(isLoading) || Boolean(isCurrentPlan(tier.name))}
                   className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
                     isCurrentPlan(tier.name)
                       ? 'bg-gray-800 text-gray-400 cursor-not-allowed'
@@ -222,32 +222,32 @@ export default function PricingPage() {
                   <FeatureItem 
                     label="Oracle Chats" 
                     value={formatFeatureLimit(tier.features.oracleChats)}
-                    included={tier.features.oracleChats > 0}
+                    included={Number(tier.features.oracleChats) > 0}
                   />
                   <FeatureItem 
                     label="Quick Scans" 
                     value={formatFeatureLimit(tier.features.quickScans)}
-                    included={tier.features.quickScans > 0}
+                    included={Number(tier.features.quickScans) > 0}
                   />
                   <FeatureItem 
                     label="Deep Dives" 
                     value={formatFeatureLimit(tier.features.deepDives)}
-                    included={tier.features.deepDives > 0}
+                    included={Number(tier.features.deepDives) > 0}
                   />
                   <FeatureItem 
                     label="Photo Analyses" 
                     value={formatFeatureLimit(tier.features.photoAnalyses)}
-                    included={tier.features.photoAnalyses > 0}
+                    included={Number(tier.features.photoAnalyses) > 0}
                   />
                   <FeatureItem 
                     label="Reports" 
                     value={formatFeatureLimit(tier.features.reportGenerations)}
-                    included={tier.features.reportGenerations > 0}
+                    included={Number(tier.features.reportGenerations) > 0}
                   />
                   <FeatureItem 
                     label="Storage" 
                     value={`${formatFeatureLimit(tier.features.storageGB)} GB`}
-                    included={tier.features.storageGB > 0}
+                    included={Number(tier.features.storageGB) > 0}
                   />
                   <FeatureItem 
                     label="Priority Support" 

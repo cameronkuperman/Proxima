@@ -16,7 +16,7 @@ export default function About() {
       >
         {/* Header */}
         <p className="text-sm font-medium text-purple-400 mb-4 uppercase tracking-wider">
-          About Proxima-1
+          About Seimeo-1
         </p>
         <h2 className="text-4xl sm:text-5xl font-semibold text-white mb-8">
           Healthcare reimagined
@@ -98,7 +98,7 @@ export default function About() {
         >
           <p className="text-gray-400 mb-6">
             Founded by a team passionate about making healthcare accessible to everyone, 
-            Proxima-1 combines cutting-edge AI technology with medical expertise to deliver 
+            Seimeo-1 combines cutting-edge AI technology with medical expertise to deliver 
             insights that matter.
           </p>
           <div className="flex items-center justify-center gap-4">

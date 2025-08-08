@@ -179,7 +179,9 @@ export function useSubscription(): UseSubscriptionReturn {
     const limit = tier.features[featureKey];
     
     if (typeof limit === 'boolean') return limit;
-    if (isUnlimited(limit)) return true;
+    if (typeof limit === 'number' || limit === 'unlimited') {
+      if (isUnlimited(limit)) return true;
+    }
     
     return typeof limit === 'number' && limit > 0;
   }, [tier]);

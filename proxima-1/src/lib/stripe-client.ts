@@ -10,22 +10,7 @@ export const getStripe = () => {
       return null;
     }
     
-    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, {
-      // Optional: Add appearance customization
-      appearance: {
-        theme: 'night',
-        variables: {
-          colorPrimary: '#8b5cf6',
-          colorBackground: '#0a0a0a',
-          colorSurface: '#1a1a1a',
-          colorText: '#ffffff',
-          colorDanger: '#ef4444',
-          fontFamily: 'Inter, system-ui, sans-serif',
-          spacingUnit: '4px',
-          borderRadius: '8px',
-        },
-      },
-    });
+    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   }
   
   return stripePromise;

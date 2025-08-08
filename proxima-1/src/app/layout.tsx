@@ -20,7 +20,7 @@ const headingFont = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Proxima — Coming Soon",
+  title: "Seimeo — Coming Soon",
   description: "Interactive 3D symptom analysis — launching 2025.",
 };
 

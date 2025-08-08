@@ -105,14 +105,14 @@ export async function POST(req: NextRequest) {
             stripe_customer_id: session.customer as string,
             tier_id: tier.id,
             status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             billing_cycle: billingCycle,
-            trial_start: subscription.trial_start 
-              ? new Date(subscription.trial_start * 1000).toISOString() 
+            trial_start: (subscription as any).trial_start 
+              ? new Date((subscription as any).trial_start * 1000).toISOString() 
               : null,
-            trial_end: subscription.trial_end 
-              ? new Date(subscription.trial_end * 1000).toISOString() 
+            trial_end: (subscription as any).trial_end 
+              ? new Date((subscription as any).trial_end * 1000).toISOString() 
               : null,
           });
 
@@ -177,8 +177,8 @@ export async function POST(req: NextRequest) {
           .update({
             tier_id: tier?.id,
             status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             cancel_at_period_end: subscription.cancel_at_period_end,
             canceled_at: subscription.canceled_at 
               ? new Date(subscription.canceled_at * 1000).toISOString() 
@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
           .insert({
             user_id: invoice.metadata?.user_id,
             stripe_invoice_id: invoice.id,
-            stripe_payment_intent_id: invoice.payment_intent as string,
+            stripe_payment_intent_id: (invoice as any).payment_intent as string,
             amount: (invoice.amount_paid || 0) / 100,
             currency: invoice.currency,
             status: 'succeeded',
@@ -262,11 +262,11 @@ export async function POST(req: NextRequest) {
           });
 
         // Reset usage tracking for new billing period (if subscription renewal)
-        if (invoice.billing_reason === 'subscription_cycle' && invoice.subscription) {
+        if (invoice.billing_reason === 'subscription_cycle' && (invoice as any).subscription) {
           const { data: subscription } = await supabase
             .from('subscriptions')
             .select('*')
-            .eq('stripe_subscription_id', invoice.subscription as string)
+            .eq('stripe_subscription_id', (invoice as any).subscription as string)
             .single();
 
           if (subscription) {
@@ -312,14 +312,14 @@ export async function POST(req: NextRequest) {
           });
 
         // Update subscription status
-        if (invoice.subscription) {
+        if ((invoice as any).subscription) {
           await supabase
             .from('subscriptions')
             .update({ 
               status: 'past_due',
               updated_at: new Date().toISOString(),
             })
-            .eq('stripe_subscription_id', invoice.subscription);
+            .eq('stripe_subscription_id', (invoice as any).subscription);
         }
 
         // Send payment failed email

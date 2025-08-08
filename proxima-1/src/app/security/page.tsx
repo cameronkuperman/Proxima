@@ -13,7 +13,7 @@ export default function Security() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/widelogoforbanner.png" alt="Proxima" width={200} height={50} priority className="h-12 w-auto" />
+              <Image src="/widelogoforbanner.png" alt="Seimeo" width={200} height={50} priority className="h-12 w-auto" />
             </Link>
           </div>
         </div>
@@ -32,7 +32,7 @@ export default function Security() {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl mb-4">
                 <Shield className="w-8 h-8 text-white" />
               </div>
-              <h1 className="text-4xl font-bold text-white mb-4">Security at Proxima</h1>
+              <h1 className="text-4xl font-bold text-white mb-4">Security at Seimeo</h1>
               <p className="text-xl text-gray-400 max-w-2xl mx-auto">
                 Your health data deserves the highest level of protection. Here's how we safeguard your information.
               </p>
@@ -277,8 +277,8 @@ export default function Security() {
                   </p>
                   <div className="bg-black/50 rounded-lg p-4 mb-4">
                     <p className="text-white font-medium mb-2">Please email us at:</p>
-                    <a href="mailto:security@proxima.health" className="text-purple-400 hover:text-purple-300 font-mono">
-                      security@proxima.health
+                    <a href="mailto:security@seimeo.health" className="text-purple-400 hover:text-purple-300 font-mono">
+                      security@seimeo.health
                     </a>
                   </div>
                   <p className="text-gray-400 text-sm">
@@ -318,8 +318,8 @@ export default function Security() {
                     <Mail className="w-6 h-6 text-purple-400 mt-1" />
                     <div>
                       <p className="text-white font-medium mb-2">For security concerns or questions:</p>
-                      <a href="mailto:security@proxima.health" className="text-purple-400 hover:text-purple-300 text-lg font-mono">
-                        security@proxima.health
+                      <a href="mailto:security@seimeo.health" className="text-purple-400 hover:text-purple-300 text-lg font-mono">
+                        security@seimeo.health
                       </a>
                       <p className="text-gray-400 text-sm mt-2">
                         We take all security reports seriously and will respond within 48 hours.
