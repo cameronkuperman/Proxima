@@ -294,6 +294,16 @@ export default function PrivacyPolicy() {
                 </div>
               </section>
             </div>
+
+            {/* Back to top button */}
+            <div className="mt-12 pt-8 border-t border-gray-800">
+              <Link href="/" className="inline-flex items-center text-purple-400 hover:text-purple-300 transition-colors">
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Home
+              </Link>
+            </div>
           </motion.div>
         </div>
       </main>
