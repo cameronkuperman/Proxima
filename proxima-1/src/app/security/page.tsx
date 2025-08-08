@@ -45,11 +45,12 @@ export default function Security() {
                 Transparency First
               </h2>
               <p className="text-gray-300 leading-relaxed mb-3">
-                We believe in being completely transparent about our security practices. While we are not yet HIPAA or SOC 2 compliant, 
-                we implement industry-standard security measures and are continuously improving our security posture.
+                We believe in being completely transparent about our security practices. As a consumer health app, 
+                HIPAA regulations don't apply to our services. However, we implement industry-standard security measures 
+                to protect your data and continuously improve our security posture.
               </p>
               <p className="text-gray-400 text-sm">
-                We're actively working towards compliance certifications as we grow.
+                Your privacy and data security are our top priorities, even without regulatory requirements.
               </p>
             </div>
 
@@ -287,23 +288,25 @@ export default function Security() {
                 </div>
               </section>
 
-              {/* Compliance & Certifications */}
+              {/* Compliance & Standards */}
               <section>
-                <h2 className="text-2xl font-semibold text-white mb-4">Compliance & Future Goals</h2>
+                <h2 className="text-2xl font-semibold text-white mb-4">Compliance & Standards</h2>
                 <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-800/50 rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-yellow-400 mb-3">Current Status</h3>
+                  <h3 className="text-lg font-medium text-yellow-400 mb-3">Regulatory Context</h3>
                   <p className="text-gray-300 mb-4">
-                    While we follow industry best practices, we are not yet certified for:
+                    As a direct-to-consumer health information platform, certain healthcare regulations like HIPAA do not apply 
+                    to our services. HIPAA only governs "covered entities" such as healthcare providers and insurance companies.
                   </p>
-                  <ul className="text-gray-400 space-y-1 mb-4">
-                    <li>• HIPAA Compliance</li>
-                    <li>• SOC 2 Type II</li>
-                    <li>• ISO 27001</li>
-                  </ul>
-                  <p className="text-gray-300">
-                    <span className="text-white font-medium">Our Commitment:</span> We are actively working towards these 
-                    certifications and will update this page as we achieve compliance milestones.
+                  <p className="text-gray-300 mb-4">
+                    <span className="text-white font-medium">What this means for you:</span> While we're not bound by HIPAA, 
+                    we voluntarily implement many of the same security practices to ensure your data remains private and secure.
                   </p>
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <p className="text-gray-400 text-sm">
+                      <span className="text-white font-medium">Note:</span> We follow industry-standard security best practices 
+                      and continuously update our security measures to protect your information, regardless of regulatory requirements.
+                    </p>
+                  </div>
                 </div>
               </section>
 
