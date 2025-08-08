@@ -161,12 +161,19 @@ export const aiPredictionCache = {
   },
 
   // Get cached data with expiry check
-  get<T>(key: string): T | null {
+  get<T>(key: string, allowStale = false): T | null {
     try {
       const cached = localStorage.getItem(key);
       if (!cached) return null;
 
       const { data, expiresAt } = JSON.parse(cached);
+      
+      // If allowing stale data, return it regardless of expiry
+      if (allowStale) {
+        return data;
+      }
+      
+      // Otherwise check expiry
       if (new Date(expiresAt) < new Date()) {
         localStorage.removeItem(key);
         return null;

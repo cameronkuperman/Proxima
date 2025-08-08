@@ -74,7 +74,7 @@ class SupabasePhotoAnalysisService {
       // First, fetch sessions without counts for speed
       let query = supabase
         .from('photo_sessions')
-        .select('*')
+        .select('id, condition_name, description, created_at, updated_at, last_photo_at, is_sensitive')
         .eq('user_id', userId)
         .is('deleted_at', null)
         .order('updated_at', { ascending: false })

@@ -125,13 +125,13 @@ export default function PhotoSessionHistoryV2({
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => onSelectSession(session)}
-            onMouseEnter={() => prefetchSession(session.id)} // Prefetch on hover for instant loading
+            onMouseEnter={() => session.id && prefetchSession(session.id)} // Prefetch on hover for instant loading
             className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all group relative"
           >
             {/* Status Indicators */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
               {/* Reminder indicator */}
-              {remindersBySession[session.id]?.enabled && (
+              {session.id && remindersBySession[session.id]?.enabled && (
                 <div className="p-1.5 rounded-full bg-orange-500/20" title="Reminder active">
                   <Bell className="w-3.5 h-3.5 text-orange-400" />
                 </div>

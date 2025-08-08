@@ -211,9 +211,9 @@ export default function PhotoSessionHistoryOptimized({
             key={session.id}
             session={session}
             index={index}
-            reminder={remindersBySession[session.id]}
+            reminder={session.id ? remindersBySession[session.id] : undefined}
             onSelect={() => onSelectSession(session)}
-            onHover={() => prefetchSession(session.id)}
+            onHover={() => session.id && prefetchSession(session.id)}
             showContinueButton={showContinueButton}
           />
         ))}

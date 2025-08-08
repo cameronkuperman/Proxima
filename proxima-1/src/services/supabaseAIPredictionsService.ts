@@ -261,35 +261,84 @@ class SupabaseAIPredictionsService {
 
   /**
    * Get immediate predictions only (for 7-day predictions page)
+   * Checks cache validity based on expires_at timestamp
    */
   async getImmediatePredictionsOnly(userId: string): Promise<{
-    status: 'success' | 'not_found' | 'needs_data';
+    status: 'success' | 'not_found' | 'needs_data' | 'expired' | 'needs_backend';
     predictions?: any[];
     data_quality_score?: number;
+    expires_at?: string;
+    generated_at?: string;
+    cache_valid?: boolean;
   }> {
     try {
-      // First get the current predictions
-      const result = await this.getCurrentPredictions(userId);
-      
-      if (result.status === 'success' && result.predictions) {
-        // Filter for immediate predictions
-        const immediatePredictions = result.predictions.predictions?.filter(
+      // Query with expiry check
+      const { data, error } = await supabase
+        .from('weekly_ai_predictions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_current', true)
+        .eq('generation_status', 'completed')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No predictions found - need backend to generate
+          console.log('No immediate predictions in cache for user:', userId)
+          return { status: 'needs_backend' };
+        }
+        throw error
+      }
+
+      if (data) {
+        // Check if cache is expired
+        const now = new Date()
+        const expiresAt = data.expires_at ? new Date(data.expires_at) : null
+        const cacheValid = !expiresAt || expiresAt > now
+        
+        // Filter for immediate predictions from the predictions array
+        const immediatePredictions = data.predictions?.filter(
           (p: any) => p.type === 'immediate'
-        ) || [];
+        ) || []
+        
+        // If cache is expired, suggest backend refresh but still return data
+        if (!cacheValid) {
+          console.log('Cache expired for immediate predictions, expires_at:', data.expires_at)
+          return {
+            status: 'expired',
+            predictions: immediatePredictions,
+            data_quality_score: data.data_quality_score || 0,
+            expires_at: data.expires_at,
+            generated_at: data.generated_at,
+            cache_valid: false
+          }
+        }
+        
+        // Check data quality
+        if (data.data_quality_score < 30) {
+          return {
+            status: 'needs_data',
+            predictions: immediatePredictions,
+            data_quality_score: data.data_quality_score,
+            expires_at: data.expires_at,
+            generated_at: data.generated_at,
+            cache_valid: true
+          }
+        }
         
         return {
           status: immediatePredictions.length > 0 ? 'success' : 'needs_data',
           predictions: immediatePredictions,
-          data_quality_score: result.predictions.data_quality_score
-        };
+          data_quality_score: data.data_quality_score || 0,
+          expires_at: data.expires_at,
+          generated_at: data.generated_at,
+          cache_valid: true
+        }
       }
       
-      // Check if we need more data
-      if (result.status === 'needs_initial') {
-        return { status: 'needs_data' };
-      }
-      
-      return { status: 'not_found' };
+      return { status: 'needs_backend' };
     } catch (error) {
       console.error('Error fetching immediate predictions:', error);
       return { status: 'not_found' };

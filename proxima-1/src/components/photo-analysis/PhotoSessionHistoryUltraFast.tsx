@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Camera, FileText, ChevronRight, Bell, AlertCircle, Loader } from 'lucide-react';
 import { PhotoSession } from '@/types/photo-analysis';
-import { usePhotoSessionsFast } from '@/hooks/queries/usePhotoQueriesFast';
-import { PhotoSessionWithCounts } from '@/services/supabasePhotoAnalysisServiceFast';
+import { useAuth } from '@/contexts/AuthContext';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
 
 interface Props {
   onSelectSession: (session: PhotoSession) => void;
@@ -19,7 +20,7 @@ const SessionCardFast = React.memo(({
   onSelect,
   showContinueButton
 }: {
-  session: PhotoSessionWithCounts;
+  session: PhotoSession;
   index: number;
   onSelect: () => void;
   showContinueButton: boolean;
@@ -98,9 +99,76 @@ export default function PhotoSessionHistoryUltraFast({
   onSelectSession, 
   showContinueButton = false
 }: Props) {
-  // Fetch sessions directly
-  const { data: sessions, isLoading, error, isLoadingCounts } = usePhotoSessionsFast(!showContinueButton, 20);
+  const { user } = useAuth();
+  const [sessions, setSessions] = useState<PhotoSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
+  // Fetch sessions from backend with caching
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Check localStorage cache first
+      const cacheKey = `photo_sessions_${user.id}_${showContinueButton ? 'continue' : 'all'}`;
+      const cached = localStorage.getItem(cacheKey);
+      
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          // Use cache if less than 30 minutes old
+          if (Date.now() - timestamp < 30 * 60 * 1000) {
+            setSessions(data);
+            setIsLoading(false);
+            // Still fetch fresh data in background
+            fetchFreshData(false);
+            return;
+          }
+        } catch (e) {
+          console.error('Cache parse error:', e);
+        }
+      }
+      
+      // Fetch fresh data
+      await fetchFreshData(true);
+    };
+    
+    const fetchFreshData = async (showLoading: boolean) => {
+      if (showLoading) setIsLoading(true);
+      
+      try {
+        const response = await fetch(`${API_URL}/api/photo-analysis/sessions?user_id=${user!.id}&limit=20`);
+        if (!response.ok) throw new Error('Failed to fetch sessions');
+        
+        const data = await response.json();
+        const sessions = data.sessions || [];
+        
+        // Filter sensitive if needed for continue tracking
+        const filtered = showContinueButton 
+          ? sessions.filter((s: PhotoSession) => !s.is_sensitive)
+          : sessions;
+        
+        setSessions(filtered);
+        
+        // Cache the results
+        const cacheKey = `photo_sessions_${user!.id}_${showContinueButton ? 'continue' : 'all'}`;
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data: filtered,
+          timestamp: Date.now()
+        }));
+      } catch (err) {
+        console.error('Error fetching sessions:', err);
+        setError('Failed to load photo sessions');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchSessions();
+  }, [user?.id, showContinueButton]);
 
   // Show skeleton loader while loading
   if (isLoading) {
@@ -163,23 +231,22 @@ export default function PhotoSessionHistoryUltraFast({
         <h2 className="text-2xl font-semibold text-white">Your Photo Sessions</h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-400">{sessions.length} sessions</span>
-          {isLoadingCounts && (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
-              <Loader className="w-3 h-3 animate-spin" />
-              Loading details...
-            </span>
-          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sessions.map((session, index) => (
           <SessionCardFast
-            key={session.id}
+            key={session.id || session.session_id}
             session={session}
             index={index}
             onSelect={() => onSelectSession(session)}
             showContinueButton={showContinueButton}
+            onMouseEnter={() => {
+              // Prefetch session data on hover for instant navigation
+              const id = session.id || session.session_id;
+              if (id) prefetchSession(id);
+            }}
           />
         ))}
       </div>
