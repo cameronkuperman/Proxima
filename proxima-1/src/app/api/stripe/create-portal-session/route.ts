@@ -1,11 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Check authentication
-    const supabase = await createClient();
+    // Create Supabase client with proper cookie handling for API routes
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            // API routes can't set cookies in the response like this
+          },
+          remove(name: string, options: any) {
+            // API routes can't remove cookies like this
+          },
+        },
+      }
+    );
+    
+    // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
@@ -15,12 +35,12 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // 2. Get user's Stripe customer ID
+    // Get user's Stripe customer ID
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
     
     if (!profile?.stripe_customer_id) {
       return NextResponse.json(
@@ -29,13 +49,13 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // 3. Create portal session
+    // Create portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile`,
     });
     
-    // 4. Return portal URL
+    // Return portal URL
     return NextResponse.json({ url: session.url });
     
   } catch (error: any) {
@@ -46,3 +66,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// Export config to ensure proper cookie handling
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

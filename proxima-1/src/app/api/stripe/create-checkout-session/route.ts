@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getPriceId } from '@/lib/stripe';
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   console.log('=== CHECKOUT SESSION START ===');
@@ -25,8 +26,28 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // 3. Check authentication
-    const supabase = await createClient();
+    // 3. Create Supabase client with proper cookie handling for API routes
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            // API routes can't set cookies in the response like this
+            // We'll handle this differently if needed
+          },
+          remove(name: string, options: any) {
+            // API routes can't remove cookies like this
+          },
+        },
+      }
+    );
+    
+    // Get the user from the session
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     console.log('Auth check:', { 
@@ -49,7 +70,7 @@ export async function POST(req: NextRequest) {
       .select('id, status')
       .eq('user_id', user.id)
       .in('status', ['active', 'trialing'])
-      .single();
+      .maybeSingle(); // Use maybeSingle to avoid errors
     
     if (existingSub) {
       return NextResponse.json(
@@ -66,12 +87,14 @@ export async function POST(req: NextRequest) {
       .from('user_profiles')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle here too
     
     if (profile?.stripe_customer_id) {
       stripeCustomerId = profile.stripe_customer_id;
+      console.log('Using existing Stripe customer:', stripeCustomerId);
     } else {
       // Create new Stripe customer
+      console.log('Creating new Stripe customer for:', user.email);
       const customer = await stripe.customers.create({
         email: user.email!,
         metadata: {
@@ -91,6 +114,8 @@ export async function POST(req: NextRequest) {
         }, {
           onConflict: 'user_id',
         });
+      
+      console.log('Created new Stripe customer:', stripeCustomerId);
     }
     
     // 6. Get the price ID
@@ -103,6 +128,8 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+    
+    console.log('Creating checkout session with price:', priceId);
     
     // 7. Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -123,8 +150,13 @@ export async function POST(req: NextRequest) {
       },
     });
     
+    console.log('Checkout session created:', session.id);
+    
     // 8. Return the checkout URL
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ 
+      url: session.url,
+      sessionId: session.id,
+    });
     
   } catch (error: any) {
     console.error('Checkout session error:', error);
@@ -134,3 +166,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// Export config to ensure proper cookie handling
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
