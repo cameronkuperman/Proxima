@@ -91,10 +91,16 @@ export async function POST(req: NextRequest) {
         console.log('Session metadata:', session.metadata);
         console.log('Client reference ID:', session.client_reference_id);
         
-        // TEMPORARY: If it's the test user, try to get from customer email
-        if (userId === 'test-user-123' || !userId) {
-          // Try to find user by email
+        // If we don't have a valid user ID, skip this webhook
+        if (!userId || userId === 'test-user-123') {
+          console.error('Invalid user ID in webhook:', userId);
+          console.log('Session metadata:', session.metadata);
+          console.log('Client reference ID:', session.client_reference_id);
+          
+          // Try to find user by email as fallback
           const customerEmail = session.customer_email || session.customer_details?.email;
+          console.log('Attempting email lookup for:', customerEmail);
+          
           if (customerEmail) {
             const { data: userByEmail } = await supabase
               .from('user_profiles')
@@ -106,13 +112,22 @@ export async function POST(req: NextRequest) {
               userId = userByEmail.user_id;
               console.log('Found user by email:', userId);
             } else {
-              // As last resort, create a placeholder - you can fix this manually later
-              console.error('Could not find user, using placeholder');
-              // For now, skip this webhook
-              console.log('Skipping webhook for unknown user');
+              console.error('Could not find user by email:', customerEmail);
+              // Skip this webhook - it's likely an old test checkout
+              console.log('Skipping webhook - no valid user found');
               return NextResponse.json({ received: true, skipped: true });
             }
+          } else {
+            console.error('No email available for lookup');
+            return NextResponse.json({ received: true, skipped: true });
           }
+        }
+        
+        // Validate the user ID is a proper UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(userId)) {
+          console.error('Invalid UUID format for user ID:', userId);
+          return NextResponse.json({ received: true, skipped: true });
         }
 
         // Ensure user profile exists
@@ -206,7 +221,7 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('payment_history')
           .insert({
-            user_id: session.metadata?.user_id || session.client_reference_id,
+            user_id: userId, // Use the validated userId we got earlier
             stripe_payment_intent_id: session.payment_intent as string,
             amount: (session.amount_total || 0) / 100, // Convert from cents
             currency: session.currency || 'usd',
@@ -224,7 +239,7 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('promotional_periods')
           .update({ is_active: false })
-          .eq('user_id', session.metadata?.user_id || session.client_reference_id)
+          .eq('user_id', userId) // Use the validated userId
           .eq('is_active', true);
 
         // Send welcome email
