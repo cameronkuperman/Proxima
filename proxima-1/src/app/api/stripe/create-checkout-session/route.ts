@@ -3,9 +3,12 @@ import { stripe, getPriceId } from '@/lib/stripe';
 import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
+  console.log('=== CHECKOUT SESSION START ===');
+  
   try {
     // 1. Parse request body
     const { tier, billingCycle = 'monthly' } = await req.json();
+    console.log('Request:', { tier, billingCycle });
     
     // 2. Validate input
     if (!tier || !['basic', 'pro', 'pro_plus'].includes(tier)) {
@@ -26,7 +29,14 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
+    console.log('Auth check:', { 
+      hasUser: !!user, 
+      userId: user?.id,
+      error: authError?.message 
+    });
+    
     if (authError || !user) {
+      console.error('Authentication failed:', authError);
       return NextResponse.json(
         { error: 'Please sign in to subscribe' },
         { status: 401 }
