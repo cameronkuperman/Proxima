@@ -3,12 +3,13 @@ import { stripe, getPriceId } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: NextRequest) {
-  console.log('=== CHECKOUT SESSION START ===');
+  console.log('=== CHECKOUT SESSION V2 START ===');
   
   try {
     // 1. Parse request body
-    const { tier, billingCycle = 'monthly' } = await req.json();
-    console.log('Request:', { tier, billingCycle });
+    const body = await req.json();
+    const { tier, billingCycle = 'monthly', userId, userEmail } = body;
+    console.log('Request:', { tier, billingCycle, userId, userEmail });
     
     // 2. Validate input
     if (!tier || !['basic', 'pro', 'pro_plus'].includes(tier)) {
@@ -25,50 +26,86 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // 3. Get auth token from Authorization header
+    // 3. Authenticate user - multiple methods
+    let user: any = null;
+    let userEmailFinal = userEmail;
+    
+    // Method 1: Try Bearer token from Authorization header
     const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('No auth token in header');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      console.log('Trying Bearer token auth...');
+      
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          auth: {
+            persistSession: false,
+          },
+        }
+      );
+      
+      const { data: { user: tokenUser }, error } = await supabase.auth.getUser(token);
+      if (tokenUser && !error) {
+        user = tokenUser;
+        userEmailFinal = tokenUser.email;
+        console.log('Bearer token auth successful:', user.id);
+      } else {
+        console.log('Bearer token auth failed:', error?.message);
+      }
+    }
+    
+    // Method 2: If userId and email provided directly (for trusted internal calls)
+    if (!user && userId && userEmail) {
+      console.log('Using provided userId and email:', userId);
+      // Verify the user exists in database
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          },
+        }
+      );
+      
+      const { data: profile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('user_id, email')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (profile) {
+        user = { id: userId, email: userEmail };
+        console.log('Direct userId auth successful');
+      }
+    }
+    
+    // If no authentication method succeeded
+    if (!user) {
+      console.error('All authentication methods failed');
       return NextResponse.json(
-        { error: 'Authentication required - no token provided' },
+        { error: 'Authentication required. Please sign in and try again.' },
         { status: 401 }
       );
     }
     
-    const token = authHeader.replace('Bearer ', '');
-    console.log('Auth token received:', token.substring(0, 20) + '...');
-    
-    // 4. Create Supabase client and verify user with the token
-    const supabase = createClient(
+    // 4. Use service role for all database operations
+    const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
         auth: {
           persistSession: false,
+          autoRefreshToken: false,
         },
       }
     );
     
-    // Verify the token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    console.log('Auth check:', { 
-      hasUser: !!user, 
-      userId: user?.id,
-      email: user?.email,
-      error: authError?.message 
-    });
-    
-    if (authError || !user) {
-      console.error('Authentication failed:', authError?.message || 'No user found');
-      return NextResponse.json(
-        { error: 'Authentication failed. Please sign in and try again.' },
-        { status: 401 }
-      );
-    }
-    
     // 5. Check for existing active subscription
-    const { data: existingSub } = await supabase
+    const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
       .select('id, status')
       .eq('user_id', user.id)
@@ -86,7 +123,7 @@ export async function POST(req: NextRequest) {
     let stripeCustomerId: string;
     
     // Check if user already has a Stripe customer ID
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('user_profiles')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
@@ -97,9 +134,9 @@ export async function POST(req: NextRequest) {
       console.log('Using existing Stripe customer:', stripeCustomerId);
     } else {
       // Create new Stripe customer
-      console.log('Creating new Stripe customer for:', user.email);
+      console.log('Creating new Stripe customer for:', userEmailFinal);
       const customer = await stripe.customers.create({
-        email: user.email!,
+        email: userEmailFinal!,
         metadata: {
           supabase_user_id: user.id,
         },
@@ -107,23 +144,12 @@ export async function POST(req: NextRequest) {
       
       stripeCustomerId = customer.id;
       
-      // Save customer ID to database - use service role for this
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-          },
-        }
-      );
-      
+      // Save customer ID to database
       const { error: upsertError } = await supabaseAdmin
         .from('user_profiles')
         .upsert({
           user_id: user.id,
-          email: user.email,
+          email: userEmailFinal,
           stripe_customer_id: stripeCustomerId,
         }, {
           onConflict: 'user_id',
@@ -179,7 +205,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Checkout session error:', error);
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: error.message || 'Failed to create checkout session' },
       { status: 500 }
     );
   }

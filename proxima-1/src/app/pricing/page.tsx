@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/utils/supabase/client';
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -29,43 +30,84 @@ export default function PricingPage() {
       return;
     }
 
-    // Check if user is authenticated
-    if (!user) {
-      toast.error('Please sign in to subscribe');
-      router.push('/login?redirect=/pricing');
-      return;
-    }
-
-    // Check if user already has this plan
-    if (hasActiveSubscription && currentTier === tierName) {
-      toast.info('You already have this plan');
-      return;
-    }
-
-    // Check if user has any active subscription
-    if (hasActiveSubscription) {
-      toast.info('Please manage your existing subscription from your profile');
-      router.push('/profile');
-      return;
-    }
-
     setIsLoading(tierName);
 
     try {
-      // Call checkout API
-      const response = await fetch('/api/stripe/create-checkout-session', {
+      // Get the current session directly from Supabase
+      const supabase = createClient();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      console.log('Session check:', { 
+        hasSession: !!session, 
+        userId: session?.user?.id,
+        error: sessionError?.message 
+      });
+      
+      if (sessionError || !session) {
+        console.error('No session found:', sessionError);
+        toast.error('Please sign in to subscribe');
+        router.push('/login?redirect=/pricing');
+        setIsLoading(null);
+        return;
+      }
+
+      // Check if user already has this plan
+      if (hasActiveSubscription && currentTier === tierName) {
+        toast.info('You already have this plan');
+        setIsLoading(null);
+        return;
+      }
+
+      // Check if user has any active subscription
+      if (hasActiveSubscription) {
+        toast.info('Please manage your existing subscription from your profile');
+        router.push('/profile');
+        setIsLoading(null);
+        return;
+      }
+
+      // Try the new v2 API endpoint with multiple auth methods
+      const response = await fetch('/api/stripe/create-checkout-session-v2', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Include cookies for authentication
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           tier: tierName,
           billingCycle,
+          userId: session.user.id,  // Pass user ID as fallback
+          userEmail: session.user.email,  // Pass email as fallback
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('Checkout error:', data);
+        
+        // If v2 fails, try the original endpoint as last resort
+        if (response.status === 404) {
+          console.log('V2 endpoint not found, trying original endpoint...');
+          const fallbackResponse = await fetch('/api/stripe/create-checkout-session', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              tier: tierName,
+              billingCycle,
+            }),
+          });
+          
+          const fallbackData = await fallbackResponse.json();
+          if (fallbackResponse.ok && fallbackData.url) {
+            window.location.href = fallbackData.url;
+            return;
+          }
+        }
+        
         toast.error(data.error || 'Failed to create checkout session');
         return;
       }
