@@ -89,14 +89,14 @@ export function useSubscription(): UseSubscriptionReturn {
         .from('user_profiles')
         .select('*')
         .eq('user_id', currentUser.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single
 
       if (!mountedRef.current) return; // Check if still mounted
 
-      if (profileError && profileError.code !== 'PGRST116') {
+      if (profileError) {
         console.error('Error fetching profile:', profileError);
       } else {
-        setProfile(profileData);
+        setProfile(profileData); // Will be null if no profile exists
       }
 
       // Check for promotional period
@@ -106,7 +106,7 @@ export function useSubscription(): UseSubscriptionReturn {
         .eq('user_id', currentUser.id)
         .eq('is_active', true)
         .gte('end_date', new Date().toISOString())
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single
 
       if (!mountedRef.current) return; // Check if still mounted
 
@@ -133,7 +133,7 @@ export function useSubscription(): UseSubscriptionReturn {
         `)
         .eq('user_id', currentUser.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single
 
       if (!mountedRef.current) return; // Check if still mounted
 
@@ -260,9 +260,9 @@ export function useSubscription(): UseSubscriptionReturn {
       .eq('user_id', user.id)
       .eq('feature_key', feature)
       .gte('period_start', periodStart)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error fetching usage:', error);
       return 0;
     }
