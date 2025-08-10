@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { 
@@ -48,8 +48,13 @@ export function useSubscription(): UseSubscriptionReturn {
   const [error, setError] = useState<string | null>(null);
   
   const supabase = createClient();
+  const fetchingRef = useRef(false); // Prevent multiple simultaneous fetches
 
   const fetchSubscriptionData = useCallback(async () => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
     try {
       setLoading(true);
       setError(null);
@@ -139,8 +144,9 @@ export function useSubscription(): UseSubscriptionReturn {
       setError(err.message);
     } finally {
       setLoading(false);
+      fetchingRef.current = false; // Reset fetch lock
     }
-  }, [supabase]);
+  }, []);  // Remove supabase from dependencies to prevent re-creation
 
   useEffect(() => {
     fetchSubscriptionData();
@@ -163,7 +169,7 @@ export function useSubscription(): UseSubscriptionReturn {
     return () => {
       authSubscription.unsubscribe();
     };
-  }, [fetchSubscriptionData, supabase.auth]);
+  }, []); // Remove dependencies to prevent infinite loop
 
   // Helper properties
   const isPromotional = !!promotionalPeriod && promotionalPeriod.isActive;
