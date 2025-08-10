@@ -1,22 +1,35 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SubscriptionCard from '@/components/profile/SubscriptionCard';
 import AccountSettings from '@/components/profile/AccountSettings';
 import HealthDataSummary from '@/components/profile/HealthDataSummary';
 import HealthProfileModal from '@/components/HealthProfileModal';
+import { toast } from 'sonner';
 
 export const dynamic = 'force-dynamic';
 import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Show welcome message if coming from checkout success
+  useEffect(() => {
+    if (searchParams.get('welcome') === 'true') {
+      toast.success('Welcome to Seimeo! Your subscription is now active.', {
+        duration: 5000,
+      });
+      // Remove the query parameter to avoid showing the message again on refresh
+      router.replace('/profile');
+    }
+  }, [searchParams, router]);
   
   // Function to trigger refresh of health data
   const handleProfileSave = () => {

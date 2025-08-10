@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?success=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
       metadata: {
         user_id: user.id,
