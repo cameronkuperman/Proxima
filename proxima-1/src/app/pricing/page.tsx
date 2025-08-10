@@ -15,11 +15,12 @@ export default function PricingPage() {
   const { user, subscription, tier: currentTier, isPromotional } = useSubscription();
 
   const handleSubscribe = async (tierName: string) => {
-    if (!user) {
-      toast.error('Please sign in to subscribe');
-      router.push('/login');
-      return;
-    }
+    // TEMPORARY: Skip auth check for testing
+    // if (!user) {
+    //   toast.error('Please sign in to subscribe');
+    //   router.push('/login');
+    //   return;
+    // }
 
     if (tierName === 'enterprise') {
       // Redirect to contact form or calendly
@@ -35,7 +36,8 @@ export default function PricingPage() {
     setIsLoading(tierName);
 
     try {
-      const response = await fetch('/api/stripe/create-checkout-session', {
+      // TEMPORARY: Use test endpoint that bypasses auth
+      const response = await fetch('/api/stripe/test-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -57,7 +59,11 @@ export default function PricingPage() {
       }
 
       if (data.url) {
+        console.log('Redirecting to Stripe checkout:', data.url);
         window.location.href = data.url;
+      } else {
+        console.error('No URL returned from API');
+        toast.error('Failed to get checkout URL');
       }
     } catch (error: any) {
       console.error('Subscription error:', error);
