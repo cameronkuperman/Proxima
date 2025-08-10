@@ -70,8 +70,58 @@ export async function POST(req: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
+        console.log('Processing checkout.session.completed:', {
+          sessionId: session.id,
+          mode: session.mode,
+          customerId: session.customer,
+          clientReferenceId: session.client_reference_id,
+          metadata: session.metadata,
+        });
+        
         // Skip if not a subscription checkout
-        if (session.mode !== 'subscription') break;
+        if (session.mode !== 'subscription') {
+          console.log('Skipping non-subscription checkout');
+          break;
+        }
+
+        // Get the user ID from metadata or client_reference_id
+        const userId = session.metadata?.user_id || session.client_reference_id;
+        
+        if (!userId || userId === 'test-user-123') {
+          console.error('Invalid or test user ID:', userId);
+          throw new Error('Valid user ID required for subscription');
+        }
+
+        // Ensure user profile exists
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          console.log('Creating user profile for:', userId);
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .insert({
+              user_id: userId,
+              email: session.customer_email || session.customer_details?.email,
+              stripe_customer_id: session.customer as string,
+            });
+          
+          if (profileError) {
+            console.error('Error creating user profile:', profileError);
+            throw profileError;
+          }
+        } else {
+          // Update existing profile with Stripe customer ID if needed
+          if (!existingProfile.stripe_customer_id) {
+            await supabase
+              .from('user_profiles')
+              .update({ stripe_customer_id: session.customer as string })
+              .eq('user_id', userId);
+          }
+        }
 
         // Get subscription details
         const subscription = await stripe.subscriptions.retrieve(
@@ -81,26 +131,31 @@ export async function POST(req: NextRequest) {
         // Get the price/product details
         const price = subscription.items.data[0].price;
         
+        console.log('Looking for tier with price ID:', price.id);
+        
         // Get the tier from database based on price ID
-        const { data: tier } = await supabase
+        const { data: tier, error: tierError } = await supabase
           .from('pricing_tiers')
           .select('*')
           .or(`stripe_price_id_monthly.eq.${price.id},stripe_price_id_yearly.eq.${price.id}`)
-          .single();
+          .maybeSingle();
 
-        if (!tier) {
-          console.error('No tier found for price:', price.id);
-          throw new Error('Tier not found');
+        if (tierError || !tier) {
+          console.error('No tier found for price:', price.id, tierError);
+          throw new Error(`Tier not found for price: ${price.id}`);
         }
+
+        console.log('Found tier:', tier.name);
 
         // Determine billing cycle
         const billingCycle = price.recurring?.interval === 'year' ? 'yearly' : 'monthly';
 
         // Create subscription record
+        console.log('Creating subscription for user:', userId);
         const { error: subError } = await supabase
           .from('subscriptions')
           .insert({
-            user_id: session.metadata?.user_id || session.client_reference_id,
+            user_id: userId,
             stripe_subscription_id: subscription.id,
             stripe_customer_id: session.customer as string,
             tier_id: tier.id,
@@ -120,6 +175,8 @@ export async function POST(req: NextRequest) {
           console.error('Error creating subscription:', subError);
           throw subError;
         }
+        
+        console.log('Subscription created successfully');
 
         // Create payment history record
         await supabase
