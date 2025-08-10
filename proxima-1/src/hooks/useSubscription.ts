@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { 
@@ -13,6 +13,15 @@ import {
   isUnlimited,
   calculateUsagePercentage
 } from '@/types/subscription';
+
+// Create client ONCE outside the component
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+const getSupabaseClient = () => {
+  if (!supabaseClient) {
+    supabaseClient = createClient();
+  }
+  return supabaseClient;
+};
 
 interface UseSubscriptionReturn {
   user: User | null;
@@ -47,12 +56,14 @@ export function useSubscription(): UseSubscriptionReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const supabase = createClient();
+  // Use stable client instance
+  const supabase = useMemo(() => getSupabaseClient(), []);
   const fetchingRef = useRef(false); // Prevent multiple simultaneous fetches
+  const mountedRef = useRef(true); // Track if component is mounted
 
   const fetchSubscriptionData = useCallback(async () => {
     // Prevent multiple simultaneous fetches
-    if (fetchingRef.current) return;
+    if (fetchingRef.current || !mountedRef.current) return;
     fetchingRef.current = true;
 
     try {
@@ -62,9 +73,12 @@ export function useSubscription(): UseSubscriptionReturn {
       // Get current user
       const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
       
+      if (!mountedRef.current) return; // Check if still mounted
+      
       if (userError || !currentUser) {
         setUser(null);
         setLoading(false);
+        fetchingRef.current = false;
         return;
       }
 
@@ -76,6 +90,8 @@ export function useSubscription(): UseSubscriptionReturn {
         .select('*')
         .eq('user_id', currentUser.id)
         .single();
+
+      if (!mountedRef.current) return; // Check if still mounted
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile:', profileError);
@@ -91,6 +107,8 @@ export function useSubscription(): UseSubscriptionReturn {
         .eq('is_active', true)
         .gte('end_date', new Date().toISOString())
         .single();
+
+      if (!mountedRef.current) return; // Check if still mounted
 
       if (promoData) {
         setPromotionalPeriod({
@@ -117,6 +135,8 @@ export function useSubscription(): UseSubscriptionReturn {
         .eq('status', 'active')
         .single();
 
+      if (!mountedRef.current) return; // Check if still mounted
+
       if (subData) {
         setSubscription(subData);
         
@@ -140,36 +160,56 @@ export function useSubscription(): UseSubscriptionReturn {
       }
 
     } catch (err: any) {
-      console.error('Error in useSubscription:', err);
-      setError(err.message);
+      if (mountedRef.current) {
+        console.error('Error in useSubscription:', err);
+        setError(err.message);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
       fetchingRef.current = false; // Reset fetch lock
     }
-  }, []);  // Remove supabase from dependencies to prevent re-creation
+  }, [supabase]); // Keep supabase as dependency since it's memoized now
 
   useEffect(() => {
+    mountedRef.current = true;
+    let authSubscription: any = null;
+
+    // Initial fetch
     fetchSubscriptionData();
 
     // Subscribe to auth changes
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          fetchSubscriptionData();
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
-          setSubscription(null);
-          setTier(null);
-          setPromotionalPeriod(null);
+    const setupAuthListener = async () => {
+      const { data } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (!mountedRef.current) return;
+          
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            fetchSubscriptionData();
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setProfile(null);
+            setSubscription(null);
+            setTier(null);
+            setPromotionalPeriod(null);
+          }
         }
-      }
-    );
-
-    return () => {
-      authSubscription.unsubscribe();
+      );
+      authSubscription = data.subscription;
     };
-  }, []); // Remove dependencies to prevent infinite loop
+
+    setupAuthListener();
+
+    // Cleanup
+    return () => {
+      mountedRef.current = false;
+      fetchingRef.current = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
+  }, [fetchSubscriptionData]); // Include fetchSubscriptionData as dependency
 
   // Helper properties
   const isPromotional = !!promotionalPeriod && promotionalPeriod.isActive;
