@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { stripe, getStripePriceId } from '@/lib/stripe';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,9 +16,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // For testing only - use a test email
-    const testEmail = 'test@seimeo.com';
-    const testUserId = 'test-user-123';
+    // Get the ACTUAL logged in user (if any) or create a test user
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    let testEmail = 'test@seimeo.com';
+    let testUserId = 'test-user-123';
+    
+    // If user is logged in, use their real data
+    if (user && !userError) {
+      testEmail = user.email || 'test@seimeo.com';
+      testUserId = user.id;
+    }
 
     // Get price ID
     const priceId = getStripePriceId(tier, billingCycle);
@@ -29,25 +39,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create test customer
+    // Create or get Stripe customer - check if user already has one
     let customer;
     try {
-      // Try to retrieve existing customer first
-      const customers = await stripe.customers.list({
-        email: testEmail,
-        limit: 1,
-      });
+      // If real user, check for existing customer ID in database
+      if (user && !userError) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('stripe_customer_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (profile?.stripe_customer_id) {
+          // Use existing customer
+          customer = await stripe.customers.retrieve(profile.stripe_customer_id);
+        }
+      }
       
-      if (customers.data.length > 0) {
-        customer = customers.data[0];
-      } else {
-        customer = await stripe.customers.create({
+      // If no existing customer, create new one
+      if (!customer) {
+        const customers = await stripe.customers.list({
           email: testEmail,
-          metadata: {
-            test_user: 'true',
-            user_id: testUserId,
-          },
+          limit: 1,
         });
+        
+        if (customers.data.length > 0) {
+          customer = customers.data[0];
+        } else {
+          customer = await stripe.customers.create({
+            email: testEmail,
+            metadata: {
+              supabase_user_id: testUserId, // Use consistent key name
+              user_id: testUserId,
+            },
+          });
+          
+          // Save customer ID to profile if real user
+          if (user && !userError) {
+            await supabase
+              .from('user_profiles')
+              .upsert({
+                user_id: user.id,
+                email: testEmail,
+                stripe_customer_id: customer.id,
+              }, {
+                onConflict: 'user_id'
+              });
+          }
+        }
       }
     } catch (err: any) {
       return NextResponse.json(
@@ -56,10 +95,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create checkout session
+    // Create checkout session with proper user ID
     try {
       const session = await stripe.checkout.sessions.create({
         customer: customer.id,
+        client_reference_id: testUserId, // This is critical for webhook to know the user!
         line_items: [
           {
             price: priceId,
@@ -70,7 +110,7 @@ export async function POST(req: NextRequest) {
         success_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
         metadata: {
-          user_id: testUserId,
+          user_id: testUserId, // Real user ID now!
           tier: tier,
           billing_cycle: billingCycle,
         },

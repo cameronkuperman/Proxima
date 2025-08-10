@@ -15,12 +15,12 @@ export default function PricingPage() {
   const { user, subscription, tier: currentTier, isPromotional } = useSubscription();
 
   const handleSubscribe = async (tierName: string) => {
-    // TEMPORARY: Skip auth check for testing
-    // if (!user) {
-    //   toast.error('Please sign in to subscribe');
-    //   router.push('/login');
-    //   return;
-    // }
+    // Check auth only if not logged in
+    if (!user) {
+      toast.error('Please sign in to subscribe');
+      router.push('/login');
+      return;
+    }
 
     if (tierName === 'enterprise') {
       // Redirect to contact form or calendly
@@ -36,8 +36,8 @@ export default function PricingPage() {
     setIsLoading(tierName);
 
     try {
-      // TEMPORARY: Use test endpoint that bypasses auth
-      const response = await fetch('/api/stripe/test-checkout', {
+      // Always use the proper endpoint now that auth is working
+      const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
