@@ -3,16 +3,18 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, Sparkles, Zap, Crown, Building2 } from 'lucide-react';
+import { TIERS, formatFeatureLimit } from '@/types/pricing';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useSubscription } from '@/hooks/useSubscription';
-import { TIERS, formatFeatureLimit } from '@/types/subscription';
-import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const router = useRouter();
-  const { user, subscription, tier: currentTier, isPromotional } = useSubscription();
+  const { user } = useAuth();
+  const { subscription, hasActiveSubscription, tier: currentTier } = useSubscription();
 
   const handleSubscribe = async (tierName: string) => {
     // Special handling for enterprise tier
@@ -21,20 +23,39 @@ export default function PricingPage() {
       return;
     }
 
-    // Free tier doesn't need checkout
+    // Free tier message
     if (tierName === 'free') {
-      toast.info('You already have access to the free tier');
+      toast.info('Free tier is available to all users by default');
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!user) {
+      toast.error('Please sign in to subscribe');
+      router.push('/login?redirect=/pricing');
+      return;
+    }
+
+    // Check if user already has this plan
+    if (hasActiveSubscription && currentTier === tierName) {
+      toast.info('You already have this plan');
+      return;
+    }
+
+    // Check if user has any active subscription
+    if (hasActiveSubscription) {
+      toast.info('Please manage your existing subscription from your profile');
+      router.push('/profile');
       return;
     }
 
     setIsLoading(tierName);
 
     try {
-      // Call the unified checkout endpoint
+      // Call checkout API
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Important: Include cookies for auth
         body: JSON.stringify({
           tier: tierName,
           billingCycle,
@@ -43,34 +64,20 @@ export default function PricingPage() {
 
       const data = await response.json();
 
-      // Handle different response statuses
-      if (response.status === 401) {
-        // User not authenticated
-        toast.error('Please sign in to subscribe');
-        router.push(`/login?redirect=${encodeURIComponent('/pricing')}`);
-        return;
-      }
-
       if (!response.ok) {
-        if (data.hasSubscription) {
-          toast.info('You already have an active subscription');
-          router.push('/profile');
-        } else {
-          toast.error(data.error || 'Failed to create checkout session');
-        }
+        toast.error(data.error || 'Failed to create checkout session');
         return;
       }
 
       // Redirect to Stripe checkout
       if (data.url) {
-        console.log('Redirecting to Stripe checkout...');
         window.location.href = data.url;
       } else {
         toast.error('Failed to get checkout URL');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Subscription error:', error);
-      toast.error('Failed to connect to payment system');
+      toast.error('Failed to start checkout process');
     } finally {
       setIsLoading(null);
     }
@@ -88,14 +95,14 @@ export default function PricingPage() {
 
   const getButtonText = (tierName: string) => {
     if (isLoading === tierName) return 'Processing...';
-    if (subscription && currentTier?.name === tierName) return 'Current Plan';
+    if (hasActiveSubscription && currentTier === tierName) return 'Current Plan';
     if (tierName === 'free') return 'Get Started';
     if (tierName === 'enterprise') return 'Contact Sales';
     return 'Subscribe';
   };
 
   const isCurrentPlan = (tierName: string) => {
-    return subscription && currentTier?.name === tierName;
+    return hasActiveSubscription && currentTier === tierName;
   };
 
   return (
@@ -116,15 +123,15 @@ export default function PricingPage() {
               Unlock the full potential of AI-powered health intelligence
             </p>
 
-            {/* Promotional Banner */}
-            {isPromotional && (
+            {/* Show current subscription status */}
+            {hasActiveSubscription && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white font-medium mb-8"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                You're currently on a 7-day Pro promotional period
+                You're currently on the {currentTier.replace('_', ' ').toUpperCase()} plan
               </motion.div>
             )}
 
@@ -214,14 +221,14 @@ export default function PricingPage() {
                 {/* Subscribe Button */}
                 <button
                   onClick={() => handleSubscribe(tier.name)}
-                  disabled={Boolean(isLoading) || Boolean(isCurrentPlan(tier.name))}
+                  disabled={isLoading !== null || isCurrentPlan(tier.name)}
                   className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
                     isCurrentPlan(tier.name)
                       ? 'bg-gray-800 text-gray-400 cursor-not-allowed'
                       : tier.isRecommended
                       ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
                       : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  } ${isLoading !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {getButtonText(tier.name)}
                 </button>
@@ -318,7 +325,7 @@ export default function PricingPage() {
           />
           <FAQItem
             question="Is there a free trial?"
-            answer="All new users get 7 days of Pro tier access to explore all features. No credit card required to start."
+            answer="All new users get access to the free tier immediately. You can upgrade to a paid plan anytime."
           />
           <FAQItem
             question="Can I cancel anytime?"

@@ -90,7 +90,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Subscription Section */}
+          {/* Subscription Card */}
           <SubscriptionCard />
 
           {/* Health Data Summary */}

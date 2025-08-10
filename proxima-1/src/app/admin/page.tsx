@@ -18,7 +18,14 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/stripe';
+
+// Format currency helper
+function formatCurrency(amount: number, currency: string = 'usd'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amount / 100); // Stripe amounts are in cents
+}
 
 interface DashboardStats {
   totalUsers: number;
