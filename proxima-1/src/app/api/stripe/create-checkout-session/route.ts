@@ -15,11 +15,23 @@ export async function POST(req: NextRequest) {
     // Get the current user
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    console.log('Auth check:', { user: user?.id, authError });
 
     if (authError || !user) {
+      console.error('Auth failed:', authError);
       return NextResponse.json(
         { error: 'You must be logged in to subscribe' },
         { status: 401 }
+      );
+    }
+
+    // Check if Stripe is configured
+    if (!stripe) {
+      console.error('Stripe not configured - check STRIPE_SECRET_KEY');
+      return NextResponse.json(
+        { error: 'Payment system not configured' },
+        { status: 500 }
       );
     }
 
@@ -42,13 +54,21 @@ export async function POST(req: NextRequest) {
 
     // Create Stripe customer if doesn't exist
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: {
-          supabase_user_id: user.id,
-        },
-      });
-      customerId = customer.id;
+      try {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            supabase_user_id: user.id,
+          },
+        });
+        customerId = customer.id;
+      } catch (stripeError: any) {
+        console.error('Stripe customer creation error:', stripeError);
+        return NextResponse.json(
+          { error: 'Failed to create payment customer', details: stripeError.message },
+          { status: 500 }
+        );
+      }
 
       // Update or create user profile with Stripe customer ID
       if (profile) {
