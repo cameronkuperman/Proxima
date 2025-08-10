@@ -117,23 +117,23 @@ export async function POST(req: NextRequest) {
         
         console.log('Price ID:', priceId);
         console.log('Environment price IDs:', {
-          basic_monthly: process.env.STRIPE_BASIC_MONTHLY_PRICE_ID,
-          basic_yearly: process.env.STRIPE_BASIC_YEARLY_PRICE_ID,
-          pro_monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
-          pro_yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID,
-          pro_plus_monthly: process.env.STRIPE_PRO_PLUS_MONTHLY_PRICE_ID,
-          pro_plus_yearly: process.env.STRIPE_PRO_PLUS_YEARLY_PRICE_ID,
+          basic_monthly: process.env.STRIPE_PRICE_BASIC_MONTHLY,
+          basic_yearly: process.env.STRIPE_PRICE_BASIC_YEARLY,
+          pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+          pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY,
+          pro_plus_monthly: process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY,
+          pro_plus_yearly: process.env.STRIPE_PRICE_PRO_PLUS_YEARLY,
         });
         
-        // Map price ID to tier
-        if (priceId === process.env.STRIPE_BASIC_MONTHLY_PRICE_ID || 
-            priceId === process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
+        // Map price ID to tier - using correct env var names
+        if (priceId === process.env.STRIPE_PRICE_BASIC_MONTHLY || 
+            priceId === process.env.STRIPE_PRICE_BASIC_YEARLY) {
           tier = 'basic';
-        } else if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 
-                   priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID) {
+        } else if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || 
+                   priceId === process.env.STRIPE_PRICE_PRO_YEARLY) {
           tier = 'pro';
-        } else if (priceId === process.env.STRIPE_PRO_PLUS_MONTHLY_PRICE_ID || 
-                   priceId === process.env.STRIPE_PRO_PLUS_YEARLY_PRICE_ID) {
+        } else if (priceId === process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 
+                   priceId === process.env.STRIPE_PRICE_PRO_PLUS_YEARLY) {
           tier = 'pro_plus';
         }
         
