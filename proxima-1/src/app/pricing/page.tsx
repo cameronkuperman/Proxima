@@ -15,19 +15,13 @@ export default function PricingPage() {
   const { user, subscription, tier: currentTier, isPromotional } = useSubscription();
 
   const handleSubscribe = async (tierName: string) => {
-    // Check auth only if not logged in
-    if (!user) {
-      toast.error('Please sign in to subscribe');
-      router.push('/login');
-      return;
-    }
-
+    // Special handling for enterprise tier
     if (tierName === 'enterprise') {
-      // Redirect to contact form or calendly
       window.open('mailto:help@seimeo.com?subject=Enterprise Plan Inquiry', '_blank');
       return;
     }
 
+    // Free tier doesn't need checkout
     if (tierName === 'free') {
       toast.info('You already have access to the free tier');
       return;
@@ -36,10 +30,11 @@ export default function PricingPage() {
     setIsLoading(tierName);
 
     try {
-      // Use test endpoint which handles auth better
-      const response = await fetch('/api/stripe/test-checkout', {
+      // Call the unified checkout endpoint
+      const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Important: Include cookies for auth
         body: JSON.stringify({
           tier: tierName,
           billingCycle,
@@ -48,26 +43,34 @@ export default function PricingPage() {
 
       const data = await response.json();
 
+      // Handle different response statuses
+      if (response.status === 401) {
+        // User not authenticated
+        toast.error('Please sign in to subscribe');
+        router.push(`/login?redirect=${encodeURIComponent('/pricing')}`);
+        return;
+      }
+
       if (!response.ok) {
         if (data.hasSubscription) {
-          toast.error('You already have an active subscription');
+          toast.info('You already have an active subscription');
           router.push('/profile');
         } else {
-          throw new Error(data.error || 'Failed to create checkout session');
+          toast.error(data.error || 'Failed to create checkout session');
         }
         return;
       }
 
+      // Redirect to Stripe checkout
       if (data.url) {
-        console.log('Redirecting to Stripe checkout:', data.url);
+        console.log('Redirecting to Stripe checkout...');
         window.location.href = data.url;
       } else {
-        console.error('No URL returned from API');
         toast.error('Failed to get checkout URL');
       }
     } catch (error: any) {
       console.error('Subscription error:', error);
-      toast.error(error.message || 'Failed to start subscription process');
+      toast.error('Failed to connect to payment system');
     } finally {
       setIsLoading(null);
     }

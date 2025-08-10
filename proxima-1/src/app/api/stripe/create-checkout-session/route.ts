@@ -1,191 +1,189 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type Stripe from 'stripe';
-import { stripe, STRIPE_CONFIG, getStripePriceId } from '@/lib/stripe';
+import Stripe from 'stripe';
 import { createClient } from '@/utils/supabase/server';
 
+// Initialize Stripe with the secret key
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-07-30.basil',
+  typescript: true,
+});
+
 export async function POST(req: NextRequest) {
+  console.log('=== CREATE CHECKOUT SESSION START ===');
+  
   try {
-    const { 
-      priceId, 
-      tier,
-      billingCycle = 'monthly',
-      mode = 'subscription' 
-    } = await req.json();
-
-    // Get the current user
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // 1. Parse request body
+    const { tier, billingCycle = 'monthly' } = await req.json();
+    console.log('Request:', { tier, billingCycle });
     
-    console.log('Auth check:', { user: user?.id, authError });
-
-    if (authError || !user) {
-      console.error('Auth failed:', authError);
+    // 2. Validate input
+    if (!tier || !['basic', 'pro', 'pro_plus'].includes(tier)) {
       return NextResponse.json(
-        { error: 'You must be logged in to subscribe' },
-        { status: 401 }
-      );
-    }
-
-    // Check if Stripe is configured
-    if (!stripe) {
-      console.error('Stripe not configured - check STRIPE_SECRET_KEY');
-      return NextResponse.json(
-        { error: 'Payment system not configured' },
-        { status: 500 }
-      );
-    }
-
-    // Get or create user profile with Stripe customer
-    let { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Profile fetch error:', profileError);
-      return NextResponse.json(
-        { error: 'Failed to fetch user profile' },
-        { status: 500 }
-      );
-    }
-
-    let customerId = profile?.stripe_customer_id;
-
-    // Create Stripe customer if doesn't exist
-    if (!customerId) {
-      try {
-        const customer = await stripe.customers.create({
-          email: user.email,
-          metadata: {
-            supabase_user_id: user.id,
-          },
-        });
-        customerId = customer.id;
-      } catch (stripeError: any) {
-        console.error('Stripe customer creation error:', stripeError);
-        return NextResponse.json(
-          { error: 'Failed to create payment customer', details: stripeError.message },
-          { status: 500 }
-        );
-      }
-
-      // Update or create user profile with Stripe customer ID
-      if (profile) {
-        await supabase
-          .from('user_profiles')
-          .update({ stripe_customer_id: customerId })
-          .eq('user_id', user.id);
-      } else {
-        await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: user.id,
-            email: user.email,
-            stripe_customer_id: customerId,
-          });
-      }
-    }
-
-    // Determine the price ID
-    let finalPriceId = priceId;
-    if (!finalPriceId && tier && billingCycle) {
-      finalPriceId = getStripePriceId(tier, billingCycle);
-    }
-
-    if (!finalPriceId) {
-      return NextResponse.json(
-        { error: 'Invalid price selection' },
+        { error: 'Invalid tier selected' },
         { status: 400 }
       );
     }
-
-    // Check if user already has an active subscription
-    const { data: existingSubscription } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
-
-    if (existingSubscription) {
-      // User already has a subscription, redirect to portal for management
-      return NextResponse.json({
-        error: 'You already have an active subscription. Please use the customer portal to manage your subscription.',
-        hasSubscription: true,
-      }, { status: 400 });
+    
+    if (!['monthly', 'yearly'].includes(billingCycle)) {
+      return NextResponse.json(
+        { error: 'Invalid billing cycle' },
+        { status: 400 }
+      );
     }
-
-    // Create Stripe checkout session with multi-currency and PayPal support
+    
+    // 3. Check authentication using Supabase server client
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    console.log('Auth check:', { 
+      authenticated: !!user, 
+      userId: user?.id,
+      error: authError?.message 
+    });
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Please sign in to subscribe' },
+        { status: 401 }
+      );
+    }
+    
+    // 4. Check for existing active subscription
+    const { data: existingSub } = await supabase
+      .from('subscriptions')
+      .select('id, status, tier')
+      .eq('user_id', user.id)
+      .in('status', ['active', 'trialing'])
+      .single();
+    
+    if (existingSub) {
+      console.log('User has existing subscription:', existingSub);
+      return NextResponse.json(
+        { 
+          error: 'You already have an active subscription. Please manage it from your profile.',
+          hasSubscription: true 
+        },
+        { status: 400 }
+      );
+    }
+    
+    // 5. Get or create Stripe customer
+    let customerId: string;
+    
+    // Check if user already has a Stripe customer ID
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (profile?.stripe_customer_id) {
+      customerId = profile.stripe_customer_id;
+      console.log('Using existing Stripe customer:', customerId);
+    } else {
+      // Create new Stripe customer
+      console.log('Creating new Stripe customer for user:', user.email);
+      
+      const customer = await stripe.customers.create({
+        email: user.email!,
+        metadata: {
+          supabase_user_id: user.id,
+        },
+      });
+      
+      customerId = customer.id;
+      
+      // Save customer ID to database
+      await supabase
+        .from('user_profiles')
+        .upsert({
+          user_id: user.id,
+          email: user.email,
+          stripe_customer_id: customerId,
+        }, {
+          onConflict: 'user_id',
+        });
+      
+      console.log('Created new Stripe customer:', customerId);
+    }
+    
+    // 6. Get the correct price ID from environment variables
+    const priceKey = `STRIPE_PRICE_${tier.toUpperCase()}_${billingCycle.toUpperCase()}`;
+    const priceId = process.env[priceKey];
+    
+    console.log('Price lookup:', { priceKey, priceId: priceId ? 'found' : 'not found' });
+    
+    if (!priceId) {
+      console.error('Price ID not found for:', priceKey);
+      return NextResponse.json(
+        { error: 'Price configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
+    
+    // 7. Create Stripe checkout session
+    console.log('Creating checkout session...');
+    
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      client_reference_id: user.id,
+      client_reference_id: user.id, // CRITICAL: Links payment to user
       line_items: [
         {
-          price: finalPriceId,
+          price: priceId,
           quantity: 1,
         },
       ],
-      mode,
-      payment_method_types: STRIPE_CONFIG.paymentMethods as Stripe.Checkout.SessionCreateParams.PaymentMethodType[],
+      mode: 'subscription',
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
+      allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      shipping_address_collection: {
-        allowed_countries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'JP'],
-      },
       customer_update: {
         address: 'auto',
         name: 'auto',
       },
-      // Enable automatic tax calculation
-      automatic_tax: {
-        enabled: STRIPE_CONFIG.automaticTax,
-      },
-      // Allow promotion codes
-      allow_promotion_codes: true,
-      // Success and cancel URLs
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
-      // Metadata for webhook processing
       metadata: {
         user_id: user.id,
-        tier: tier || 'unknown',
+        user_email: user.email!,
+        tier: tier,
         billing_cycle: billingCycle,
       },
-      // Set up trial if needed (but you said no trials)
-      // subscription_data: {
-      //   trial_period_days: 7,
-      // },
-      // Consent collection for marketing
-      consent_collection: {
-        terms_of_service: 'required',
-        promotions: 'auto',
-      },
-      // Custom fields for additional info
-      custom_fields: [
-        {
-          key: 'company_name',
-          label: {
-            type: 'custom',
-            custom: 'Company Name (Optional)',
-          },
-          type: 'text',
-          optional: true,
-        },
-      ],
-      // Session expiration
-      expires_at: Math.floor(Date.now() / 1000) + (30 * 60), // 30 minutes
     });
-
+    
+    console.log('Checkout session created:', {
+      id: session.id,
+      url: session.url ? 'present' : 'missing',
+    });
+    
+    // 8. Return the checkout URL
     return NextResponse.json({ 
       url: session.url,
       sessionId: session.id,
     });
+    
   } catch (error: any) {
-    console.error('Checkout session error:', error);
+    console.error('Checkout session error:', {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      stack: error.stack,
+    });
+    
+    // Return user-friendly error messages
+    let userMessage = 'Failed to create checkout session';
+    
+    if (error.type === 'StripeAuthenticationError') {
+      userMessage = 'Payment system configuration error';
+    } else if (error.type === 'StripeInvalidRequestError') {
+      userMessage = 'Invalid request. Please try again.';
+    } else if (error.code === 'resource_missing') {
+      userMessage = 'Product not found. Please contact support.';
+    }
+    
     return NextResponse.json(
       { 
-        error: 'Failed to create checkout session',
-        details: error.message,
+        error: userMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
     );
