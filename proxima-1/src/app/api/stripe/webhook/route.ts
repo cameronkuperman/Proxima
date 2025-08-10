@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
         
         // Validate the user ID is a proper UUID
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(userId)) {
+        if (!userId || !uuidRegex.test(userId)) {
           console.error('Invalid UUID format for user ID:', userId);
           return NextResponse.json({ received: true, skipped: true });
         }
