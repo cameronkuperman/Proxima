@@ -78,13 +78,27 @@ export async function POST(req: NextRequest) {
       if (existing) {
         console.log('Subscription already exists, updating...');
         
+        // Safe date handling for update
+        const currentPeriodEnd = (stripeSub as any).current_period_end;
+        let periodEndDate: string | null = null;
+        
+        if (currentPeriodEnd) {
+          try {
+            const timestamp = typeof currentPeriodEnd === 'number' ? currentPeriodEnd * 1000 : currentPeriodEnd;
+            periodEndDate = new Date(timestamp).toISOString();
+          } catch (e) {
+            console.error('Error converting period end date:', e);
+            periodEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          }
+        }
+        
         // Update existing subscription
         const { error: updateError } = await supabaseAdmin
           .from('subscriptions')
           .update({
             status: stripeSub.status,
-            current_period_end: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
-            cancel_at_period_end: (stripeSub as any).cancel_at_period_end,
+            current_period_end: periodEndDate,
+            cancel_at_period_end: (stripeSub as any).cancel_at_period_end || false,
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_subscription_id', stripeSub.id);
@@ -125,7 +139,22 @@ export async function POST(req: NextRequest) {
         
         console.log('Determined tier:', tier);
         
-        // Create new subscription
+        // Create new subscription with safe date handling
+        const currentPeriodEnd = (stripeSub as any).current_period_end;
+        let periodEndDate: string | null = null;
+        
+        if (currentPeriodEnd) {
+          try {
+            // Stripe timestamps are in seconds, convert to milliseconds
+            const timestamp = typeof currentPeriodEnd === 'number' ? currentPeriodEnd * 1000 : currentPeriodEnd;
+            periodEndDate = new Date(timestamp).toISOString();
+          } catch (e) {
+            console.error('Error converting period end date:', e);
+            // Use a default date 30 days from now
+            periodEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          }
+        }
+        
         const { error: insertError } = await supabaseAdmin
           .from('subscriptions')
           .insert({
@@ -134,8 +163,8 @@ export async function POST(req: NextRequest) {
             stripe_customer_id: stripeSub.customer as string,
             status: stripeSub.status,
             tier: tier,
-            current_period_end: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
-            cancel_at_period_end: (stripeSub as any).cancel_at_period_end,
+            current_period_end: periodEndDate,
+            cancel_at_period_end: (stripeSub as any).cancel_at_period_end || false,
           });
         
         if (insertError) {
