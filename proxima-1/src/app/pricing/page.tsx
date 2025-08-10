@@ -36,8 +36,8 @@ export default function PricingPage() {
     setIsLoading(tierName);
 
     try {
-      // Always use the proper endpoint now that auth is working
-      const response = await fetch('/api/stripe/create-checkout-session', {
+      // Use test endpoint which handles auth better
+      const response = await fetch('/api/stripe/test-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
