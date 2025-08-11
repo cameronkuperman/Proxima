@@ -343,7 +343,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Recommendations</h3>
             <ul className="space-y-3">
-              {(analysis!.recommendations as string[]).map((rec: string, idx: number) => (
+              {(analysis?.recommendations as string[])?.map((rec: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-indigo-400 mt-0.5">•</span>
                   <span className="text-gray-300">{rec}</span>
@@ -362,7 +362,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Self-Care Instructions</h3>
             <ul className="space-y-3">
-              {(analysis!.selfCare as string[]).map((care: string, idx: number) => (
+              {(analysis?.selfCare as string[])?.map((care: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-green-400 mt-0.5">•</span>
                   <span className="text-gray-300">{care}</span>
@@ -384,7 +384,7 @@ export default function HistoryPage() {
               Warning Signs
             </h3>
             <ul className="space-y-2">
-              {(analysis!.redFlags as string[]).map((flag: string, idx: number) => (
+              {(analysis?.redFlags as string[])?.map((flag: string, idx: number) => (
                 <li key={idx} className="text-red-300">{flag}</li>
               ))}
             </ul>
@@ -517,7 +517,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Recommendations</h3>
             <ul className="space-y-3">
-              {(analysis!.recommendations as string[]).map((rec: string, idx: number) => (
+              {(analysis?.recommendations as string[])?.map((rec: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-emerald-400 mt-0.5">•</span>
                   <span className="text-gray-300">{rec}</span>
@@ -539,7 +539,7 @@ export default function HistoryPage() {
               Warning Signs
             </h3>
             <ul className="space-y-2">
-              {(analysis!.redFlags as string[]).map((flag: string, idx: number) => (
+              {(analysis?.redFlags as string[])?.map((flag: string, idx: number) => (
                 <li key={idx} className="text-red-300">{flag}</li>
               ))}
             </ul>
@@ -792,7 +792,7 @@ export default function HistoryPage() {
               Recommendations
             </h3>
             <ul className="space-y-3">
-              {(fullData.recommendations as string[]).map((rec: string, idx: number) => (
+              {(fullData.recommendations as string[])?.map((rec: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-blue-400 mt-0.5">•</span>
                   <span className="text-gray-300">{rec}</span>
@@ -905,7 +905,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">Question & Answer History</h3>
             <div className="space-y-4">
-              {(fullData.questions as Array<{question: string, question_number: number}>).map((q, idx) => {
+              {(fullData.questions as Array<{question: string, question_number: number}>)?.map((q, idx) => {
                 const answer = (fullData.answers as Array<{answer: string, question_number: number}>)
                   .find(a => a.question_number === q.question_number);
                 
@@ -958,7 +958,7 @@ export default function HistoryPage() {
 
             {/* Analysis Content */}
             <div className="prose prose-invert max-w-none">
-              {Object.entries(finalAnalysis).map(([key, value]) => (
+              {Object.entries(finalAnalysis || {}).map(([key, value]) => (
                 <div key={key} className="mb-4">
                   <h4 className="text-sm font-medium text-gray-400 mb-2">
                     {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -985,7 +985,7 @@ export default function HistoryPage() {
               Key Findings
             </h3>
             <ul className="space-y-3">
-              {(fullData.key_findings as string[]).map((finding: string, idx: number) => (
+              {(fullData.key_findings as string[])?.map((finding: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="text-indigo-400 mt-0.5">•</span>
                   <span className="text-gray-300">{finding}</span>
@@ -1005,7 +1005,7 @@ export default function HistoryPage() {
           >
             <h3 className="text-xl font-semibold text-white mb-4">AI Reasoning Process</h3>
             <div className="space-y-3">
-              {(fullData.reasoning_snippets as string[]).map((snippet: string, idx: number) => (
+              {(fullData.reasoning_snippets as string[])?.map((snippet: string, idx: number) => (
                 <div key={idx} className="text-indigo-300 text-sm">
                   <span className="text-indigo-400 font-medium">Step {idx + 1}:</span> {snippet}
                 </div>

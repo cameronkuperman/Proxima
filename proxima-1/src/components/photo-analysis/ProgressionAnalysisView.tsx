@@ -83,25 +83,25 @@ export default function ProgressionAnalysisView({
 
   // Prepare chart data
   const chartData = {
-    labels: visualization_data.timeline.map(item => 
+    labels: visualization_data?.timeline?.map(item => 
       new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    ),
+    ) || [],
     datasets: [
       {
         label: 'Size (mm)',
-        data: visualization_data.timeline.map(item => item.metrics.size_mm || 0),
+        data: visualization_data?.timeline?.map(item => item.metrics?.size_mm || 0) || [],
         borderColor: 'rgb(251, 146, 60)',
         backgroundColor: 'rgba(251, 146, 60, 0.1)',
         tension: 0.3,
         pointRadius: 6,
         pointHoverRadius: 8,
-        pointBackgroundColor: visualization_data.timeline.map(item => 
+        pointBackgroundColor: visualization_data?.timeline?.map(item => 
           item.has_red_flags ? 'rgb(239, 68, 68)' : 'rgb(251, 146, 60)'
-        ),
+        ) || [],
       },
       {
         label: 'Trend',
-        data: visualization_data.trend_lines.map(point => point.y),
+        data: visualization_data?.trend_lines?.map(point => point.y) || [],
         borderColor: 'rgb(168, 85, 247)',
         backgroundColor: 'rgba(168, 85, 247, 0.1)',
         borderDash: [5, 5],
@@ -294,7 +294,7 @@ export default function ProgressionAnalysisView({
       <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Clinical Thresholds</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Object.entries(progression_metrics.clinical_thresholds).map(([key, value]) => (
+          {Object.entries(progression_metrics?.clinical_thresholds || {}).map(([key, value]) => (
             <div key={key} className="bg-white/[0.03] rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">
                 {key.replace(/_/g, ' ')}
@@ -312,7 +312,7 @@ export default function ProgressionAnalysisView({
           Recommendations
         </h3>
         <div className="space-y-3">
-          {progression_metrics.recommendations.map((rec, index) => (
+          {progression_metrics?.recommendations?.map((rec, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -20 }}
@@ -336,7 +336,7 @@ export default function ProgressionAnalysisView({
           Next Steps
         </h3>
         <div className="space-y-2">
-          {next_steps.map((step, index) => (
+          {next_steps?.map((step, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -20 }}
