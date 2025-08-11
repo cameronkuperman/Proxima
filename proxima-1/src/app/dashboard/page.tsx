@@ -977,7 +977,7 @@ function DashboardContent() {
                             >
                               {/* Info button in top right */}
                               <div className="absolute top-2 right-2 z-10">
-                                <InfoButton content={`View detailed information about this ${entry.interaction_type.replace('_', ' ')} interaction from ${formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}`} position="left" />
+                                <InfoButton content={`View detailed information about this ${entry.interaction_type.replace('_', ' ')} interaction from ${formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}`} position="top" />
                               </div>
                               <div className="flex items-center justify-between mb-1">
                                 <p className="text-xs text-gray-400">
@@ -1132,7 +1132,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Manage your health profile including medications, allergies, and emergency contacts. Complete your profile for more accurate assessments." position="left" />
+                  <InfoButton content="Manage your health profile including medications, allergies, and emergency contacts. Complete your profile for more accurate assessments." position="top" />
                 </div>
                 {/* Completion ring background */}
                 <div className="absolute top-4 right-14">
@@ -1217,7 +1217,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Interactive 3D body model. Click exactly where symptoms occur for precise location tracking. Best for pain, injuries, and visible symptoms." />
+                  <InfoButton content="Interactive 3D body model. Click exactly where symptoms occur for precise location tracking. Best for pain, injuries, and visible symptoms." position="top" />
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 flex items-center justify-center mb-4 group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all">
                   <PersonStanding className="w-6 h-6 text-purple-400" />
@@ -1234,7 +1234,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Describe symptoms in your own words. AI will analyze and ask follow-up questions. Best for fatigue, mental health, or multiple symptoms." />
+                  <InfoButton content="Describe symptoms in your own words. AI will analyze and ask follow-up questions. Best for fatigue, mental health, or multiple symptoms." position="top" />
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <ClipboardList className="w-6 h-6 text-blue-400" />
@@ -1251,7 +1251,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Upload photos for AI visual analysis. Track changes over time. Best for skin conditions, rashes, wounds, or any visible symptoms." />
+                  <InfoButton content="Upload photos for AI visual analysis. Track changes over time. Best for skin conditions, rashes, wounds, or any visible symptoms." position="top" />
                 </div>
                 {/* Ultra-thin reminder indicator */}
                 {lastActivityTimes.photoAnalysis === 'Follow-up due' && (
@@ -1279,7 +1279,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Generate professional medical reports from your health conversations. Perfect for sharing with healthcare providers." />
+                  <InfoButton content="Generate professional medical reports from your health conversations. Perfect for sharing with healthcare providers." position="top" />
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <FileText className="w-6 h-6 text-blue-400" />
@@ -1608,10 +1608,6 @@ function DashboardContent() {
                   onClick={() => router.push('/oracle')}
                   className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5 cursor-pointer hover:border-purple-600/30 transition-all relative"
                 >
-                  {/* Info button in top right */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <InfoButton content="Advanced AI health assistant that can analyze symptoms, review your health history, provide medical insights, and answer complex health questions using multiple AI models." position="left" />
-                  </div>
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                       <Brain className="w-4 h-4 text-white" />
@@ -1643,10 +1639,6 @@ function DashboardContent() {
                 onClick={() => router.push('/intelligence')}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all relative"
               >
-                {/* Info button in top right */}
-                <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="AI-generated comprehensive analysis of your health journey, identifying patterns, trends, and personalized recommendations based on your complete health history." position="left" />
-                </div>
                 {healthStoryLoading ? (
                   // Loading state
                   <div className="animate-pulse">
@@ -1720,10 +1712,6 @@ function DashboardContent() {
                       whileHover={{ scale: 1.02, x: 3, y: -3 }}
                       className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer relative"
                     >
-                      {/* Info button in top right */}
-                      <div className="absolute top-3 right-3 z-10">
-                        <InfoButton content="AI-generated health recommendation based on your recent health data and patterns. Following this advice can help improve your health score." position="left" />
-                      </div>
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${colors[index % colors.length]} flex items-center justify-center text-2xl`}>
                           {action.icon}
@@ -1755,10 +1743,6 @@ function DashboardContent() {
                     whileHover={{ scale: 1.02, x: 3, y: -3 }}
                     className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer relative"
                   >
-                    {/* Info button in top right */}
-                    <div className="absolute top-3 right-3 z-10">
-                      <InfoButton content="Default health recommendations to help you maintain good health habits. Personalized tips will appear as we learn more about your health." position="left" />
-                    </div>
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tip.color} flex items-center justify-center text-2xl`}>
                         {tip.icon}

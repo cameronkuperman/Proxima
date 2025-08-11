@@ -147,6 +147,17 @@ export default function OracleEnhanced() {
         {/* Header Bar - Claude Style */}
         <div className="h-[56px] border-b border-white/[0.08] flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
+            {/* Back Arrow - Moved to left side */}
+            <button 
+              onClick={() => router.back()}
+              className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/[0.05] rounded-lg transition-colors"
+              title="Go back"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            
             {/* Title */}
             {isEditingTitle ? (
               <input
@@ -202,6 +213,17 @@ export default function OracleEnhanced() {
             <button className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/[0.05] rounded-lg transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.032 4.026a3 3 0 10-5.464 0m5.464 0a3 3 0 01-5.464 0M6.732 6.732a3 3 0 10-4.464 4.464m4.464-4.464a3 3 0 00-4.464 4.464m13.464 0a3 3 0 104.464-4.464m-4.464 4.464a3 3 0 004.464-4.464" />
+              </svg>
+            </button>
+            
+            {/* Close/Dashboard */}
+            <button 
+              onClick={() => router.push('/dashboard')}
+              className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/[0.05] rounded-lg transition-colors"
+              title="Close"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>

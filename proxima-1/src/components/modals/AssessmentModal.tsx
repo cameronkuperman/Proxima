@@ -79,7 +79,7 @@ export default function AssessmentModal({ isOpen, onClose, type }: AssessmentMod
                     <div className="absolute top-4 right-4 flex items-center gap-2">
                       <InfoButton 
                         content="Ultra-fast AI assessment. Get immediate guidance in seconds. Best for: Quick health checks, general wellness questions, or when you need instant direction." 
-                        position="left" 
+                        position="top" 
                       />
                       <span className="px-2 py-1 text-xs font-medium bg-amber-500/20 text-amber-400 rounded-full">
                         New
@@ -112,7 +112,7 @@ export default function AssessmentModal({ isOpen, onClose, type }: AssessmentMod
                   <div className="absolute top-4 right-4 flex items-center gap-2">
                     <InfoButton 
                       content="Our recommended assessment type. Balances speed with accuracy through essential questions. Best for: Most health concerns, initial symptom evaluation, or when you have a few minutes." 
-                      position="left" 
+                      position="top" 
                     />
                     <span className="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
                       Recommended
@@ -144,7 +144,7 @@ export default function AssessmentModal({ isOpen, onClose, type }: AssessmentMod
                   <div className="absolute top-4 right-4 flex items-center gap-2">
                     <InfoButton 
                       content="Most comprehensive analysis with advanced AI reasoning. Asks personalized follow-up questions for maximum accuracy. Best for: Complex symptoms, chronic conditions, or when you need the most detailed insights." 
-                      position="left" 
+                      position="top" 
                     />
                     <span className="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-400 rounded-full">
                       Premium

@@ -269,11 +269,11 @@ export function ChatInterface({
                     <div className="max-w-[900px] mx-auto px-8">
                       <div className="flex justify-end">
                         <div className="flex gap-3 items-start max-w-[70%]">
-                          <div className="text-[17px] text-gray-100 leading-relaxed whitespace-pre-wrap">
+                          <div className="text-[19px] text-gray-100 leading-relaxed whitespace-pre-wrap">
                             {message.content}
                           </div>
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                            <span className="text-white font-medium text-sm">CK</span>
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-medium text-base">CK</span>
                           </div>
                         </div>
                       </div>
@@ -283,7 +283,7 @@ export function ChatInterface({
                   // Assistant Message - Claude Style
                   <div className="py-4 border-b border-white/[0.06] last:border-0">
                     {/* Thought Process Section (Claude-style collapsed) */}
-                    {message.metadata?.reasoning && (
+                    {message.metadata?.reasoning && message.metadata.reasoning.trim() && (
                       <div className="max-w-[900px] mx-auto px-8 mb-4">
                         <motion.div
                           initial={{ opacity: 0 }}
@@ -300,7 +300,7 @@ export function ChatInterface({
                           >
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-gray-400">Thought process</span>
-                              <span className="text-xs text-gray-500">{localShowReasoning[message.id] ? '2s' : `${Math.round(message.metadata.reasoning.length / 50)}s`}</span>
+                              <span className="text-xs text-gray-500">{localShowReasoning[message.id] ? 'Hide' : 'Show'}</span>
                             </div>
                             <svg 
                               className={`w-4 h-4 text-gray-500 transition-transform ${
@@ -316,14 +316,14 @@ export function ChatInterface({
                           <AnimatePresence>
                             {localShowReasoning[message.id] && (
                               <motion.div
-                                initial={{ height: 0 }}
-                                animate={{ height: "auto" }}
-                                exit={{ height: 0 }}
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.2 }}
                                 className="border-t border-white/[0.08]"
                               >
-                                <div className="px-4 py-3">
-                                  <div className="text-[15px] text-gray-400 leading-relaxed whitespace-pre-wrap">
+                                <div className="px-4 py-4">
+                                  <div className="text-[16px] text-gray-400 leading-relaxed whitespace-pre-wrap">
                                     {message.metadata.reasoning}
                                   </div>
                                 </div>
@@ -337,14 +337,14 @@ export function ChatInterface({
                     {/* Main Message Content */}
                     <div className="max-w-[900px] mx-auto px-8">
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
                           </svg>
                         </div>
                         <div className="flex-1">
-                          <div className="text-base font-medium text-gray-200 mb-2">Oracle</div>
-                          <div className="text-[17px] text-gray-100 leading-[1.7] whitespace-pre-wrap">
+                          <div className="text-lg font-medium text-gray-200 mb-2">Oracle</div>
+                          <div className="text-[19px] text-gray-100 leading-[1.75] whitespace-pre-wrap">
                             {streamingText[message.id] || message.content}
                             {isStreaming[message.id] && (
                               <motion.span
