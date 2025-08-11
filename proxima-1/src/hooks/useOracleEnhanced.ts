@@ -296,6 +296,8 @@ export function useOracleEnhanced({
     isLoading,
     error,
     conversationId,
+    conversationTitle,
+    updateTitle,
     startNewConversation,
     loadConversation,
     tokenUsage,

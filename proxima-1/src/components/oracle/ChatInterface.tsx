@@ -223,22 +223,22 @@ export function ChatInterface({
                 onKeyDown={handleKeyDown}
                 placeholder={isBlocked ? "Upgrade to continue chatting..." : "Message Oracle..."}
                 disabled={isBlocked}
-                className={`w-full px-4 py-3 pr-12 bg-[#161616] border border-white/[0.08] rounded-xl text-gray-100 placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500/50 focus:bg-[#1a1a1a] transition-all text-[15px] ${
+                className={`w-full px-5 py-4 pr-14 bg-[#161616] border border-white/[0.08] rounded-xl text-gray-100 placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500/50 focus:bg-[#1a1a1a] transition-all text-[18px] ${
                   isBlocked ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-                style={{ minHeight: '48px' }}
+                style={{ minHeight: '64px' }}
               />
 
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading || isBlocked}
-                className={`absolute bottom-2.5 right-2.5 p-2 rounded-lg transition-all ${
+                className={`absolute bottom-3.5 right-3.5 p-2.5 rounded-lg transition-all ${
                   input.trim() && !isLoading && !isBlocked
                     ? 'text-purple-400 hover:bg-purple-500/10'
                     : 'text-gray-600 cursor-not-allowed'
                 }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
@@ -269,7 +269,7 @@ export function ChatInterface({
                     <div className="max-w-[900px] mx-auto px-8">
                       <div className="flex justify-end">
                         <div className="flex gap-3 items-start max-w-[70%]">
-                          <div className="text-[19px] text-gray-100 leading-relaxed whitespace-pre-wrap">
+                          <div className="text-[15px] text-gray-100 leading-relaxed whitespace-pre-wrap">
                             {message.content}
                           </div>
                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center flex-shrink-0">
@@ -343,8 +343,8 @@ export function ChatInterface({
                           </svg>
                         </div>
                         <div className="flex-1">
-                          <div className="text-lg font-medium text-gray-200 mb-2">Oracle</div>
-                          <div className="text-[19px] text-gray-100 leading-[1.75] whitespace-pre-wrap">
+                          <div className="text-base font-medium text-gray-200 mb-2">Oracle</div>
+                          <div className="text-[15px] text-gray-100 leading-[1.65] whitespace-pre-wrap">
                             {streamingText[message.id] || message.content}
                             {isStreaming[message.id] && (
                               <motion.span
@@ -388,7 +388,7 @@ export function ChatInterface({
 
       {/* Input Area - Fixed at bottom */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] bg-[#0a0a0a]">
-        <div className="max-w-[900px] mx-auto px-8 py-5">
+        <div className="max-w-[900px] mx-auto px-8 py-6">
           <div className="relative">
             <textarea
               ref={textareaRef}
@@ -397,22 +397,22 @@ export function ChatInterface({
               onKeyDown={handleKeyDown}
               placeholder={isBlocked ? "Upgrade to continue..." : "Message Oracle..."}
               disabled={isBlocked}
-              className={`w-full px-5 py-4 pr-14 bg-[#161616] border border-white/[0.08] rounded-xl text-gray-100 placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500/50 focus:bg-[#1a1a1a] transition-all text-[17px] ${
+              className={`w-full px-5 py-5 pr-14 bg-[#161616] border border-white/[0.08] rounded-xl text-gray-100 placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500/50 focus:bg-[#1a1a1a] transition-all text-[19px] ${
                 isBlocked ? 'opacity-50 cursor-not-allowed' : ''
               }`}
-              style={{ minHeight: '56px' }}
+              style={{ minHeight: '72px' }}
             />
 
             <button
               onClick={handleSend}
               disabled={!input.trim() || isLoading || isBlocked}
-              className={`absolute bottom-3 right-3 p-2.5 rounded-lg transition-all ${
+              className={`absolute bottom-4 right-4 p-3 rounded-lg transition-all ${
                 input.trim() && !isLoading && !isBlocked
                   ? 'text-purple-400 hover:bg-purple-500/10'
                   : 'text-gray-600 cursor-not-allowed'
               }`}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </button>

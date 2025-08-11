@@ -28,6 +28,7 @@ export default function PhotoAnalysisPage() {
   const { 
     sessions, 
     activeSession,
+    setActiveSession,
     uploadPhotos,
     analyzePhotos,
     createSession,
@@ -253,7 +254,13 @@ export default function PhotoAnalysisPage() {
                   key={tab.id}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setMode(tab.id as 'new' | 'continue' | 'history')}
+                  onClick={() => {
+                    setMode(tab.id as 'new' | 'continue' | 'history');
+                    // Reset active session when switching away from continue mode
+                    if (tab.id !== 'continue') {
+                      setActiveSession(null);
+                    }
+                  }}
                   className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
                     mode === tab.id
                       ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
@@ -472,10 +479,10 @@ export default function PhotoAnalysisPage() {
                   ) : (
                     <PhotoSessionHistoryUltraFast
                       onSelectSession={(session) => {
-                        if (session.id) {
-                          continueSession(session.id);
-                          setUploadedPhotos([]);
-                        }
+                        // Set active session directly when selected
+                        setActiveSession(session);
+                        setUploadedPhotos([]);
+                        console.log('Selected session for continue tracking:', session);
                       }}
                       showContinueButton={true}
                     />

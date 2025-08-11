@@ -764,12 +764,12 @@ function DashboardContent() {
 
   return (
     <UnifiedAuthGuard requireAuth={true}>
-      <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden transition-all duration-1000">
+      <div className="min-h-screen bg-[#0a0a0a] relative  transition-all duration-1000">
         {/* Ambient Health Background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${getAmbientGradient()} transition-all duration-3000`} />
         
         {/* Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 ">
           <div className="absolute top-1/4 -left-48 w-96 h-96 bg-gradient-to-r from-purple-600/10 to-pink-600/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-full blur-3xl" />
           
@@ -799,7 +799,7 @@ function DashboardContent() {
           }}
           onAnimationComplete={() => setTimelineAnimating(false)}
         >
-          <div className={`h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative overflow-hidden flex flex-col ${timelineAnimating ? 'timeline-animating' : ''}`}>
+          <div className={`h-full backdrop-blur-[20px] bg-white/[0.02] border-r border-white/[0.05] relative  flex flex-col ${timelineAnimating ? 'timeline-animating' : ''}`}>
             {/* Timeline gradient line - Fixed position */}
             <div className="absolute top-0 bottom-0 w-[2px] bg-gradient-to-b from-purple-500/20 via-pink-500/20 to-blue-500/20 pointer-events-none" style={{ left: '21px' }} />
             
@@ -1127,7 +1127,7 @@ function DashboardContent() {
               <motion.div
                 data-tour="profile-card"
                 whileHover={{ scale: 1.02, x: 3, y: -3 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative "
                 onClick={() => router.push('/profile')}
               >
                 {/* Info button in top right */}
@@ -1212,7 +1212,7 @@ function DashboardContent() {
               <motion.div
                 data-tour="body-visualization-card"
                 whileHover={{ scale: 1.02, x: 3, y: -3 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative "
                 onClick={() => setAssessmentModalOpen('body')}
               >
                 {/* Info button in top right */}

@@ -397,6 +397,7 @@ export function usePhotoAnalysis() {
   return {
     sessions,
     activeSession,
+    setActiveSession,  // Export setActiveSession for direct control
     isLoading,
     error,
     uploadPhotos,
