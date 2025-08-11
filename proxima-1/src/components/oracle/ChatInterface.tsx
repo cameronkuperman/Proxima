@@ -34,16 +34,17 @@ export function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [hasUnread, setHasUnread] = useState(false);
+  // Remove scroll tracking that interferes with scrolling
   const [localShowReasoning, setLocalShowReasoning] = useState<{ [key: string]: boolean }>({});
   const [streamingText, setStreamingText] = useState<{ [key: string]: string }>({});
   const [isStreaming, setIsStreaming] = useState<{ [key: string]: boolean }>({});
 
   const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      }
+    }, 0);
   };
 
   // Simulate text streaming for new messages
@@ -74,16 +75,13 @@ export function ChatInterface({
 
   // Auto-scroll on new messages
   useEffect(() => {
-    // Always scroll to bottom when new messages arrive
     scrollToBottom();
-  }, [messages, streamingText]);
+  }, [messages]);
   
-  // Scroll when loading state changes (thinking indicator appears)
+  // Scroll when loading state changes
   useEffect(() => {
     if (isLoading) {
-      setTimeout(() => {
-        scrollToBottom();
-      }, 100);
+      scrollToBottom();
     }
   }, [isLoading]);
 
@@ -101,20 +99,12 @@ export function ChatInterface({
     const query = input.trim();
     setInput('');
     
-    // Focus back on input
-    textareaRef.current?.focus();
-    
     await onSendMessage(query);
     
-    // Scroll to bottom after message is sent
-    setTimeout(() => {
+    // Scroll after message is added
+    requestAnimationFrame(() => {
       scrollToBottom();
-    }, 100);
-    
-    // Scroll again when response starts
-    setTimeout(() => {
-      scrollToBottom();
-    }, 500);
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -158,18 +148,7 @@ export function ChatInterface({
     </motion.div>
   );
 
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const threshold = 40; // px
-      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-      setIsAtBottom(atBottom);
-      if (atBottom) setHasUnread(false);
-    };
-    el.addEventListener('scroll', onScroll);
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+  // Removed scroll tracking that was interfering
 
   if (messages.length === 0 && !conversationId) {
     return (
@@ -271,8 +250,8 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden">
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto oracle-scrollbar" style={{ paddingBottom: '120px' }}>
+    <div className="flex-1 flex flex-col relative h-full">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '120px' }}>
         <div className="py-6">
           <AnimatePresence mode="popLayout">
             {messages.map((message, index) => (
@@ -405,15 +384,7 @@ export function ChatInterface({
         </div>
       </div>
 
-      {/* Scroll-to-bottom button */}
-      {!isAtBottom && (
-        <button
-          onClick={scrollToBottom}
-          className="absolute bottom-32 right-8 z-10 px-3 py-2 bg-white/[0.06] border border-white/[0.12] rounded-full text-xs text-gray-200 hover:bg-white/[0.1] transition-colors"
-        >
-          {hasUnread ? 'New messages' : 'Jump to bottom'}
-        </button>
-      )}
+      {/* Removed scroll button for now */
 
       {/* Input Area - Fixed at bottom */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] bg-[#0a0a0a]">
