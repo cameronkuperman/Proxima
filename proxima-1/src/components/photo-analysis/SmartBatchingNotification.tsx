@@ -59,7 +59,7 @@ export default function SmartBatchingNotification({
                   <div>
                     <p className="text-xs text-gray-400 mb-2">Photos were selected based on:</p>
                     <ul className="space-y-1">
-                      {batchingInfo.selection_reasoning.map((reason, index) => (
+                      {batchingInfo.selection_reasoning?.map((reason, index) => (
                         <li key={index} className="text-sm text-gray-300 flex items-start gap-2">
                           <span className="text-blue-400 mt-0.5">•</span>
                           <span>{reason}</span>
@@ -68,11 +68,11 @@ export default function SmartBatchingNotification({
                     </ul>
                   </div>
                   
-                  {batchingInfo.omitted_periods.length > 0 && (
+                  {batchingInfo.omitted_periods && batchingInfo.omitted_periods.length > 0 && (
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Time periods with similar photos:</p>
                       <div className="space-y-1">
-                        {batchingInfo.omitted_periods.map((period, index) => (
+                        {batchingInfo.omitted_periods?.map((period, index) => (
                           <div key={index} className="flex items-center gap-2 text-sm text-gray-300">
                             <Calendar className="w-3 h-3 text-gray-500" />
                             <span>
