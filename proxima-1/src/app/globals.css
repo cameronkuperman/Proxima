@@ -47,23 +47,7 @@ html {
   background: #444;
 }
 
-/* Oracle Chat Scrollbar */
-.oracle-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.oracle-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.oracle-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.oracle-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
+/* Removed oracle-scrollbar - was interfering with scroll */
 
 /* Selection color */
 ::selection {

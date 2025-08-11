@@ -152,8 +152,8 @@ export function ChatInterface({
 
   if (messages.length === 0 && !conversationId) {
     return (
-      <div className="flex-1 flex flex-col relative">
-        <div className="flex-1 flex items-center justify-center">
+      <div className="h-full flex flex-col relative">
+        <div className="flex-1 flex items-center justify-center" style={{ paddingBottom: '10%' }}>
           <div className="max-w-2xl w-full px-6">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -250,9 +250,9 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex-1 flex flex-col relative h-full">
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '120px' }}>
-        <div className="py-6">
+    <div className="h-full flex flex-col relative">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '140px' }}>
+        <div className="pt-6">
           <AnimatePresence mode="popLayout">
             {messages.map((message, index) => (
               <motion.div
@@ -384,7 +384,7 @@ export function ChatInterface({
         </div>
       </div>
 
-      {/* Removed scroll button for now */
+      {/* Removed scroll button for now */}
 
       {/* Input Area - Fixed at bottom */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] bg-[#0a0a0a]">

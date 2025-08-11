@@ -143,7 +143,7 @@ export default function OracleEnhanced() {
       />
 
       {/* Main Chat Area */}
-      <div className="ml-[52px] flex-1 flex flex-col relative overflow-hidden">
+      <div className="ml-[52px] flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header Bar - Claude Style */}
         <div className="h-[56px] border-b border-white/[0.08] flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
@@ -222,7 +222,7 @@ export default function OracleEnhanced() {
         )}
 
         {/* Chat Interface */}
-        <div className="flex-1 w-full">
+        <div className="flex-1 overflow-hidden">
           <ChatInterface
             messages={messages}
             isLoading={isLoading}
