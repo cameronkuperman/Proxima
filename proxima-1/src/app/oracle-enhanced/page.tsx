@@ -5,7 +5,7 @@ import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export const dynamic = 'force-dynamic';
 
-export default function OraclePage() {
+export default function OracleEnhancedPage() {
   return (
     <UnifiedAuthGuard requireAuth={true}>
       <OracleEnhanced />

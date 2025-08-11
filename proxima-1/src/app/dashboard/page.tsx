@@ -30,6 +30,8 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { supabaseReportsService as reportsService, GeneratedReport } from '@/services/supabaseReportsService';
 import { healthStoryService } from '@/lib/health-story';
 import type { HealthStoryData } from '@/lib/health-story';
+import Tooltip from '@/components/ui/Tooltip';
+import InfoButton from '@/components/ui/InfoButton';
 
 // Type definitions
 interface TimelineEntry {
@@ -965,13 +967,18 @@ function DashboardContent() {
                             exit={{ opacity: 0, x: -10 }}
                             className="ml-12"
                           >
-                            <div 
+                            <motion.div 
+                              whileHover={{ scale: 1.02, x: 3, y: -3 }}
                               onClick={() => {
                                 setSelectedHistoryItem(entry);
                                 setHistoryModalOpen(true);
                               }}
-                              className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all`}
+                              className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all relative`}
                             >
+                              {/* Info button in top right */}
+                              <div className="absolute top-2 right-2 z-10">
+                                <InfoButton content={`View detailed information about this ${entry.interaction_type.replace('_', ' ')} interaction from ${formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}`} position="left" />
+                              </div>
                               <div className="flex items-center justify-between mb-1">
                                 <p className="text-xs text-gray-400">
                                   {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
@@ -1023,7 +1030,7 @@ function DashboardContent() {
                                   </span>
                                 )}
                               </div>
-                            </div>
+                            </motion.div>
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -1119,12 +1126,16 @@ function DashboardContent() {
               {/* Health Profile Card */}
               <motion.div
                 data-tour="profile-card"
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.02, x: 3, y: -3 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
                 onClick={() => router.push('/profile')}
               >
+                {/* Info button in top right */}
+                <div className="absolute top-4 right-4 z-10">
+                  <InfoButton content="Manage your health profile including medications, allergies, and emergency contacts. Complete your profile for more accurate assessments." position="left" />
+                </div>
                 {/* Completion ring background */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-14">
                   <svg className="w-12 h-12 transform -rotate-90">
                     <circle
                       cx="24"
@@ -1200,45 +1211,51 @@ function DashboardContent() {
               {/* 3D Body Visualization Card */}
               <motion.div
                 data-tour="body-visualization-card"
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.02, x: 3, y: -3 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative overflow-hidden"
                 onClick={() => setAssessmentModalOpen('body')}
               >
+                {/* Info button in top right */}
+                <div className="absolute top-4 right-4 z-10">
+                  <InfoButton content="Interactive 3D body model. Click exactly where symptoms occur for precise location tracking. Best for pain, injuries, and visible symptoms." />
+                </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 flex items-center justify-center mb-4 group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all">
                   <PersonStanding className="w-6 h-6 text-purple-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">3D Body Visualization</h3>
-                <p className="text-gray-400 text-sm mb-2">Click exactly where it hurts on our interactive model</p>
-                <p className="text-xs text-gray-500">
-                  Best for: Pain, injuries, rashes, visible symptoms
-                </p>
+                <p className="text-gray-400 text-sm mb-4">Click exactly where it hurts on our interactive model</p>
               </motion.div>
 
               {/* General Assessment Card */}
               <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group"
+                whileHover={{ scale: 1.02, x: 3, y: -3 }}
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
                 onClick={() => setAssessmentModalOpen('general')}
               >
+                {/* Info button in top right */}
+                <div className="absolute top-4 right-4 z-10">
+                  <InfoButton content="Describe symptoms in your own words. AI will analyze and ask follow-up questions. Best for fatigue, mental health, or multiple symptoms." />
+                </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <ClipboardList className="w-6 h-6 text-blue-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">General Assessment</h3>
-                <p className="text-gray-400 text-sm mb-2">Describe how you&apos;re feeling overall</p>
-                <p className="text-xs text-gray-500">
-                  Best for: Fatigue, fever, mental health, multiple symptoms
-                </p>
+                <p className="text-gray-400 text-sm mb-4">Describe how you&apos;re feeling overall</p>
               </motion.div>
 
               {/* Photo Analysis Card */}
               <motion.div
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.02, x: 3, y: -3 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
                 onClick={() => router.push('/photo-analysis')}
               >
+                {/* Info button in top right */}
+                <div className="absolute top-4 right-4 z-10">
+                  <InfoButton content="Upload photos for AI visual analysis. Track changes over time. Best for skin conditions, rashes, wounds, or any visible symptoms." />
+                </div>
                 {/* Ultra-thin reminder indicator */}
                 {lastActivityTimes.photoAnalysis === 'Follow-up due' && (
-                  <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Follow-up photo recommended" />
+                  <div className="absolute top-4 right-12 w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Follow-up photo recommended" />
                 )}
                 
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:from-pink-600/30 group-hover:to-purple-600/30 transition-all">
@@ -1256,10 +1273,14 @@ function DashboardContent() {
               {/* Reports Card */}
               <motion.div
                 data-tour="reports-card"
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.02, x: 3, y: -3 }}
                 className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
                 onClick={() => router.push('/reports')}
               >
+                {/* Info button in top right */}
+                <div className="absolute top-4 right-4 z-10">
+                  <InfoButton content="Generate professional medical reports from your health conversations. Perfect for sharing with healthcare providers." />
+                </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <FileText className="w-6 h-6 text-blue-400" />
                 </div>
@@ -1583,10 +1604,14 @@ function DashboardContent() {
 
                 {/* AI Oracle Chat */}
                 <motion.div 
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.02, x: 3, y: -3 }}
                   onClick={() => router.push('/oracle')}
-                  className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5 cursor-pointer hover:border-purple-600/30 transition-all"
+                  className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5 cursor-pointer hover:border-purple-600/30 transition-all relative"
                 >
+                  {/* Info button in top right */}
+                  <div className="absolute top-4 right-4 z-10">
+                    <InfoButton content="Advanced AI health assistant that can analyze symptoms, review your health history, provide medical insights, and answer complex health questions using multiple AI models." position="left" />
+                  </div>
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                       <Brain className="w-4 h-4 text-white" />
@@ -1613,10 +1638,15 @@ function DashboardContent() {
               className="mb-8"
             >
               <h2 className="text-2xl font-semibold text-white mb-6">Your Health Story</h2>
-              <div 
+              <motion.div 
+                whileHover={{ scale: 1.02, x: 3, y: -3 }}
                 onClick={() => router.push('/intelligence')}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all"
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer hover:border-white/[0.1] transition-all relative"
               >
+                {/* Info button in top right */}
+                <div className="absolute top-4 right-4 z-10">
+                  <InfoButton content="AI-generated comprehensive analysis of your health journey, identifying patterns, trends, and personalized recommendations based on your complete health history." position="left" />
+                </div>
                 {healthStoryLoading ? (
                   // Loading state
                   <div className="animate-pulse">
@@ -1665,7 +1695,7 @@ function DashboardContent() {
                     </div>
                   </div>
                 )}
-              </div>
+              </motion.div>
             </motion.div>
 
             {/* Health Tips Widget - Dynamic Actions from API */}
@@ -1687,9 +1717,13 @@ function DashboardContent() {
                   return (
                     <motion.div
                       key={index}
-                      whileHover={{ scale: 1.02 }}
-                      className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer"
+                      whileHover={{ scale: 1.02, x: 3, y: -3 }}
+                      className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer relative"
                     >
+                      {/* Info button in top right */}
+                      <div className="absolute top-3 right-3 z-10">
+                        <InfoButton content="AI-generated health recommendation based on your recent health data and patterns. Following this advice can help improve your health score." position="left" />
+                      </div>
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${colors[index % colors.length]} flex items-center justify-center text-2xl`}>
                           {action.icon}
@@ -1718,9 +1752,13 @@ function DashboardContent() {
                 ].map((tip, index) => (
                   <motion.div
                     key={index}
-                    whileHover={{ scale: 1.02 }}
-                    className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer"
+                    whileHover={{ scale: 1.02, x: 3, y: -3 }}
+                    className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-lg p-4 cursor-pointer relative"
                   >
+                    {/* Info button in top right */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <InfoButton content="Default health recommendations to help you maintain good health habits. Personalized tips will appear as we learn more about your health." position="left" />
+                    </div>
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tip.color} flex items-center justify-center text-2xl`}>
                         {tip.icon}

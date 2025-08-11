@@ -16,6 +16,7 @@ import UnifiedAuthGuard from '@/components/UnifiedAuthGuard'
 import { useQuickScan } from '@/hooks/useQuickScan'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserProfile } from '@/utils/onboarding'
+import Tooltip from '@/components/ui/Tooltip'
 
 export const dynamic = 'force-dynamic'
 
@@ -146,20 +147,26 @@ function ScanPageContent() {
               
               <div className="flex items-center gap-2">
                 {mode === 'flash' ? (
-                  <>
-                    <Sparkles className="w-5 h-5 text-amber-400" />
-                    <span className="font-medium text-white">Flash Assessment</span>
-                  </>
+                  <Tooltip content="Ultra-fast 10-second assessment for immediate insights" position="bottom">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-amber-400" />
+                      <span className="font-medium text-white">Flash Assessment</span>
+                    </div>
+                  </Tooltip>
                 ) : mode === 'quick' ? (
-                  <>
-                    <Zap className="w-5 h-5 text-emerald-400" />
-                    <span className="font-medium text-white">Quick Scan</span>
-                  </>
+                  <Tooltip content="AI-powered analysis with comprehensive results in 30-45 seconds" position="bottom">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-emerald-400" />
+                      <span className="font-medium text-white">Quick Scan</span>
+                    </div>
+                  </Tooltip>
                 ) : (
-                  <>
-                    <Brain className="w-5 h-5 text-indigo-400" />
-                    <span className="font-medium text-white">Deep Dive</span>
-                  </>
+                  <Tooltip content="In-depth analysis with follow-up questions for maximum accuracy (2-5 minutes)" position="bottom">
+                    <div className="flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-indigo-400" />
+                      <span className="font-medium text-white">Deep Dive</span>
+                    </div>
+                  </Tooltip>
                 )}
               </div>
 

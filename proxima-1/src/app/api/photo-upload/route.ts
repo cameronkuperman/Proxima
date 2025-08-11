@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getAuthenticatedUser } from '@/utils/auth-helpers';
+import { createServerClient } from '@supabase/ssr';
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -67,14 +67,34 @@ function generateSafeFilename(originalName: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user
-    const user = await getAuthenticatedUser(request);
-    if (!user) {
+    // Get authenticated user from Supabase session
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set() {},
+          remove() {}
+        }
+      }
+    );
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
+    
+    const user = {
+      id: session.user.id,
+      email: session.user.email
+    };
 
     // Parse multipart form data
     const formData = await request.formData();
@@ -97,6 +117,7 @@ export async function POST(request: NextRequest) {
     
     // Validate each photo
     const validatedPhotos: FormData = new FormData();
+    // Backend expects user_id in the FormData
     validatedPhotos.append('user_id', user.id);
     validatedPhotos.append('session_id', sessionId);
     

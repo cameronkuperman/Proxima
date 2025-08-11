@@ -4,6 +4,15 @@
 :root {
   --background: #0a0a0a;
   --foreground: #ffffff;
+  /* Chat design tokens */
+  --chat-max-width: 900px;
+  --chat-radius: 12px;
+  --chat-border: rgba(255,255,255,0.08);
+  --chat-border-strong: rgba(255,255,255,0.12);
+  --chat-soft-bg: rgba(255,255,255,0.03);
+  --chat-soft-bg-strong: rgba(255,255,255,0.05);
+  --accent-from: #8b5cf6; /* purple-500 */
+  --accent-to: #ec4899;   /* pink-500 */
 }
 
 body {
@@ -12,6 +21,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
 }
 
 /* Smooth scrolling */
@@ -35,6 +45,24 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #444;
+}
+
+/* Oracle Chat Scrollbar */
+.oracle-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.oracle-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.oracle-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.oracle-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* Selection color */
@@ -68,6 +96,76 @@ html {
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
+}
+
+/* Claude-style layout for Oracle */
+.oracle-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0a0a0a;
+}
+
+/* Remove chat bubble styles */
+.chat-bubble {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.chat-bubble.user {
+  background: transparent !important;
+}
+
+.chat-bubble.assistant {
+  background: transparent !important;
+}
+
+/* Claude-style message container */
+.message-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Smooth streaming animation */
+@keyframes stream-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.streaming-text {
+  animation: stream-in 0.2s ease-out;
+}
+
+/* Thought process styles */
+.thought-process {
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+/* Icon button styles */
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
 }
 
 @keyframes slide-up {
@@ -160,6 +258,56 @@ html {
     0 0 0 1px rgba(255, 255, 255, 0.1),
     0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Ambient radial glow for chat area */
+.ambient-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(1200px 400px at 50% 0%, rgba(139, 92, 246, 0.07), transparent 60%),
+              radial-gradient(900px 300px at 80% 10%, rgba(236, 72, 153, 0.05), transparent 60%);
+  pointer-events: none;
+}
+
+/* Chat bubbles */
+.chat-bubble {
+  border-radius: var(--chat-radius);
+  border: 1px solid var(--chat-border);
+  background: var(--chat-soft-bg);
+}
+
+.chat-bubble.assistant {
+  background: rgba(255,255,255,0.035);
+  border-color: var(--chat-border-strong);
+}
+
+.chat-bubble.user {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border-color: var(--chat-border-strong);
+}
+
+/* Icon buttons subtle */
+.icon-btn {
+  background: transparent;
+  border-radius: 10px;
+}
+.icon-btn:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+/* Gradient text utility */
+.text-gradient {
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Subtle separator */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
 }
 
 /* Timeline scrollbar styles */

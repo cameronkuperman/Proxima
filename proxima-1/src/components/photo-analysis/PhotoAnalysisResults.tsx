@@ -455,7 +455,8 @@ export default function PhotoAnalysisResults({
         >
           New Analysis
         </motion.button>
-        {sessionId && onViewProgression && (
+        {/* Only show View Progression for follow-up/continue tracking */}
+        {sessionId && onViewProgression && followUpData && (
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -463,7 +464,7 @@ export default function PhotoAnalysisResults({
             className="flex-1 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium flex items-center justify-center gap-2"
           >
             <ChartLine className="w-4 h-4" />
-            View Progression
+            View Progression Analysis
           </motion.button>
         )}
         <motion.button

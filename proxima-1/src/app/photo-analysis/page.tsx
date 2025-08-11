@@ -128,11 +128,11 @@ export default function PhotoAnalysisPage() {
         
         console.log('Created session:', session);
         
-        if (!session || (!session.id && !session.session_id)) {
+        if (!session || !session.id) {
           throw new Error('Session creation failed - no session ID returned');
         }
         
-        sessionId = session.id || session.session_id;
+        sessionId = session.id;  // session.id is already normalized in usePhotoAnalysis hook
         console.log('Using session ID:', sessionId);
       }
       

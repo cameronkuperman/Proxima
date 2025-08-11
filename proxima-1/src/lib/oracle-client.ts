@@ -159,6 +159,140 @@ export class OracleClient {
   }
 
   /**
+   * Stream a message (SSE or chunked) if backend supports it
+   * Falls back to non-streaming when not available.
+   */
+  async streamMessage(
+    query: string,
+    userId: string,
+    conversationId?: string,
+    options?: {
+      category?: string;
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+      retries?: number;
+      isFirstMessage?: boolean;
+    },
+    callbacks?: {
+      onStart?: (convId: string) => void;
+      onReasoningDelta?: (text: string) => void;
+      onContentDelta?: (text: string) => void;
+      onDone?: (finalText: string) => void;
+    }
+  ): Promise<OracleResponse | null> {
+    // Gate by env so we don't call a route that may not exist
+    if (process.env.NEXT_PUBLIC_ORACLE_STREAMING !== 'true') {
+      return null;
+    }
+
+    const convId = conversationId || uuidv4();
+
+    // Create conversation if needed (mirrors sendMessage logic)
+    if (options?.isFirstMessage && !this.conversationCreated.get(convId)) {
+      const conversation = await ConversationService.createConversation(
+        userId,
+        convId,
+        await ConversationService.generateTitle(query),
+        'openrouterai',
+        options?.model || 'tngtech/deepseek-r1t-chimera:free',
+        'health_analysis'
+      );
+      if (conversation) {
+        this.conversationCreated.set(convId, true);
+        await ConversationService.addMessage(convId, 'user', query, { source: 'oracle_chat' });
+      }
+    } else if (!options?.isFirstMessage) {
+      await ConversationService.addMessage(convId, 'user', query, { source: 'oracle_chat' });
+    }
+
+    callbacks?.onStart?.(convId);
+
+    const payload: OracleMessage = {
+      query,
+      user_id: userId,
+      conversation_id: convId,
+      category: options?.category || 'health-scan',
+      model: options?.model,
+      temperature: options?.temperature,
+      max_tokens: options?.maxTokens
+    };
+
+    const endpoint = `${this.baseUrl}/api/chat/stream`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok || !res.body) {
+        return null; // fall back to non-streaming
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+      let reasoningAccum = '';
+
+      // We accept either server-sent events with lines starting with 'data:'
+      // or raw JSONL where each line is a JSON object with {type, delta, done}
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split(/\n/).filter(Boolean);
+        for (const line of lines) {
+          const content = line.startsWith('data:') ? line.slice(5).trim() : line.trim();
+          if (!content) continue;
+          try {
+            const data = JSON.parse(content);
+            if (data.type === 'reasoning' && data.delta) {
+              reasoningAccum += data.delta;
+              callbacks?.onReasoningDelta?.(data.delta);
+            } else if (data.type === 'content' && data.delta) {
+              accumulated += data.delta;
+              callbacks?.onContentDelta?.(data.delta);
+            } else if (data.done) {
+              callbacks?.onDone?.(accumulated);
+            }
+          } catch {
+            // Treat as plain text delta
+            accumulated += content;
+            callbacks?.onContentDelta?.(content);
+          }
+        }
+      }
+
+      // After stream completes, persist assistant message
+      const responseData: OracleResponse = {
+        response: accumulated,
+        raw_response: accumulated,
+        conversation_id: convId,
+        user_id: userId,
+        category: payload.category || 'health-scan',
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+        model: options?.model || 'unknown'
+      };
+
+      await ConversationService.addMessage(convId, 'assistant', accumulated, {
+        token_count: 0,
+        model_used: responseData.model,
+        source: 'oracle_chat'
+      });
+
+      const currentCount = this.messagesInConversation.get(convId) || 0;
+      this.messagesInConversation.set(convId, currentCount + 2);
+
+      return responseData;
+    } catch (error) {
+      console.error('Streaming failed:', error);
+      return null;
+    }
+  }
+
+  /**
    * Create a new conversation
    */
   async createConversation(userId: string): Promise<string> {

@@ -85,14 +85,15 @@ export function usePhotoAnalysis() {
     
     const formData = new FormData();
     photos.forEach(photo => formData.append('photos', photo));
+    // Backend expects user_id in FormData directly
     formData.append('user_id', userId);
     formData.append('session_id', sessionId);
     
     console.log('Uploading photos with user_id:', userId);
     console.log('Session ID:', sessionId);
 
-    // Use our secure upload endpoint
-    const response = await fetch('/api/photo-upload', {
+    // Call backend directly since it expects user_id in FormData, not auth headers
+    const response = await fetch(`${API_URL}/api/photo-analysis/upload`, {
       method: 'POST',
       body: formData
     });
@@ -195,11 +196,13 @@ export function usePhotoAnalysis() {
     
     const sessionData = await response.json();
     
-    // Normalize the session object - backend returns session_id, frontend expects id
+    // Backend returns session_id, normalize to have both id and session_id
     const session: PhotoSession = {
       ...sessionData,
-      id: sessionData.id || sessionData.session_id,
-      session_id: sessionData.session_id || sessionData.id
+      id: sessionData.session_id,  // Use session_id as id
+      session_id: sessionData.session_id,
+      condition_name: sessionData.condition_name,
+      created_at: sessionData.created_at
     };
     
     setSessions(prev => [session, ...prev]);
@@ -252,27 +255,55 @@ export function usePhotoAnalysis() {
       throw new Error('Session ID is required');
     }
     
-    const formData = new FormData();
-    photos.forEach(photo => formData.append('photos', photo));
-    if (options?.auto_compare !== undefined) {
-      formData.append('auto_compare', String(options.auto_compare));
+    // Validate photo count (max 5)
+    if (photos.length > 5) {
+      throw new Error('Maximum 5 photos allowed per follow-up upload');
     }
+    
+    const formData = new FormData();
+    // Add photos
+    photos.forEach(photo => formData.append('photos', photo));
+    
+    // Add auto_compare (backend expects string "true" or "false")
+    formData.append('auto_compare', options?.auto_compare !== false ? 'true' : 'false');
+    
+    // Add optional notes
     if (options?.notes) {
       formData.append('notes', options.notes);
     }
-    if (options?.compare_with_photo_ids) {
+    
+    // Add compare_with_photo_ids as JSON string if provided
+    if (options?.compare_with_photo_ids && options.compare_with_photo_ids.length > 0) {
       formData.append('compare_with_photo_ids', JSON.stringify(options.compare_with_photo_ids));
     }
 
     const url = `${API_URL}/api/photo-analysis/session/${sessionId}/follow-up`;
     console.log('Making follow-up request to:', url);
+    console.log('FormData contents:', {
+      photos: photos.length,
+      auto_compare: options?.auto_compare !== false,
+      notes: options?.notes,
+      compare_with_photo_ids: options?.compare_with_photo_ids
+    });
     
     const response = await fetch(url, {
       method: 'POST',
       body: formData
     });
 
-    if (!response.ok) throw new Error('Follow-up upload failed');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Follow-up upload failed:', response.status, errorText);
+      
+      if (response.status === 404) {
+        throw new Error('Session not found. Please refresh and try again.');
+      } else if (response.status === 400) {
+        throw new Error('Invalid request. Maximum 5 photos allowed.');
+      } else {
+        throw new Error('Follow-up upload failed');
+      }
+    }
+    
     return response.json();
   };
 

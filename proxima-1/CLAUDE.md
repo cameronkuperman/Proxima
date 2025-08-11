@@ -121,6 +121,61 @@ Inspired by Linear and Stripe - clean, modern, and trustworthy with smooth anima
 - Deep Dive Continue sends: `{ session_id, answer, question_number }`
 - Deep Dive Complete sends: `{ session_id, final_answer }`
 
+### Photo Analysis API Guidelines:
+**CRITICAL: The backend photo analysis API has specific requirements:**
+
+1. **Authentication**: Backend expects `user_id` in request body/FormData, NOT from auth headers
+2. **Session Creation**: Backend returns `session_id` not `id`. Frontend normalizes to `id` in usePhotoAnalysis hook
+3. **Photo Upload**: 
+   - Call backend directly at `${API_URL}/api/photo-analysis/upload`
+   - Send `user_id` and `session_id` in FormData
+   - Do NOT use local `/api/photo-upload` endpoint for backend calls
+4. **GET Endpoints**: For fetching sessions, use Supabase directly (existing implementation)
+5. **POST Endpoints**: For uploads/analysis, use backend API with user_id in body
+
+**WORKING Photo Upload Implementation:**
+```javascript
+// In usePhotoAnalysis.ts
+const formData = new FormData();
+photos.forEach(photo => formData.append('photos', photo));
+formData.append('user_id', userId);  // Required by backend
+formData.append('session_id', sessionId);
+
+const response = await fetch(`${API_URL}/api/photo-analysis/upload`, {
+  method: 'POST',
+  body: formData
+});
+```
+
+**Session ID Handling:**
+- Backend returns `session_id` in response
+- Frontend hook normalizes to `id` for consistency
+- Always use `session.id` in frontend, it maps to backend's `session_id`
+
+### Continue Tracking / Follow-up Photos API:
+**CRITICAL: Follow-up endpoint has different requirements than initial upload:**
+
+1. **NO user_id needed** - Backend gets it from session record
+2. **Endpoint**: `POST /api/photo-analysis/session/{sessionId}/follow-up`
+3. **FormData structure**:
+   ```javascript
+   const formData = new FormData();
+   photos.forEach(photo => formData.append('photos', photo));  // Max 5 files
+   formData.append('auto_compare', 'true');  // or 'false' - string required
+   if (notes) formData.append('notes', notes);
+   if (comparePhotoIds) formData.append('compare_with_photo_ids', JSON.stringify(photoIds));
+   ```
+
+4. **Common Errors**:
+   - 400: More than 5 photos uploaded
+   - 404: Session ID doesn't exist
+   - 500: Database/API issues
+
+5. **UI Rules**:
+   - "View Progression Analysis" button only shows for follow-up analyses
+   - Available only in continue tracking mode
+   - Shows comparison with previous photos when auto_compare is true
+
 ### When Backend Returns Empty Responses:
 1. Add logging but DO NOT change request structure
 2. Implement fallback questions on frontend
