@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     let stripeSubscriptions = null;
     if (profile?.stripe_customer_id) {
       try {
-        const subs = await stripe.subscriptions.list({
+        const subs = await stripe().subscriptions.list({
           customer: profile.stripe_customer_id,
           status: 'active',
         });

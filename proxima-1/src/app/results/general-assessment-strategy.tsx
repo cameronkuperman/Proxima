@@ -277,7 +277,7 @@ export function formatResultsForCategory(
       switch(section) {
         case 'current_state_summary':
           return {
-            title: 'How You're Feeling',
+            title: 'How You\'re Feeling',
             content: aiResponse.symptoms || aiResponse.description,
             type: 'summary'
           }

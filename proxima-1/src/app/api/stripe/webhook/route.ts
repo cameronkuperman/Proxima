@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   
   try {
     // Verify webhook signature
-    event = stripe.webhooks.constructEvent(
+    event = stripe().webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
           }
           
           // Retrieve the subscription details
-          const subscription = await stripe.subscriptions.retrieve(
+          const subscription = await stripe().subscriptions.retrieve(
             session.subscription as string
           ) as Stripe.Subscription;
           

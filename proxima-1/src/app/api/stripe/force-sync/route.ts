@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     console.log('Found Stripe customer:', profile.stripe_customer_id);
     
     // Get active subscriptions from Stripe
-    const subscriptions = await stripe.subscriptions.list({
+    const subscriptions = await stripe().subscriptions.list({
       customer: profile.stripe_customer_id,
       status: 'active',
     });

@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     } else {
       // Create new Stripe customer
       console.log('Creating new Stripe customer for:', userEmailFinal);
-      const customer = await stripe.customers.create({
+      const customer = await stripe().customers.create({
         email: userEmailFinal!,
         metadata: {
           supabase_user_id: user.id,
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
     console.log('Creating checkout session with price:', priceId);
     
     // 8. Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripe().checkout.sessions.create({
       customer: stripeCustomerId,
       client_reference_id: user.id,
       line_items: [
