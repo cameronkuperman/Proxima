@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CreditCard, HelpCircle } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -14,13 +14,20 @@ import UnifiedAuthGuard from '@/components/UnifiedAuthGuard';
 
 export default function SubscriptionManagementPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
   
   useEffect(() => {
-    fetchSubscriptionDetails();
+    // Always sync with Stripe when visiting the page
+    handleForceSync();
+    
+    // Clean up URL if returning from portal
+    if (searchParams.get('updated') === 'true') {
+      router.replace('/subscription');
+    }
   }, []);
   
   const fetchSubscriptionDetails = async () => {
@@ -51,6 +58,41 @@ export default function SubscriptionManagementPage() {
       toast.error('Failed to load subscription details');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleForceSync = async () => {
+    try {
+      setLoading(true);
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.push('/login?redirect=/subscription');
+        return;
+      }
+      
+      // Force sync with Stripe to ensure latest data
+      const syncResponse = await fetch('/api/stripe/force-sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+      
+      const syncData = await syncResponse.json();
+      
+      // Always fetch subscription details after sync attempt
+      await fetchSubscriptionDetails();
+      
+      // Only show success toast if actually coming from portal
+      if (searchParams.get('updated') === 'true' && syncData.success) {
+        toast.success('Subscription updated');
+      }
+    } catch (error: any) {
+      console.error('Error syncing subscription:', error);
+      // Fallback to just fetching current data
+      await fetchSubscriptionDetails();
     }
   };
   
