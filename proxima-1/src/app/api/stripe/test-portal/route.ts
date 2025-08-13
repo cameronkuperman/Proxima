@@ -32,20 +32,7 @@ export async function GET(req: NextRequest) {
               enabled: true,
             },
             subscription_cancel: {
-              enabled: true,
-              mode: 'at_period_end',
-              cancellation_reason: {
-                enabled: true,
-                options: [
-                  'too_expensive',
-                  'missing_features',
-                  'switched_service',
-                  'unused',
-                  'customer_service',
-                  'too_complex',
-                  'other',
-                ],
-              },
+              enabled: false, // Disabled - we handle cancellation in our app with custom feedback
             },
             subscription_update: {
               enabled: true,

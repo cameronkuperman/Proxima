@@ -118,15 +118,30 @@ export async function POST(req: NextRequest) {
         
         // If cancellation is scheduled, capture the reason if available
         if (cancelAtPeriodEnd) {
-          // Portal cancellations often don't have cancellation_details
-          updateData.cancellation_reason = (subscription as any).cancellation_details?.reason || 
-                                          (subscription as any).metadata?.cancellation_reason || 
-                                          'portal_cancellation';
-          updateData.cancellation_feedback = (subscription as any).cancellation_details?.feedback || 
-                                            (subscription as any).metadata?.cancellation_feedback || 
-                                            null;
-          // Set canceled_at to when the cancellation was scheduled
-          updateData.canceled_at = new Date().toISOString();
+          // Check if this is a new cancellation (not already canceled)
+          const { data: existingSub } = await supabase
+            .from('subscriptions')
+            .select('cancel_at_period_end, canceled_at')
+            .eq('stripe_subscription_id', subscription.id)
+            .single();
+          
+          // Only set cancellation data if this is a new cancellation
+          if (existingSub && !existingSub.cancel_at_period_end) {
+            // Portal cancellations don't have cancellation_details
+            updateData.cancellation_reason = (subscription as any).cancellation_details?.reason || 
+                                            (subscription as any).metadata?.cancellation_reason || 
+                                            'stripe_portal';
+            updateData.cancellation_feedback = (subscription as any).cancellation_details?.feedback || 
+                                              (subscription as any).metadata?.cancellation_feedback || 
+                                              null;
+            // Set canceled_at to when the cancellation was scheduled
+            updateData.canceled_at = new Date().toISOString();
+          }
+        } else {
+          // If cancel_at_period_end is false, clear cancellation data (subscription was resumed)
+          updateData.cancellation_reason = null;
+          updateData.cancellation_feedback = null;
+          updateData.canceled_at = null;
         }
         
         const { error: updateError } = await supabase
@@ -157,7 +172,7 @@ export async function POST(req: NextRequest) {
                   stripe_subscription_id: subscription.id,
                   cancel_at: (subscription as any).cancel_at,
                   current_period_end: (subscription as any).current_period_end,
-                  reason: (subscription as any).cancellation_details?.reason || 'portal_cancellation',
+                  reason: (subscription as any).cancellation_details?.reason || 'stripe_portal',
                   feedback: (subscription as any).cancellation_details?.feedback || null,
                   canceled_via: 'stripe_portal',
                 },
