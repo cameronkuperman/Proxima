@@ -117,38 +117,53 @@ export async function POST(req: NextRequest) {
         };
         
         // If cancellation is scheduled, capture the reason if available
-        if (cancelAtPeriodEnd && (subscription as any).cancellation_details) {
-          updateData.cancellation_reason = (subscription as any).cancellation_details.reason;
-          updateData.cancellation_feedback = (subscription as any).cancellation_details.feedback;
+        if (cancelAtPeriodEnd) {
+          // Portal cancellations often don't have cancellation_details
+          updateData.cancellation_reason = (subscription as any).cancellation_details?.reason || 
+                                          (subscription as any).metadata?.cancellation_reason || 
+                                          'portal_cancellation';
+          updateData.cancellation_feedback = (subscription as any).cancellation_details?.feedback || 
+                                            (subscription as any).metadata?.cancellation_feedback || 
+                                            null;
+          // Set canceled_at to when the cancellation was scheduled
+          updateData.canceled_at = new Date().toISOString();
         }
         
-        await supabase
+        const { error: updateError } = await supabase
           .from('subscriptions')
           .update(updateData)
           .eq('stripe_subscription_id', subscription.id);
+        
+        if (updateError) {
+          console.error('Failed to update subscription:', updateError);
+        }
         
         // Log cancellation scheduling if it's a new cancellation
         if (cancelAtPeriodEnd) {
           const { data: sub } = await supabase
             .from('subscriptions')
-            .select('user_id')
+            .select('user_id, id')
             .eq('stripe_subscription_id', subscription.id)
             .single();
           
           if (sub?.user_id) {
+            // Always log the cancellation event, even without details
             await supabase
               .from('subscription_events')
               .insert({
                 user_id: sub.user_id,
                 event_type: 'cancellation_scheduled',
                 metadata: {
-                  subscription_id: subscription.id,
+                  stripe_subscription_id: subscription.id,
                   cancel_at: (subscription as any).cancel_at,
                   current_period_end: (subscription as any).current_period_end,
-                  reason: (subscription as any).cancellation_details?.reason,
-                  feedback: (subscription as any).cancellation_details?.feedback,
+                  reason: (subscription as any).cancellation_details?.reason || 'portal_cancellation',
+                  feedback: (subscription as any).cancellation_details?.feedback || null,
+                  canceled_via: 'stripe_portal',
                 },
               });
+            
+            console.log('Cancellation event logged for user:', sub.user_id);
           }
         }
         
