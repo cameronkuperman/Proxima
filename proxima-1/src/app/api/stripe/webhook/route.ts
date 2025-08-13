@@ -82,8 +82,25 @@ export async function POST(req: NextRequest) {
             session.subscription as string
           ) as Stripe.Subscription;
           
-          // Extract tier from metadata
-          const tier = session.metadata?.tier || 'unknown';
+          // Determine tier from price ID (same logic as updates)
+          let tier = session.metadata?.tier || 'basic'; // Use metadata as fallback
+          if (subscription.items && subscription.items.data.length > 0) {
+            const priceId = subscription.items.data[0].price.id;
+            
+            // Map price IDs to tiers
+            if (priceId === process.env.STRIPE_PRICE_BASIC_MONTHLY || 
+                priceId === process.env.STRIPE_PRICE_BASIC_YEARLY) {
+              tier = 'basic';
+            } else if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || 
+                       priceId === process.env.STRIPE_PRICE_PRO_YEARLY) {
+              tier = 'pro';
+            } else if (priceId === process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 
+                       priceId === process.env.STRIPE_PRICE_PRO_PLUS_YEARLY) {
+              tier = 'pro_plus';
+            }
+            
+            console.log('Detected tier from price ID at checkout:', priceId, '->', tier);
+          }
           
           // Create subscription record
           await supabase
