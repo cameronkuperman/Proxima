@@ -87,7 +87,7 @@ export default function CheckoutSuccessPage() {
       // Get the tier name from the synced data
       if (data.currentSubscriptions && data.currentSubscriptions.length > 0) {
         const tier = data.currentSubscriptions[0].tier;
-        setTierName(tier.replace('_', ' ').toUpperCase());
+        setTierName(tier === 'pro_plus' ? 'PRO +' : tier.replace('_', ' ').toUpperCase());
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));

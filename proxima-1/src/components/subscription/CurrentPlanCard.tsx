@@ -148,7 +148,8 @@ export default function CurrentPlanCard({
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white">
-              {tier.replace('_', ' ').charAt(0).toUpperCase() + tier.replace('_', ' ').slice(1)} Plan
+              {tier === 'pro_plus' ? 'Pro +' : 
+               tier.replace('_', ' ').charAt(0).toUpperCase() + tier.replace('_', ' ').slice(1)} Plan
             </h2>
             <p className="text-gray-400">{getPlanPrice()}</p>
           </div>
@@ -174,8 +175,24 @@ export default function CurrentPlanCard({
             <span className="text-yellow-400 font-medium">Subscription ending</span>
           </div>
           <p className="text-sm text-gray-300">
-            Your subscription will end on {new Date(subscription.current_period_end).toLocaleDateString()}.
-            You'll retain access until then.
+            {(() => {
+              // Debug logging
+              console.log('Subscription data:', subscription);
+              console.log('current_period_end:', subscription.current_period_end);
+              
+              if (!subscription.current_period_end) {
+                return "Your subscription will end at the end of your billing period. You'll retain access until then.";
+              }
+              
+              const endDate = new Date(subscription.current_period_end);
+              // Check if the date is valid
+              if (isNaN(endDate.getTime()) || endDate.getFullYear() < 2020) {
+                console.error('Invalid current_period_end date:', subscription.current_period_end);
+                return "Your subscription will end at the end of your billing period. You'll retain access until then.";
+              }
+              
+              return `Your subscription will end on ${endDate.toLocaleDateString()}. You'll retain access until then.`;
+            })()}
           </p>
         </div>
       )}
