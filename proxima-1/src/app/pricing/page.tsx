@@ -239,22 +239,22 @@ export default function PricingPage() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 pt-6">
           {Object.values(TIERS).map((tier, index) => (
             <motion.div
               key={tier.name}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`relative rounded-2xl backdrop-blur-sm border transition-all hover:scale-105 ${
+              className={`relative rounded-2xl backdrop-blur-sm border transition-all hover:scale-105 overflow-visible ${
                 tier.isRecommended
                   ? 'bg-gradient-to-b from-purple-900/20 to-transparent border-purple-500/50 shadow-xl shadow-purple-500/20'
                   : 'bg-white/[0.02] border-white/10'
               }`}
             >
               {tier.isRecommended && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full shadow-lg">
                     MOST POPULAR
                   </span>
                 </div>
@@ -404,10 +404,6 @@ export default function PricingPage() {
           <FAQItem
             question="Can I cancel anytime?"
             answer="Absolutely. You can cancel your subscription at any time, and you'll continue to have access until the end of your billing period."
-          />
-          <FAQItem
-            question="Do you offer refunds?"
-            answer="We offer a 30-day money-back guarantee. If you're not satisfied, contact support for a full refund."
           />
         </div>
       </div>
