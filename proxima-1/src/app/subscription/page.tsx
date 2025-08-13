@@ -122,9 +122,9 @@ export default function SubscriptionManagementPage() {
         throw new Error(data.error || 'Failed to create portal session');
       }
       
-      // Open Stripe Customer Portal in new tab
+      // Open Stripe Customer Portal in same tab
       if (data.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
     } catch (error: any) {
       console.error('Error creating portal session:', error);
@@ -243,7 +243,7 @@ export default function SubscriptionManagementPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => router.back()}
+                  onClick={() => router.push('/dashboard')}
                   className="p-2 hover:bg-white/[0.05] rounded-lg transition-all"
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-400" />
