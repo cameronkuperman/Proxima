@@ -107,17 +107,52 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         
+        const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
+        
+        const updateData: any = {
+          status: subscription.status,
+          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          cancel_at_period_end: cancelAtPeriodEnd,
+          updated_at: new Date().toISOString(),
+        };
+        
+        // If cancellation is scheduled, capture the reason if available
+        if (cancelAtPeriodEnd && (subscription as any).cancellation_details) {
+          updateData.cancellation_reason = (subscription as any).cancellation_details.reason;
+          updateData.cancellation_feedback = (subscription as any).cancellation_details.feedback;
+        }
+        
         await supabase
           .from('subscriptions')
-          .update({
-            status: subscription.status,
-            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-            cancel_at_period_end: (subscription as any).cancel_at_period_end,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq('stripe_subscription_id', subscription.id);
         
-        console.log('Subscription updated:', subscription.id);
+        // Log cancellation scheduling if it's a new cancellation
+        if (cancelAtPeriodEnd) {
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('user_id')
+            .eq('stripe_subscription_id', subscription.id)
+            .single();
+          
+          if (sub?.user_id) {
+            await supabase
+              .from('subscription_events')
+              .insert({
+                user_id: sub.user_id,
+                event_type: 'cancellation_scheduled',
+                metadata: {
+                  subscription_id: subscription.id,
+                  cancel_at: (subscription as any).cancel_at,
+                  current_period_end: (subscription as any).current_period_end,
+                  reason: (subscription as any).cancellation_details?.reason,
+                  feedback: (subscription as any).cancellation_details?.feedback,
+                },
+              });
+          }
+        }
+        
+        console.log('Subscription updated:', subscription.id, cancelAtPeriodEnd ? '(cancellation scheduled)' : '');
         break;
       }
       
@@ -125,13 +160,48 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         
+        // Extract cancellation details
+        const cancellationReason = (subscription as any).cancellation_details?.reason || 
+                                   (subscription as any).metadata?.cancellation_reason || 
+                                   null;
+        const cancellationFeedback = (subscription as any).cancellation_details?.feedback || 
+                                     (subscription as any).metadata?.cancellation_feedback || 
+                                     null;
+        
         await supabase
           .from('subscriptions')
           .update({
             status: 'canceled',
+            cancellation_reason: cancellationReason,
+            cancellation_feedback: cancellationFeedback,
+            canceled_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_subscription_id', subscription.id);
+        
+        // Store cancellation event with reason if available
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('user_id')
+          .eq('stripe_subscription_id', subscription.id)
+          .single();
+        
+        if (sub) {
+          await supabase
+            .from('subscription_events')
+            .insert({
+              user_id: sub.user_id,
+              event_type: 'subscription_canceled',
+              metadata: {
+                stripe_subscription_id: subscription.id,
+                cancellation_reason: cancellationReason || 'not_provided',
+                cancellation_feedback: cancellationFeedback,
+                cancellation_comment: (subscription as any).cancellation_details?.comment,
+                canceled_at: new Date().toISOString(),
+                final_period_end: (subscription as any).current_period_end,
+              },
+            });
+        }
         
         console.log('Subscription canceled:', subscription.id);
         break;

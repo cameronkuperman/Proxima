@@ -115,11 +115,16 @@ export async function POST(req: NextRequest) {
         );
       }
       
-      // Cancel the subscription in Stripe (at period end)
+      // Cancel the subscription in Stripe (at period end) with cancellation reason
       const canceledSubscription = await stripe().subscriptions.update(
         subscription.stripe_subscription_id,
         {
           cancel_at_period_end: true,
+          metadata: {
+            ...((await stripe().subscriptions.retrieve(subscription.stripe_subscription_id)).metadata || {}),
+            cancellation_reason: reason || 'not_specified',
+            cancellation_feedback: feedback || '',
+          },
         }
       );
       
