@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { aiPredictionsApi, aiPredictionCache } from '@/lib/api/aiPredictions';
 import { SeasonalPredictionsResponse, SeasonalPrediction } from '@/types/aiPredictions';
+import supabaseAIPredictionsService from '@/services/supabaseAIPredictionsService';
 
 export function useAISeasonalPredictions() {
   const { user } = useAuth();
@@ -36,23 +37,45 @@ export function useAISeasonalPredictions() {
         setIsLoading(true);
       }
 
-      const response = await aiPredictionsApi.getSeasonalPredictions(user.id, forceRefresh);
+      // First try Supabase for cached seasonal predictions
+      const supabaseResult = await supabaseAIPredictionsService.getPredictionsByType(user.id, 'seasonal');
       
-      // Ensure predictions have proper type and gradients
-      if (response.predictions) {
-        response.predictions = response.predictions.map(p => ({
-          ...p,
-          type: 'seasonal' as const,
-          gradient: p.gradient || 'from-green-600/10 to-emerald-600/10',
-          prevention_protocol: p.prevention_protocol || []
-        }));
-      }
-      
-      setData(response);
-      
-      // Cache successful responses
-      if (response.status === 'success' || response.status === 'cached') {
-        aiPredictionCache.set(cacheKey, response, 10); // Cache for 10 minutes
+      if (supabaseResult?.predictions && !forceRefresh) {
+        const response: SeasonalPredictionsResponse = {
+          status: 'success',
+          predictions: (supabaseResult.predictions || []).map((p: any) => ({
+            ...p,
+            type: 'seasonal' as const,
+            gradient: p.gradient || 'from-green-600/10 to-emerald-600/10',
+            prevention_protocol: p.prevention_protocol || []
+          })),
+          current_season: supabaseResult.metadata?.current_season,
+          next_season_transition: supabaseResult.metadata?.next_season_transition,
+          data_quality_score: supabaseResult.data_quality_score || 0
+        };
+        
+        setData(response);
+        aiPredictionCache.set(cacheKey, response, 10);
+      } else {
+        // Fallback to backend API
+        const response = await aiPredictionsApi.getSeasonalPredictions(user.id, forceRefresh);
+        
+        // Ensure predictions have proper type and gradients
+        if (response.predictions) {
+          response.predictions = response.predictions.map(p => ({
+            ...p,
+            type: 'seasonal' as const,
+            gradient: p.gradient || 'from-green-600/10 to-emerald-600/10',
+            prevention_protocol: p.prevention_protocol || []
+          }));
+        }
+        
+        setData(response);
+        
+        // Cache successful responses
+        if (response.status === 'success' || response.status === 'cached') {
+          aiPredictionCache.set(cacheKey, response, 10); // Cache for 10 minutes
+        }
       }
     } catch (err) {
       setError(err as Error);

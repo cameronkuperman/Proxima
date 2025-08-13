@@ -272,20 +272,29 @@ export function formatResultsForCategory(
     approach: strategy.approach,
     sensitivity: strategy.sensitivity,
     
+    // Map new backend fields directly
+    severity_level: aiResponse.severity_level,
+    confidence_level: aiResponse.confidence_level,
+    what_this_means: aiResponse.what_this_means,
+    immediate_actions: aiResponse.immediate_actions,
+    red_flags: aiResponse.red_flags,
+    tracking_metrics: aiResponse.tracking_metrics,
+    follow_up_timeline: aiResponse.follow_up_timeline,
+    
     // Reformat sections based on strategy
     sections: strategy.sections.map(section => {
       switch(section) {
         case 'current_state_summary':
           return {
             title: 'How You\'re Feeling',
-            content: aiResponse.symptoms || aiResponse.description,
+            content: aiResponse.what_this_means || aiResponse.symptoms || aiResponse.description,
             type: 'summary'
           }
         
         case 'self_care_recommendations':
           return {
             title: strategy.terminology.actionWord,
-            content: aiResponse.recommendations || aiResponse.self_care,
+            content: aiResponse.immediate_actions || aiResponse.recommendations || aiResponse.self_care,
             type: 'actionable'
           }
         
@@ -294,13 +303,13 @@ export function formatResultsForCategory(
           if (strategy.sensitivity === 'high') {
             return {
               title: 'Contributing Factors',
-              content: aiResponse.factors || aiResponse.causes,
+              content: aiResponse.factors || aiResponse.possible_causes || aiResponse.causes,
               type: 'informational'
             }
           }
           return {
             title: 'Potential Causes',
-            content: aiResponse.diagnosis || aiResponse.causes,
+            content: aiResponse.possible_causes || aiResponse.diagnosis || aiResponse.causes,
             type: 'diagnostic'
           }
         
@@ -309,9 +318,10 @@ export function formatResultsForCategory(
         case 'medical_follow_up':
           return {
             title: 'When to See a Doctor',
-            content: aiResponse.medical_advice || aiResponse.doctor_visit,
+            content: aiResponse.follow_up_timeline || aiResponse.medical_advice || aiResponse.doctor_visit,
             type: 'medical',
-            urgency: aiResponse.urgency || 'routine'
+            urgency: aiResponse.urgency || aiResponse.severity_level || 'routine',
+            red_flags: aiResponse.red_flags
           }
         
         case 'crisis_resources':
@@ -330,6 +340,13 @@ export function formatResultsForCategory(
             }
           }
           return null
+        
+        case 'tracking_progress':
+          return {
+            title: 'Track Your Progress',
+            content: aiResponse.tracking_metrics,
+            type: 'tracking'
+          }
         
         default:
           return {

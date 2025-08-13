@@ -13,6 +13,7 @@ export interface OracleMessage {
   model?: string;
   temperature?: number;
   max_tokens?: number;
+  reasoning_mode?: boolean;
 }
 
 export interface OracleResponse {
@@ -25,8 +26,12 @@ export interface OracleResponse {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
+    reasoning_tokens?: number;
   };
   model: string;
+  model_used?: string;
+  tier?: string;
+  reasoning_mode?: boolean;
 }
 
 export interface SummaryResponse {
@@ -62,6 +67,7 @@ export class OracleClient {
       maxTokens?: number;
       retries?: number;
       isFirstMessage?: boolean;
+      reasoningMode?: boolean;
     }
   ): Promise<OracleResponse> {
     // Generate conversation ID if not provided
@@ -106,7 +112,8 @@ export class OracleClient {
       category: options?.category || 'health-scan',
       model: options?.model,
       temperature: options?.temperature,
-      max_tokens: options?.maxTokens
+      max_tokens: options?.maxTokens,
+      reasoning_mode: options?.reasoningMode
     };
 
     const retries = options?.retries || this.defaultRetries;
@@ -173,6 +180,7 @@ export class OracleClient {
       maxTokens?: number;
       retries?: number;
       isFirstMessage?: boolean;
+      reasoningMode?: boolean;
     },
     callbacks?: {
       onStart?: (convId: string) => void;
@@ -215,7 +223,8 @@ export class OracleClient {
       category: options?.category || 'health-scan',
       model: options?.model,
       temperature: options?.temperature,
-      max_tokens: options?.maxTokens
+      max_tokens: options?.maxTokens,
+      reasoning_mode: options?.reasoningMode
     };
 
     const endpoint = `${this.baseUrl}/api/chat/stream`;

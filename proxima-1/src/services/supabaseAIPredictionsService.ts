@@ -72,72 +72,78 @@ export interface WeeklyPredictions {
 class SupabaseAIPredictionsService {
   /**
    * Fetch current weekly predictions from Supabase
+   * Now fetches from multiple rows based on prediction_type
    */
   async getCurrentPredictions(userId: string): Promise<{ 
     status: 'success' | 'not_found' | 'needs_initial';
     predictions?: WeeklyPredictions;
   }> {
     try {
-      // Fetch the most recent prediction that is current
-      const { data, error } = await supabase
+      // Fetch all current predictions for the user
+      const { data: allPredictions, error } = await supabase
         .from('weekly_ai_predictions')
         .select('*')
         .eq('user_id', userId)
         .eq('is_current', true)
-        .eq('generation_status', 'completed')
         .order('generated_at', { ascending: false })
-        .limit(1)
-        .single()
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No predictions found
-          console.log('No predictions found for user:', userId)
-          
-          // Check if user has ANY predictions (to determine if it's initial or not found)
-          const { data: anyPredictions } = await supabase
-            .from('weekly_ai_predictions')
-            .select('id')
-            .eq('user_id', userId)
-            .limit(1)
-          
-          return {
-            status: anyPredictions && anyPredictions.length > 0 ? 'not_found' : 'needs_initial'
-          }
-        }
-        throw error
+        console.error('Error fetching predictions:', error)
+        return { status: 'not_found' }
       }
 
-      if (data) {
-        // Transform the data to match the expected format
-        const predictions: WeeklyPredictions = {
-          id: data.id,
-          user_id: data.user_id,
-          dashboard_alert: data.dashboard_alert || null,
-          predictions: data.predictions || [],
-          pattern_questions: data.pattern_questions || [],
-          body_patterns: data.body_patterns || {
-            tendencies: [],
-            positive_responses: []
-          },
-          generated_at: data.generated_at,
-          data_quality_score: data.data_quality_score || 0,
-          is_current: data.is_current,
-          viewed_at: data.viewed_at
-        }
-
-        // Mark as viewed if not already
-        if (!data.viewed_at) {
-          await this.markAsViewed(data.id)
-        }
-
+      if (!allPredictions || allPredictions.length === 0) {
+        console.log('No predictions found for user:', userId)
+        
+        // Check if user has ANY predictions
+        const { data: anyPredictions } = await supabase
+          .from('weekly_ai_predictions')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1)
+        
         return {
-          status: 'success',
-          predictions
+          status: anyPredictions && anyPredictions.length > 0 ? 'not_found' : 'needs_initial'
         }
       }
 
-      return { status: 'not_found' }
+      // Group predictions by type
+      const predictionsByType = allPredictions.reduce((acc: any, pred) => {
+        acc[pred.prediction_type] = pred
+        return acc
+      }, {})
+
+      // Build the combined predictions object
+      const predictions: WeeklyPredictions = {
+        id: predictionsByType.dashboard?.id || predictionsByType.immediate?.id || allPredictions[0].id,
+        user_id: userId,
+        dashboard_alert: predictionsByType.dashboard?.dashboard_alert || null,
+        predictions: [
+          ...(predictionsByType.immediate?.predictions || []),
+          ...(predictionsByType.seasonal?.predictions || []),
+          ...(predictionsByType.longterm?.predictions || [])
+        ],
+        pattern_questions: predictionsByType.questions?.pattern_questions || [],
+        body_patterns: predictionsByType.patterns?.body_patterns || {
+          tendencies: [],
+          positive_responses: []
+        },
+        generated_at: predictionsByType.dashboard?.generated_at || allPredictions[0].generated_at,
+        data_quality_score: predictionsByType.immediate?.data_quality_score || 
+                           predictionsByType.dashboard?.data_quality_score || 0,
+        is_current: true,
+        viewed_at: predictionsByType.dashboard?.viewed_at
+      }
+
+      // Mark dashboard as viewed if not already
+      if (predictionsByType.dashboard && !predictionsByType.dashboard.viewed_at) {
+        await this.markAsViewed(predictionsByType.dashboard.id)
+      }
+
+      return {
+        status: 'success',
+        predictions
+      }
     } catch (error) {
       console.error('Error fetching predictions from Supabase:', error)
       return { status: 'not_found' }
@@ -261,7 +267,7 @@ class SupabaseAIPredictionsService {
 
   /**
    * Get immediate predictions only (for 7-day predictions page)
-   * Checks cache validity based on expires_at timestamp
+   * Fetches from the correct prediction_type row
    */
   async getImmediatePredictionsOnly(userId: string): Promise<{
     status: 'success' | 'not_found' | 'needs_data' | 'expired' | 'needs_backend';
@@ -272,20 +278,20 @@ class SupabaseAIPredictionsService {
     cache_valid?: boolean;
   }> {
     try {
-      // Query with expiry check
+      // Query for immediate prediction type specifically
       const { data, error } = await supabase
         .from('weekly_ai_predictions')
         .select('*')
         .eq('user_id', userId)
+        .eq('prediction_type', 'immediate')
         .eq('is_current', true)
-        .eq('generation_status', 'completed')
         .order('generated_at', { ascending: false })
         .limit(1)
         .single()
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // No predictions found - need backend to generate
+          // No immediate predictions found - need backend to generate
           console.log('No immediate predictions in cache for user:', userId)
           return { status: 'needs_backend' };
         }
@@ -298,10 +304,8 @@ class SupabaseAIPredictionsService {
         const expiresAt = data.expires_at ? new Date(data.expires_at) : null
         const cacheValid = !expiresAt || expiresAt > now
         
-        // Filter for immediate predictions from the predictions array
-        const immediatePredictions = data.predictions?.filter(
-          (p: any) => p.type === 'immediate'
-        ) || []
+        // Get predictions directly from the predictions column
+        const immediatePredictions = data.predictions || []
         
         // If cache is expired, suggest backend refresh but still return data
         if (!cacheValid) {
@@ -358,22 +362,53 @@ class SupabaseAIPredictionsService {
         .select('*')
         .eq('user_id', userId)
         .eq('prediction_type', predictionType)
-        .eq('generation_status', 'completed')
+        .eq('is_current', true)
         .order('generated_at', { ascending: false })
         .limit(1)
         .single()
 
       if (!data) return null
 
+      // Check if data is expired
+      if (data.expires_at) {
+        const now = new Date()
+        const expiresAt = new Date(data.expires_at)
+        if (expiresAt < now) {
+          console.log(`${predictionType} predictions expired, expires_at:`, data.expires_at)
+        }
+      }
+
       switch (predictionType) {
         case 'dashboard':
-          return data.dashboard_alert
+          return {
+            alert: data.dashboard_alert,
+            metadata: data.metadata,
+            expires_at: data.expires_at,
+            is_current: data.is_current
+          }
         case 'patterns':
-          return data.body_patterns
+          return {
+            patterns: data.body_patterns,
+            metadata: data.metadata,
+            expires_at: data.expires_at
+          }
         case 'questions':
-          return data.pattern_questions
+          return {
+            questions: data.pattern_questions,
+            metadata: data.metadata,
+            expires_at: data.expires_at
+          }
+        case 'immediate':
+        case 'seasonal':
+        case 'longterm':
+          return {
+            predictions: data.predictions || [],
+            metadata: data.metadata,
+            expires_at: data.expires_at,
+            data_quality_score: data.data_quality_score
+          }
         default:
-          return data.predictions?.filter((p: any) => p.type === predictionType) || []
+          return data
       }
     } catch (error) {
       console.error(`Error fetching ${predictionType} predictions:`, error)

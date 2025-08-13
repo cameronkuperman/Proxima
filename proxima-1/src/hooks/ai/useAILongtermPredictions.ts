@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { aiPredictionsApi, aiPredictionCache } from '@/lib/api/aiPredictions';
 import { LongtermPredictionsResponse, LongtermAssessment } from '@/types/aiPredictions';
+import supabaseAIPredictionsService from '@/services/supabaseAIPredictionsService';
 
 export function useAILongtermPredictions() {
   const { user } = useAuth();
@@ -36,12 +37,38 @@ export function useAILongtermPredictions() {
         setIsLoading(true);
       }
 
-      const response = await aiPredictionsApi.getLongtermPredictions(user.id, forceRefresh);
-      setData(response);
+      // First try Supabase for cached longterm predictions
+      const supabaseResult = await supabaseAIPredictionsService.getPredictionsByType(user.id, 'longterm');
       
-      // Cache successful responses
-      if (response.status === 'success' || response.status === 'cached') {
-        aiPredictionCache.set(cacheKey, response, 15); // Cache for 15 minutes
+      if (supabaseResult?.predictions && !forceRefresh) {
+        // Transform predictions to assessments format
+        const response: LongtermPredictionsResponse = {
+          status: 'success',
+          assessments: (supabaseResult.predictions || []).map((p: any) => ({
+            ...p,
+            // Ensure proper assessment structure
+            trajectory: p.trajectory || {
+              current_path: { risk_level: 'moderate', description: '', projected_outcome: '' },
+              optimized_path: { description: '', requirements: [] }
+            },
+            risk_factors: p.risk_factors || [],
+            prevention_strategy: p.prevention_strategy || p.prevention_protocol || []
+          })),
+          overall_health_trajectory: supabaseResult.metadata?.overall_trajectory,
+          key_focus_areas: supabaseResult.metadata?.focus_areas || []
+        };
+        
+        setData(response);
+        aiPredictionCache.set(cacheKey, response, 15);
+      } else {
+        // Fallback to backend API
+        const response = await aiPredictionsApi.getLongtermPredictions(user.id, forceRefresh);
+        setData(response);
+        
+        // Cache successful responses
+        if (response.status === 'success' || response.status === 'cached') {
+          aiPredictionCache.set(cacheKey, response, 15); // Cache for 15 minutes
+        }
       }
     } catch (err) {
       setError(err as Error);

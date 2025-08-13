@@ -27,6 +27,8 @@ interface TokenLimits {
 
 export interface UseOracleEnhancedOptions {
   userId: string;
+  tier?: string;
+  reasoningMode?: boolean;
   onTokenLimitReached?: (limits: TokenLimits) => void;
   onError?: (error: Error) => void;
   onSuccess?: (response: any) => void;
@@ -34,6 +36,8 @@ export interface UseOracleEnhancedOptions {
 
 export function useOracleEnhanced({
   userId,
+  tier = 'free',
+  reasoningMode = false,
   onTokenLimitReached,
   onError,
   onSuccess
@@ -46,6 +50,7 @@ export function useOracleEnhanced({
   const [tokenUsage, setTokenUsage] = useState({ current: 0, limit: 100000 });
   const [compressionActive, setCompressionActive] = useState(false);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
+  const [modelUsed, setModelUsed] = useState<string | undefined>();
   const streamingEnabled = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ORACLE_STREAMING === 'true';
 
   // Check token limits
@@ -145,7 +150,11 @@ export function useOracleEnhanced({
           query,
           userId,
           convId,
-          { isFirstMessage, model: 'tngtech/deepseek-r1t-chimera:free' },
+          { 
+            isFirstMessage, 
+            model: getModelForTier(tier, reasoningMode),
+            reasoningMode 
+          },
           {
             onStart: () => {
               // Create a placeholder assistant message for streaming deltas
@@ -180,7 +189,8 @@ export function useOracleEnhanced({
           convId,
           {
             isFirstMessage,
-            model: 'tngtech/deepseek-r1t-chimera:free'
+            model: getModelForTier(tier, reasoningMode),
+            reasoningMode
           }
         );
       }
@@ -220,9 +230,10 @@ export function useOracleEnhanced({
         setMessages(prev => [...prev, assistantMessage]);
       }
 
-      // Update token usage
+      // Update token usage and model used
       const newTotal = tokenUsage.current + response.usage.total_tokens;
       setTokenUsage(prev => ({ ...prev, current: newTotal }));
+      setModelUsed(response.model_used || response.model);
 
       // Check limits after sending
       await checkLimits(convId);
@@ -240,7 +251,7 @@ export function useOracleEnhanced({
     } finally {
       setIsLoading(false);
     }
-  }, [conversationId, userId, isFirstMessage, tokenUsage, checkLimits, onError, onSuccess, onTokenLimitReached]);
+  }, [conversationId, userId, isFirstMessage, tokenUsage, tier, reasoningMode, checkLimits, onError, onSuccess, onTokenLimitReached]);
 
   // Load existing conversation
   const loadConversation = useCallback(async (convId: string) => {
@@ -301,6 +312,27 @@ export function useOracleEnhanced({
     startNewConversation,
     loadConversation,
     tokenUsage,
-    compressionActive
+    compressionActive,
+    modelUsed
   };
+}
+
+// Helper function to determine model based on tier and reasoning mode
+function getModelForTier(tier: string, reasoningMode: boolean): string {
+  if (tier === 'free') {
+    return reasoningMode ? 'deepseek/deepseek-r1' : 'deepseek/deepseek-chat';
+  }
+  
+  // For premium tiers, let the backend decide based on endpoint
+  // But provide a hint for reasoning mode
+  if (reasoningMode) {
+    return 'openai/gpt-5'; // Backend will use GPT-5 for reasoning
+  }
+  
+  // Default models for premium tiers
+  if (tier === 'pro' || tier === 'pro_plus') {
+    return 'anthropic/claude-4-sonnet'; // For chat endpoint
+  }
+  
+  return 'openai/gpt-5-mini'; // Basic tier default
 }

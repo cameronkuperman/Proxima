@@ -8,15 +8,47 @@ import { ConversationSidebar } from './ConversationSidebar';
 import { ChatInterface } from './ChatInterface';
 import { UpgradeModal } from './UpgradeModal';
 import { useOracleEnhanced } from '@/hooks/useOracleEnhanced';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/lib/supabase';
+
+// Helper function to get model display name
+const getModelName = (tier: string, reasoningMode: boolean, modelUsed?: string) => {
+  // If we have the actual model from the response, use it
+  if (modelUsed) {
+    const modelMap: Record<string, string> = {
+      'tngtech/deepseek-r1t-chimera:free': 'DeepSeek R1',
+      'deepseek/deepseek-chat': 'DeepSeek Chat',
+      'deepseek/deepseek-r1': 'DeepSeek R1 (Reasoning)',
+      'openai/gpt-5': 'GPT-5',
+      'openai/gpt-5-mini': 'GPT-5 Mini',
+      'anthropic/claude-4-sonnet': 'Claude 4 Sonnet',
+      'google/gemini-2.5-flash': 'Gemini 2.5 Flash',
+      'x-ai/grok-4': 'Grok 4'
+    };
+    return modelMap[modelUsed] || 'AI Assistant';
+  }
+  
+  // Otherwise, predict based on tier and reasoning mode
+  if (tier === 'free') {
+    return reasoningMode ? 'DeepSeek R1 (Reasoning)' : 'DeepSeek Chat';
+  }
+  
+  if (tier === 'pro' || tier === 'pro_plus') {
+    return reasoningMode ? 'GPT-5 (Enhanced)' : 'Claude 4 Sonnet';
+  }
+  
+  return reasoningMode ? 'GPT-5 (Enhanced)' : 'GPT-5 Mini';
+};
 
 export default function OracleEnhanced() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { tier } = useSubscription();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState('');
+  const [reasoningMode, setReasoningMode] = useState(false);
   // Sidebar state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [compressionPrompt, setCompressionPrompt] = useState(false);
@@ -40,9 +72,12 @@ export default function OracleEnhanced() {
     updateTitle,
     startNewConversation,
     loadConversation,
-    compressionActive
+    compressionActive,
+    modelUsed
   } = useOracleEnhanced({
     userId: user?.id || 'anonymous',
+    tier,
+    reasoningMode,
     onTokenLimitReached: (limits) => {
       setTokenLimits(limits as unknown as TokenLimitsState);
       if (limits.is_blocked) {
@@ -201,13 +236,24 @@ export default function OracleEnhanced() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Model Selector */}
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 hover:bg-white/[0.05] rounded-lg transition-colors">
-              <span>DeepSeek R1</span>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+            {/* Reasoning Toggle */}
+            <button
+              onClick={() => setReasoningMode(!reasoningMode)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
+                reasoningMode 
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.05] border border-transparent'
+              }`}
+              title={reasoningMode ? 'Enhanced reasoning enabled' : 'Enable enhanced reasoning'}
+            >
+              <span className="text-lg">🧠</span>
+              <span>{reasoningMode ? 'Enhanced' : 'Standard'}</span>
             </button>
+            
+            {/* Model Indicator */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 bg-white/[0.03] rounded-lg border border-white/[0.08]">
+              <span>{getModelName(tier, reasoningMode, modelUsed)}</span>
+            </div>
 
             {/* Share */}
             <button className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/[0.05] rounded-lg transition-colors">

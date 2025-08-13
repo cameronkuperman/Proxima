@@ -1127,7 +1127,7 @@ function DashboardContent() {
               <motion.div
                 data-tour="profile-card"
                 whileHover={{ scale: 1.02, x: 3, y: -3 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative "
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative hover:z-10 "
                 onClick={() => router.push('/profile')}
               >
                 {/* Info button in top right */}
@@ -1212,7 +1212,7 @@ function DashboardContent() {
               <motion.div
                 data-tour="body-visualization-card"
                 whileHover={{ scale: 1.02, x: 3, y: -3 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative "
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative hover:z-10 "
                 onClick={() => setAssessmentModalOpen('body')}
               >
                 {/* Info button in top right */}

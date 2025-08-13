@@ -80,6 +80,7 @@ export function useWeeklyAIPredictions() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState<'success' | 'needs_initial' | 'not_found'>('success');
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
   useEffect(() => {
     if (!user?.id) {
@@ -95,6 +96,12 @@ export function useWeeklyAIPredictions() {
     
     try {
       setIsLoading(true);
+      
+      // Fetch dashboard alert separately
+      const dashboardResult = await supabaseAIPredictionsService.getPredictionsByType(user.id, 'dashboard');
+      if (dashboardResult?.alert) {
+        setDashboardData(dashboardResult.alert);
+      }
       
       // First try to fetch from Supabase (faster)
       const supabaseResult = await supabaseAIPredictionsService.getCurrentPredictions(user.id);
@@ -192,7 +199,8 @@ export function useWeeklyAIPredictions() {
   };
 
   // Extract individual components for backward compatibility
-  const dashboardAlert = predictions?.dashboard_alert || null;
+  // Use dashboardData if available (from separate query), otherwise fall back to predictions object
+  const dashboardAlert = dashboardData || predictions?.dashboard_alert || null;
   const allPredictions = predictions?.predictions || [];
   const patternQuestions = predictions?.pattern_questions || [];
   const bodyPatterns = predictions?.body_patterns || null;

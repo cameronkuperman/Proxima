@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2, MessageSquare } from 'lucide-react'
+import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2, MessageSquare, Lightbulb, CheckCircle } from 'lucide-react'
 import OracleEmbedded from '@/components/OracleEmbedded'
 import OracleAIModal from '@/components/OracleAIModal'
 import { useRouter } from 'next/navigation'
@@ -46,6 +46,10 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   // Extract analysis data with fallbacks
   const analysis = scanData.analysis || {}
   const confidence = scanData.confidence || 0
+  
+  // Extract new fields from backend
+  const whatThisMeans = (scanData as any).what_this_means
+  const immediateActions = (scanData as any).immediate_actions
   
   // Debug logging
   console.log('QuickScanResults - scanData analysis type:', typeof scanData.analysis)
@@ -366,6 +370,50 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
               </div>
             </div>
           </div>
+
+          {/* What This Means - New Section */}
+          {whatThisMeans && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-6 bg-gradient-to-r from-blue-500/[0.05] to-purple-500/[0.05] border-b border-blue-500/[0.2]"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <Lightbulb className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-white mb-1">What This Means</h3>
+                  <p className="text-sm text-gray-300 leading-relaxed">{whatThisMeans}</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
+          {/* Immediate Actions - New Section */}
+          {immediateActions && immediateActions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="p-6 bg-gradient-to-r from-emerald-500/[0.05] to-green-500/[0.05] border-b border-emerald-500/[0.2]"
+            >
+              <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
+                Take Action Now
+              </h3>
+              <div className="space-y-2">
+                {immediateActions.map((action: string, index: number) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-emerald-400">{index + 1}</span>
+                    </div>
+                    <p className="text-sm text-gray-300">{action}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           {/* Three-stage tabs */}
           <div className="flex border-b border-gray-800">

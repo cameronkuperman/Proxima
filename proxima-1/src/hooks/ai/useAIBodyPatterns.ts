@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { aiPredictionsApi, aiPredictionCache } from '@/lib/api/aiPredictions';
 import { BodyPatternsResponse } from '@/types/aiPredictions';
+import supabaseAIPredictionsService from '@/services/supabaseAIPredictionsService';
 
 export function useAIBodyPatterns() {
   const { user } = useAuth();
@@ -36,18 +37,34 @@ export function useAIBodyPatterns() {
         setIsLoading(true);
       }
 
-      const response = await aiPredictionsApi.getBodyPatterns(user.id, forceRefresh);
+      // First try Supabase for cached patterns
+      const supabaseResult = await supabaseAIPredictionsService.getPredictionsByType(user.id, 'patterns');
       
-      // Handle legacy field names
-      if (response.positiveResponses && !response.positive_responses) {
-        response.positive_responses = response.positiveResponses;
-      }
-      
-      setData(response);
-      
-      // Cache successful responses
-      if (response.status === 'success' || response.status === 'cached') {
+      if (supabaseResult?.patterns && !forceRefresh) {
+        const response: BodyPatternsResponse = {
+          status: 'success',
+          tendencies: supabaseResult.patterns.tendencies || [],
+          positive_responses: supabaseResult.patterns.positive_responses || supabaseResult.patterns.positiveResponses || [],
+          pattern_metadata: supabaseResult.patterns.pattern_metadata
+        };
+        
+        setData(response);
         aiPredictionCache.set(cacheKey, response, 5);
+      } else {
+        // Fallback to backend API
+        const response = await aiPredictionsApi.getBodyPatterns(user.id, forceRefresh);
+        
+        // Handle legacy field names
+        if (response.positiveResponses && !response.positive_responses) {
+          response.positive_responses = response.positiveResponses;
+        }
+        
+        setData(response);
+        
+        // Cache successful responses
+        if (response.status === 'success' || response.status === 'cached') {
+          aiPredictionCache.set(cacheKey, response, 5);
+        }
       }
     } catch (err) {
       setError(err as Error);
