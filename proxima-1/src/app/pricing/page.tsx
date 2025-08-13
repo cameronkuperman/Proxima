@@ -186,7 +186,7 @@ export default function PricingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-pink-900/20" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 0 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
@@ -200,7 +200,7 @@ export default function PricingPage() {
             {/* Show current subscription status */}
             {hasActiveSubscription && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 1, scale: 1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white font-medium mb-8"
               >
@@ -239,26 +239,19 @@ export default function PricingPage() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 pt-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
           {Object.values(TIERS).map((tier, index) => (
             <motion.div
               key={tier.name}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 1, y: 0 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={`relative rounded-2xl backdrop-blur-sm border transition-all hover:scale-105 overflow-visible ${
+              transition={{ duration: 0.3 }}
+              className={`relative rounded-2xl backdrop-blur-sm border transition-all hover:scale-105 ${
                 tier.isRecommended
                   ? 'bg-gradient-to-b from-purple-900/20 to-transparent border-purple-500/50 shadow-xl shadow-purple-500/20'
                   : 'bg-white/[0.02] border-white/10'
               }`}
             >
-              {tier.isRecommended && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full shadow-lg">
-                    MOST POPULAR
-                  </span>
-                </div>
-              )}
 
               <div className="p-6">
                 {/* Tier Header */}
@@ -443,7 +436,7 @@ function FeatureItem({
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
       className="bg-white/[0.02] backdrop-blur-sm border border-white/10 rounded-xl p-6"
