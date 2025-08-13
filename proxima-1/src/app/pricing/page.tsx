@@ -58,10 +58,28 @@ export default function PricingPage() {
         return;
       }
 
-      // Check if user has any active subscription
+      // If user has an active subscription, use portal for upgrades/downgrades
       if (hasActiveSubscription) {
-        toast.info('Please manage your existing subscription from your profile');
-        router.push('/profile');
+        console.log('User has active subscription, opening portal for plan change...');
+        
+        const portalResponse = await fetch('/api/stripe/create-portal-session', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+        
+        const portalData = await portalResponse.json();
+        
+        if (portalResponse.ok && portalData.url) {
+          toast.info('Redirecting to billing portal to change your plan...');
+          // Open portal where they can change plans
+          window.location.href = portalData.url;
+        } else {
+          toast.error('Failed to open billing portal. Please try from your subscription page.');
+          router.push('/subscription');
+        }
+        
         setIsLoading(null);
         return;
       }
@@ -141,6 +159,19 @@ export default function PricingPage() {
     if (hasActiveSubscription && currentTier === tierName) return 'Current Plan';
     if (tierName === 'free') return 'Get Started';
     if (tierName === 'enterprise') return 'Contact Sales';
+    
+    // Show different text for upgrades/downgrades
+    if (hasActiveSubscription) {
+      const currentTierIndex = ['free', 'basic', 'pro', 'pro_plus'].indexOf(currentTier || 'free');
+      const targetTierIndex = ['free', 'basic', 'pro', 'pro_plus'].indexOf(tierName);
+      
+      if (targetTierIndex > currentTierIndex) {
+        return 'Upgrade Plan';
+      } else if (targetTierIndex < currentTierIndex) {
+        return 'Downgrade Plan';
+      }
+    }
+    
     return 'Subscribe';
   };
 
