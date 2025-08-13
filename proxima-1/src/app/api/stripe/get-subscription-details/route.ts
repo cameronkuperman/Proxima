@@ -69,6 +69,29 @@ export async function GET(req: NextRequest) {
     let invoices: any[] = [];
     let upcomingInvoice: any = null;
     
+    // First try to get payment history from our database
+    const { data: paymentHistory } = await supabaseAdmin
+      .from('payment_history')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    if (paymentHistory && paymentHistory.length > 0) {
+      // Use payment history from database
+      invoices = paymentHistory.map(payment => ({
+        id: payment.stripe_invoice_id || payment.id,
+        number: payment.stripe_invoice_id,
+        amount: payment.amount / 100, // Convert from cents
+        currency: payment.currency,
+        status: payment.status === 'succeeded' ? 'paid' : payment.status,
+        created: payment.created_at,
+        pdf_url: payment.hosted_invoice_url,
+        invoice_pdf: payment.invoice_pdf,
+        description: payment.description,
+      }));
+    }
+    
     if (profile?.stripe_customer_id && subscription.stripe_subscription_id) {
       try {
         // Get full subscription details from Stripe
@@ -87,22 +110,24 @@ export async function GET(req: NextRequest) {
           trial_end: (stripeSubscription as any).trial_end ? new Date((stripeSubscription as any).trial_end * 1000).toISOString() : null,
         };
         
-        // Get recent invoices
-        const invoiceList = await stripe().invoices.list({
-          customer: profile.stripe_customer_id,
-          limit: 5,
-        });
-        
-        invoices = invoiceList.data.map(inv => ({
-          id: inv.id,
-          number: inv.number,
-          amount: inv.amount_paid / 100, // Convert from cents
-          currency: inv.currency,
-          status: inv.status,
-          created: new Date((inv as any).created * 1000).toISOString(),
-          pdf_url: inv.hosted_invoice_url,
-          invoice_pdf: inv.invoice_pdf,
-        }));
+        // If no payment history in DB, get from Stripe
+        if (invoices.length === 0) {
+          const invoiceList = await stripe().invoices.list({
+            customer: profile.stripe_customer_id,
+            limit: 5,
+          });
+          
+          invoices = invoiceList.data.map(inv => ({
+            id: inv.id,
+            number: inv.number,
+            amount: inv.amount_paid / 100, // Convert from cents
+            currency: inv.currency,
+            status: inv.status,
+            created: new Date((inv as any).created * 1000).toISOString(),
+            pdf_url: inv.hosted_invoice_url,
+            invoice_pdf: inv.invoice_pdf,
+          }));
+        }
         
         // Get upcoming invoice (shows next charge)
         try {

@@ -141,7 +141,41 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         console.log('Payment succeeded for invoice:', invoice.id);
-        // You can add payment logging here if needed
+        
+        // Store payment in payment_history table
+        if (invoice.customer && invoice.amount_paid > 0) {
+          // Get user ID from customer
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('stripe_customer_id', invoice.customer as string)
+            .single();
+          
+          if (profile) {
+            await supabase
+              .from('payment_history')
+              .upsert({
+                user_id: profile.user_id,
+                stripe_invoice_id: invoice.id,
+                stripe_payment_intent_id: (invoice as any).payment_intent as string,
+                amount: invoice.amount_paid,
+                currency: invoice.currency,
+                status: 'succeeded',
+                description: invoice.description || `Payment for ${invoice.lines.data[0]?.description || 'subscription'}`,
+                invoice_pdf: (invoice as any).invoice_pdf,
+                hosted_invoice_url: (invoice as any).hosted_invoice_url,
+                metadata: {
+                  period_start: (invoice as any).period_start,
+                  period_end: (invoice as any).period_end,
+                  subscription: (invoice as any).subscription,
+                },
+              }, {
+                onConflict: 'stripe_invoice_id',
+              });
+            
+            console.log('Payment history recorded for invoice:', invoice.id);
+          }
+        }
         break;
       }
       
@@ -149,6 +183,35 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         console.log('Payment failed for invoice:', invoice.id);
+        
+        // Store failed payment in payment_history
+        if (invoice.customer) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('stripe_customer_id', invoice.customer as string)
+            .single();
+          
+          if (profile) {
+            await supabase
+              .from('payment_history')
+              .upsert({
+                user_id: profile.user_id,
+                stripe_invoice_id: invoice.id,
+                stripe_payment_intent_id: (invoice as any).payment_intent as string,
+                amount: invoice.amount_due,
+                currency: invoice.currency,
+                status: 'failed',
+                description: `Failed payment for ${invoice.lines.data[0]?.description || 'subscription'}`,
+                metadata: {
+                  failure_reason: (invoice as any).last_payment_error?.message,
+                  subscription: (invoice as any).subscription,
+                },
+              }, {
+                onConflict: 'stripe_invoice_id',
+              });
+          }
+        }
         
         if ((invoice as any).subscription) {
           await supabase
