@@ -110,8 +110,29 @@ export async function POST(req: NextRequest) {
         
         const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
         
+        // Determine the tier from the price ID
+        let tier = 'basic'; // default
+        if (subscription.items && subscription.items.data.length > 0) {
+          const priceId = subscription.items.data[0].price.id;
+          
+          // Map price IDs to tiers
+          if (priceId === process.env.STRIPE_PRICE_BASIC_MONTHLY || 
+              priceId === process.env.STRIPE_PRICE_BASIC_YEARLY) {
+            tier = 'basic';
+          } else if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || 
+                     priceId === process.env.STRIPE_PRICE_PRO_YEARLY) {
+            tier = 'pro';
+          } else if (priceId === process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 
+                     priceId === process.env.STRIPE_PRICE_PRO_PLUS_YEARLY) {
+            tier = 'pro_plus';
+          }
+          
+          console.log('Detected tier from price ID:', priceId, '->', tier);
+        }
+        
         const updateData: any = {
           status: subscription.status,
+          tier: tier, // Add tier update
           current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
           cancel_at_period_end: cancelAtPeriodEnd,
           updated_at: new Date().toISOString(),
@@ -165,13 +186,31 @@ export async function POST(req: NextRequest) {
         // Log subscription state changes
         const { data: sub } = await supabase
           .from('subscriptions')
-          .select('user_id')
+          .select('user_id, tier')
           .eq('stripe_subscription_id', subscription.id)
           .single();
         
         if (sub?.user_id) {
           // Check what changed
           const previousCancelState = previousAttributes?.cancel_at_period_end;
+          
+          // Check for tier changes (upgrade/downgrade)
+          if (sub.tier !== tier) {
+            const eventType = tier > sub.tier ? 'subscription_upgraded' : 'subscription_downgraded';
+            await supabase
+              .from('subscription_events')
+              .insert({
+                user_id: sub.user_id,
+                event_type: eventType,
+                metadata: {
+                  stripe_subscription_id: subscription.id,
+                  old_tier: sub.tier,
+                  new_tier: tier,
+                  changed_at: new Date().toISOString(),
+                },
+              });
+            console.log(`Subscription ${eventType} from ${sub.tier} to ${tier}`);
+          }
           
           if (cancelAtPeriodEnd && previousCancelState === false) {
             // New cancellation
