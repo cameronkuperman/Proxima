@@ -6,33 +6,34 @@ import Stripe from 'stripe';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
-  const signature = req.headers.get('stripe-signature');
-  
-  console.log('=== WEBHOOK DEBUG ===');
-  console.log('Signature present:', !!signature);
-  
-  if (!signature) {
-    return NextResponse.json({ error: 'No signature' }, { status: 400 });
-  }
-  
-  let event: Stripe.Event;
-  
   try {
-    event = stripe().webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-    console.log('Event type:', event.type);
-    console.log('Event ID:', event.id);
-  } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
-    return NextResponse.json(
-      { error: `Webhook Error: ${err.message}` },
-      { status: 400 }
-    );
-  }
+    const body = await req.text();
+    const signature = req.headers.get('stripe-signature');
+    
+    console.log('=== WEBHOOK DEBUG ===');
+    console.log('Signature present:', !!signature);
+    
+    if (!signature) {
+      return NextResponse.json({ error: 'No signature' }, { status: 400 });
+    }
+    
+    let event: Stripe.Event;
+    
+    try {
+      event = stripe().webhooks.constructEvent(
+        body,
+        signature,
+        process.env.STRIPE_WEBHOOK_SECRET!
+      );
+      console.log('Event type:', event.type);
+      console.log('Event ID:', event.id);
+    } catch (err: any) {
+      console.error('Webhook signature verification failed:', err.message);
+      return NextResponse.json(
+        { error: `Webhook Error: ${err.message}` },
+        { status: 400 }
+      );
+    }
   
   const supabase = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
   // Only handle subscription updates for debugging
   if (event.type === 'customer.subscription.updated') {
     const subscription = event.data.object as Stripe.Subscription;
-    const previousAttributes = event.data.previous_attributes as any;
+    const previousAttributes = (event.data as any).previous_attributes || {};
     
     console.log('=== SUBSCRIPTION UPDATE DEBUG ===');
     console.log('Subscription ID:', subscription.id);
@@ -70,9 +71,17 @@ export async function POST(req: NextRequest) {
     // If being canceled
     if ((subscription as any).cancel_at_period_end) {
       console.log('Setting cancellation data...');
-      updateData.cancellation_reason = 'stripe_portal_debug';
-      updateData.canceled_at = new Date().toISOString();
-      updateData.cancellation_feedback = 'Via Stripe Portal';
+      // Use actual cancellation details from Stripe
+      const cancellationDetails = (subscription as any).cancellation_details;
+      updateData.cancellation_reason = cancellationDetails?.reason || 
+                                       (subscription as any).metadata?.cancellation_reason || 
+                                       'cancellation_requested';
+      updateData.canceled_at = (subscription as any).canceled_at ? 
+                              new Date((subscription as any).canceled_at * 1000).toISOString() : 
+                              new Date().toISOString();
+      updateData.cancellation_feedback = cancellationDetails?.feedback || 
+                                         (subscription as any).metadata?.cancellation_feedback || 
+                                         'Via Stripe Portal';
     } else {
       console.log('Clearing cancellation data...');
       updateData.cancellation_reason = null;
@@ -168,4 +177,14 @@ export async function POST(req: NextRequest) {
     event_type: event.type,
     debug_mode: true 
   });
+  } catch (error: any) {
+    console.error('=== WEBHOOK DEBUG ERROR ===');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error.message,
+      stack: error.stack
+    }, { status: 500 });
+  }
 }

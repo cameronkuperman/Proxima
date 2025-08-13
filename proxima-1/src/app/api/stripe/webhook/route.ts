@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
       // Handle subscription updates
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
+        const previousAttributes = (event.data as any).previous_attributes || {};
         
         const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
         
@@ -118,11 +119,17 @@ export async function POST(req: NextRequest) {
         
         // Handle cancellation status changes
         if (cancelAtPeriodEnd) {
-          // Subscription is being canceled (or was already canceled and still is)
-          // Use cancellation_details from Stripe or metadata or default to 'stripe_portal'
-          const reason = (subscription as any).cancellation_details?.reason || 
+          // Subscription is being canceled
+          const cancellationDetails = (subscription as any).cancellation_details;
+          
+          // Use actual cancellation details from Stripe
+          const reason = cancellationDetails?.reason || 
                         (subscription as any).metadata?.cancellation_reason || 
-                        'stripe_portal';
+                        'cancellation_requested';
+          
+          const feedback = cancellationDetails?.feedback || 
+                          (subscription as any).metadata?.cancellation_feedback || 
+                          null;
           
           // Only update cancellation fields if they're not already set or if reason changed
           const { data: existingSub } = await supabase
@@ -133,9 +140,7 @@ export async function POST(req: NextRequest) {
           
           if (!existingSub?.canceled_at || existingSub?.cancellation_reason !== reason) {
             updateData.cancellation_reason = reason;
-            updateData.cancellation_feedback = (subscription as any).cancellation_details?.feedback || 
-                                              (subscription as any).metadata?.cancellation_feedback || 
-                                              null;
+            updateData.cancellation_feedback = feedback;
             updateData.canceled_at = (subscription as any).canceled_at ? 
                                    new Date((subscription as any).canceled_at * 1000).toISOString() : 
                                    new Date().toISOString();
@@ -166,10 +171,11 @@ export async function POST(req: NextRequest) {
         
         if (sub?.user_id) {
           // Check what changed
-          const previousCancelState = event.data.previous_attributes?.cancel_at_period_end;
+          const previousCancelState = previousAttributes?.cancel_at_period_end;
           
           if (cancelAtPeriodEnd && previousCancelState === false) {
             // New cancellation
+            const cancellationDetails = (subscription as any).cancellation_details;
             await supabase
               .from('subscription_events')
               .insert({
@@ -179,10 +185,12 @@ export async function POST(req: NextRequest) {
                   stripe_subscription_id: subscription.id,
                   cancel_at: (subscription as any).cancel_at,
                   current_period_end: (subscription as any).current_period_end,
-                  reason: (subscription as any).cancellation_details?.reason || 'stripe_portal',
-                  feedback: (subscription as any).cancellation_details?.feedback || null,
+                  reason: cancellationDetails?.reason || 'cancellation_requested',
+                  feedback: cancellationDetails?.feedback || null,
+                  comment: cancellationDetails?.comment || null,
                   canceled_via: 'stripe_portal',
                 },
+                event_details: cancellationDetails || null,
               });
             console.log('Cancellation scheduled for user:', sub.user_id);
             
