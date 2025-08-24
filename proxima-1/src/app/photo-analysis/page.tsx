@@ -301,7 +301,7 @@ export default function PhotoAnalysisPage() {
                     <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
                       <textarea
                         id="analysis-context"
-                        placeholder="What would you like me to analyze? Describe your symptoms, how long you've had them, and any specific concerns..."
+                        placeholder="Describe what you see or ask a question (e.g., 'Is this healing normally?', 'Should I see a doctor?', 'Is this serious?')"
                         rows={6}
                         className="w-full px-4 py-3 rounded-lg bg-white/[0.03] text-white border border-white/[0.05] focus:border-orange-500 focus:outline-none resize-none"
                       />

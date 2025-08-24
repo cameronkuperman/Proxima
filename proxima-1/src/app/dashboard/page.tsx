@@ -975,10 +975,6 @@ function DashboardContent() {
                               }}
                               className={`p-3 rounded-lg bg-gradient-to-r ${colors.gradient} backdrop-blur-sm border border-white/[0.05] cursor-pointer hover:border-white/[0.1] transition-all relative`}
                             >
-                              {/* Info button in top right */}
-                              <div className="absolute top-2 right-2 z-10">
-                                <InfoButton content={`View detailed information about this ${entry.interaction_type.replace('_', ' ')} interaction from ${formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}`} position="top" />
-                              </div>
                               <div className="flex items-center justify-between mb-1">
                                 <p className="text-xs text-gray-400">
                                   {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}

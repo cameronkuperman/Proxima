@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import RefinementQuestion from './RefinementQuestion'
+import { useRefinement } from '@/hooks/useRefinement'
+import { AssessmentRefinementResponse } from '@/lib/general-assessment-client'
 import { 
   Activity,
   AlertCircle,
@@ -101,9 +104,28 @@ export default function GeneralAssessmentResult({
   const [expandedCause, setExpandedCause] = useState<number | null>(null)
   const [showAllFindings, setShowAllFindings] = useState(false)
   const [showFollowUp, setShowFollowUp] = useState(false)
+  const [showRefinement, setShowRefinement] = useState(false)
+  const [refinedData, setRefinedData] = useState<AssessmentRefinementResponse | null>(null)
   
   const category = categoryConfig[categoryId as keyof typeof categoryConfig] || categoryConfig.unsure
   const CategoryIcon = category.icon
+  
+  // Use refinement hook if follow-up questions exist
+  const refinementHook = result.analysis.follow_up_questions && result.analysis.follow_up_questions.length > 0
+    ? useRefinement({
+        assessmentId: result.assessment_id,
+        questions: result.analysis.follow_up_questions,
+        originalConfidence: result.analysis.confidence,
+        onComplete: (refinedResult) => {
+          setRefinedData(refinedResult)
+          setShowRefinement(false)
+        }
+      })
+    : null
+    
+  // Use refined data if available
+  const displayConfidence = refinedData?.refined_confidence || result.analysis.confidence
+  const displayAssessment = refinedData?.refined_analysis.refined_primary_assessment || result.analysis.primary_assessment
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -190,19 +212,70 @@ export default function GeneralAssessmentResult({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-white mb-2">Primary Assessment</h3>
-            <p className="text-gray-300 leading-relaxed">{result.analysis.primary_assessment}</p>
+            <p className="text-gray-300 leading-relaxed">{displayAssessment}</p>
             <div className="mt-3 flex items-center gap-4">
               <span className={`text-sm font-medium ${urgencyColors[result.analysis.urgency]}`}>
                 {result.analysis.urgency === 'emergency' ? 'EMERGENCY' : 
                  result.analysis.urgency.charAt(0).toUpperCase() + result.analysis.urgency.slice(1) + ' Priority'}
               </span>
-              <span className="text-sm text-gray-400">
-                Confidence: {result.analysis.confidence}%
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400">
+                  Confidence: {displayConfidence}%
+                </span>
+                {refinedData && (
+                  <span className="text-xs text-green-400 font-medium">
+                    (+{refinedData.confidence_improvement.toFixed(0)}% improved)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </motion.div>
+
+      {/* Refined Results Section - Show when refinement is complete */}
+      {refinedData && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="backdrop-blur-[20px] bg-gradient-to-r from-purple-500/[0.05] to-pink-500/[0.05] border border-purple-500/[0.2] rounded-xl p-6 mb-6"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="w-6 h-6 text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-2">Refined Diagnosis</h3>
+              <div className="space-y-4">
+                {/* Diagnostic Certainty Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30">
+                  <span className="text-sm font-medium text-purple-300">
+                    {refinedData.diagnostic_certainty === 'definitive' ? 'Definitive' :
+                     refinedData.diagnostic_certainty === 'probable' ? 'Probable' : 'Provisional'} Diagnosis
+                  </span>
+                </div>
+                
+                {/* Next Steps */}
+                <div className="space-y-3">
+                  <div className="p-3 bg-white/[0.03] rounded-lg border border-white/[0.05]">
+                    <p className="text-xs text-gray-400 mb-1">Immediate Action</p>
+                    <p className="text-sm text-white">{refinedData.refined_analysis.next_steps.immediate}</p>
+                  </div>
+                  <div className="p-3 bg-white/[0.03] rounded-lg border border-white/[0.05]">
+                    <p className="text-xs text-gray-400 mb-1">Next 24-48 Hours</p>
+                    <p className="text-sm text-white">{refinedData.refined_analysis.next_steps.short_term}</p>
+                  </div>
+                  <div className="p-3 bg-white/[0.03] rounded-lg border border-white/[0.05]">
+                    <p className="text-xs text-gray-400 mb-1">Follow-up Required</p>
+                    <p className="text-sm text-white">{refinedData.refined_analysis.next_steps.follow_up}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Immediate Actions - New Section */}
       {result.immediate_actions && result.immediate_actions.length > 0 && (
@@ -350,7 +423,7 @@ export default function GeneralAssessmentResult({
         </div>
       </motion.div>
 
-      {/* Follow-up Questions */}
+      {/* Follow-up Questions with Refinement */}
       {result.analysis.follow_up_questions && result.analysis.follow_up_questions.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -362,10 +435,17 @@ export default function GeneralAssessmentResult({
             onClick={() => setShowFollowUp(!showFollowUp)}
             className="w-full flex items-center justify-between"
           >
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <HelpCircle className="w-5 h-5 text-purple-400" />
-              AI Has Follow-up Questions
-            </h3>
+            <div>
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-purple-400" />
+                AI Has Follow-up Questions - Answer to Improve Accuracy
+              </h3>
+              {result.analysis.confidence < 80 && !refinedData && (
+                <p className="text-xs text-amber-400 mt-1 text-left">
+                  Current confidence is {result.analysis.confidence}%. Answering these questions can boost accuracy by 15-30%.
+                </p>
+              )}
+            </div>
             <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showFollowUp && 'rotate-180'}`} />
           </button>
           <AnimatePresence>
@@ -374,21 +454,113 @@ export default function GeneralAssessmentResult({
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="mt-4 space-y-2"
+                className="mt-4"
               >
-                {result.analysis.follow_up_questions.map((question, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <span className="text-purple-400">•</span>
-                    <p className="text-sm text-gray-300">{question}</p>
-                  </div>
-                ))}
-                <button
-                  onClick={onDeepDive}
-                  className="mt-4 w-full py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-all flex items-center justify-center gap-2"
-                >
-                  Answer with Deep Dive
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                {!showRefinement ? (
+                  <>
+                    {/* Show questions list when not refining */}
+                    <div className="space-y-2 mb-4">
+                      {result.analysis.follow_up_questions.map((question, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <span className="text-purple-400">•</span>
+                          <p className="text-sm text-gray-300">{question}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowRefinement(true)}
+                        className="flex-1 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-all flex items-center justify-center gap-2 font-medium"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Quick Refine
+                      </button>
+                      <button
+                        onClick={onDeepDive}
+                        className="flex-1 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-all flex items-center justify-center gap-2"
+                      >
+                        Deep Dive
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </>
+                ) : refinementHook ? (
+                  <>
+                    {/* Refinement Interface */}
+                    <div className="mb-4">
+                      {/* Confidence Progress Bar */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-400">Confidence Progress</span>
+                          <span className="text-sm font-medium text-white">
+                            {refinementHook.confidenceProgress.toFixed(0)}%
+                            {refinementHook.confidenceImprovement > 0 && (
+                              <span className="text-green-400 ml-1">
+                                (+{refinementHook.confidenceImprovement.toFixed(0)}%)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                            initial={{ width: `${result.analysis.confidence}%` }}
+                            animate={{ width: `${refinementHook.confidenceProgress}%` }}
+                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Questions */}
+                      <div className="space-y-3">
+                        {result.analysis.follow_up_questions.map((question, index) => (
+                          <RefinementQuestion
+                            key={index}
+                            question={question}
+                            questionIndex={index}
+                            totalQuestions={result.analysis.follow_up_questions.length}
+                            isActive={index === refinementHook.currentQuestionIndex}
+                            isAnswered={refinementHook.answers.has(question)}
+                            onAnswer={(answer) => refinementHook.handleAnswer(index, answer)}
+                            answer={refinementHook.answers.get(question)}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Loading State */}
+                      {refinementHook.isRefining && (
+                        <div className="mt-4 p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                          <div className="flex items-center gap-3">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                              className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full"
+                            />
+                            <span className="text-sm text-purple-300">Refining assessment with your answers...</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Error State */}
+                      {refinementHook.error && (
+                        <div className="mt-4 p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                          <p className="text-sm text-red-400">{refinementHook.error}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cancel Button */}
+                    <button
+                      onClick={() => {
+                        setShowRefinement(false)
+                        refinementHook.resetRefinement()
+                      }}
+                      className="w-full py-2 rounded-lg border border-gray-700 text-gray-400 hover:bg-white/[0.03] transition-all"
+                    >
+                      Cancel Refinement
+                    </button>
+                  </>
+                ) : null}
               </motion.div>
             )}
           </AnimatePresence>

@@ -7,11 +7,12 @@ import {
   Camera, FileText, MessageCircle, BarChart,
   ChevronRight, Share2, Download, Stethoscope,
   AlertTriangle, TrendingUp, Shield, Sparkles,
-  ClipboardList, Search
+  ClipboardList, Search, RefreshCw
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { FollowUpButton } from '@/components/FollowUpButton';
 
 interface HistoryModalProps {
   isOpen: boolean;
@@ -171,6 +172,46 @@ export default function HistoryModal({
   const navigateToFull = () => {
     router.push(`/history/${interactionId}`);
     onClose();
+  };
+
+  // Check if follow-up is available for this assessment type
+  const canFollowUp = () => {
+    // Only allow follow-ups for these assessment types
+    const eligibleTypes = ['quick_scan', 'deep_dive', 'general_assessment', 'general_deepdive'];
+    if (!eligibleTypes.includes(interactionType)) return false;
+    
+    // Check if enough time has passed (at least 1 day)
+    if (!data?.created_at) return false;
+    const daysSince = differenceInDays(new Date(), new Date(data.created_at));
+    return daysSince >= 1;
+  };
+
+  // Map interaction type to follow-up compatible type
+  const mapInteractionType = (type: string): string => {
+    const typeMap: Record<string, string> = {
+      'quick_scan': 'quick_scan',
+      'deep_dive': 'deep_dive',
+      'general_assessment': 'general',
+      'general_deepdive': 'general_deep'
+    };
+    return typeMap[type] || type;
+  };
+
+  // Handle follow-up navigation
+  const handleFollowUp = () => {
+    const mappedType = mapInteractionType(interactionType);
+    router.push(`/follow-up/${mappedType}/${interactionId}`);
+    onClose();
+  };
+
+  // Get days since text for button
+  const getDaysSinceText = () => {
+    if (!data?.created_at) return '';
+    const daysSince = differenceInDays(new Date(), new Date(data.created_at));
+    if (daysSince === 1) return '1 day later';
+    if (daysSince < 7) return `${daysSince} days later`;
+    if (daysSince < 30) return `${Math.floor(daysSince / 7)} week${Math.floor(daysSince / 7) > 1 ? 's' : ''} later`;
+    return `${Math.floor(daysSince / 30)} month${Math.floor(daysSince / 30) > 1 ? 's' : ''} later`;
   };
 
   const renderDeepDivePreview = () => {
@@ -794,6 +835,18 @@ export default function HistoryModal({
                         View Full Details
                         <ChevronRight className="w-4 h-4" />
                       </button>
+                      
+                      {/* Follow-up button for eligible assessments */}
+                      {canFollowUp() && (
+                        <button
+                          onClick={handleFollowUp}
+                          className="flex-1 px-4 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+                        >
+                          Follow Up ({getDaysSinceText()})
+                          <RefreshCw className="w-4 h-4" />
+                        </button>
+                      )}
+                      
                       <button
                         className="px-4 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] text-white rounded-lg transition-all"
                         title="Share"

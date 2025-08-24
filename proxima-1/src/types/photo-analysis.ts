@@ -38,6 +38,8 @@ export interface AnalysisResult {
     recommendations: string[];
     red_flags: string[];
     trackable_metrics?: TrackableMetric[];
+    question_detected?: boolean;
+    question_answer?: string;
   };
   comparison?: {
     days_between: number;

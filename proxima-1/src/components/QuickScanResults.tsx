@@ -40,6 +40,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
   const [ultraAnalysis, setUltraAnalysis] = useState<any>(null)
   const [currentTier, setCurrentTier] = useState<'basic' | 'enhanced' | 'ultra'>('basic')
   const [showSuccessNotification, setShowSuccessNotification] = useState(false)
+  const [showWhatThisMeans, setShowWhatThisMeans] = useState(false)
   
   const { generateSuggestion, currentSuggestion, suggestionId, loading: trackingStoreLoading } = useTrackingStore()
 
@@ -367,53 +368,37 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                     )}
                   </div>
                 )}
+                
+                {/* Subtle What This Means Toggle */}
+                {whatThisMeans && (
+                  <button
+                    onClick={() => setShowWhatThisMeans(!showWhatThisMeans)}
+                    className="mt-3 text-xs text-gray-400 hover:text-gray-300 transition-colors flex items-center gap-1"
+                  >
+                    What does this mean?
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showWhatThisMeans ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* What This Means - New Section */}
-          {whatThisMeans && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-6 bg-gradient-to-r from-blue-500/[0.05] to-purple-500/[0.05] border-b border-blue-500/[0.2]"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                  <Lightbulb className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-white mb-1">What This Means</h3>
-                  <p className="text-sm text-gray-300 leading-relaxed">{whatThisMeans}</p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-          
-          {/* Immediate Actions - New Section */}
-          {immediateActions && immediateActions.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="p-6 bg-gradient-to-r from-emerald-500/[0.05] to-green-500/[0.05] border-b border-emerald-500/[0.2]"
-            >
-              <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-                Take Action Now
-              </h3>
-              <div className="space-y-2">
-                {immediateActions.map((action: string, index: number) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-xs font-bold text-emerald-400">{index + 1}</span>
-                    </div>
-                    <p className="text-sm text-gray-300">{action}</p>
+            
+            {/* Expandable What This Means */}
+            <AnimatePresence>
+              {showWhatThisMeans && whatThisMeans && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="px-8 pb-4 overflow-hidden"
+                >
+                  <div className="p-3 bg-white/[0.02] rounded-lg border border-white/[0.05]">
+                    <p className="text-sm text-gray-300 leading-relaxed">{whatThisMeans}</p>
                   </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Three-stage tabs */}
           <div className="flex border-b border-gray-800">
@@ -631,13 +616,14 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
                 exit={{ opacity: 0, y: -10 }}
                 className="p-8"
               >
-                {/* Immediate actions */}
+                {/* Immediate actions from backend or existing recommendations */}
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-400 mb-4">Immediate Actions</h4>
                   <div className="space-y-3">
-                    {(currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.diagnostic_strategy?.immediate_actions ||
+                    {(immediateActions || 
+                      currentTier === 'ultra' && ultraAnalysis?.ultra_analysis?.diagnostic_strategy?.immediate_actions ||
                       currentTier === 'enhanced' && o4MiniAnalysis?.o4_mini_analysis?.specific_recommendations ||
-                      analysisResult.recommendations)?.slice(0, 3).map((rec: any, index: number) => (
+                      analysisResult.recommendations?.slice(0, 3))?.map((rec: any, index: number) => (
                       <div key={index} className="flex items-start gap-4 p-4 bg-gray-800/30 rounded-lg">
                         <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                           <span className="text-green-400 font-bold">{index + 1}</span>

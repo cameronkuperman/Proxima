@@ -97,73 +97,23 @@ export function useWeeklyAIPredictions() {
     try {
       setIsLoading(true);
       
-      // Fetch dashboard alert separately
-      const dashboardResult = await supabaseAIPredictionsService.getPredictionsByType(user.id, 'dashboard');
-      if (dashboardResult?.alert) {
-        setDashboardData(dashboardResult.alert);
-      }
-      
-      // First try to fetch from Supabase (faster)
+      // Fetch from Supabase only
       const supabaseResult = await supabaseAIPredictionsService.getCurrentPredictions(user.id);
       
       if (supabaseResult.status === 'success' && supabaseResult.predictions) {
         setPredictions(supabaseResult.predictions as WeeklyPredictions);
         setStatus('success');
-      } else if (supabaseResult.status === 'needs_initial') {
-        // No predictions exist, generate initial ones
-        setStatus('needs_initial');
-        await generateInitialPredictions();
       } else {
-        // Try backend API as fallback
-        const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
-        const response = await fetch(
-          `${API_URL}/api/ai/weekly/${user.id}`
-        );
-        
-        const data = await response.json();
-        setStatus(data.status);
-        
-        if (data.status === 'success' && data.predictions) {
-          setPredictions(data.predictions);
-        } else if (data.status === 'needs_initial' || data.status === 'not_found') {
-          // Automatically generate initial predictions
-          await generateInitialPredictions();
-        }
+        // No predictions exist
+        setStatus('not_found');
+        setPredictions(null);
       }
     } catch (error) {
       console.error('Error fetching weekly predictions:', error);
       setStatus('not_found');
-      // Try to generate if fetch fails
-      await generateInitialPredictions();
+      setPredictions(null);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const generateInitialPredictions = async () => {
-    if (!user?.id || isGenerating) return;
-    
-    try {
-      setIsGenerating(true);
-      const API_URL = process.env.NEXT_PUBLIC_ORACLE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://web-production-945c4.up.railway.app';
-      const response = await fetch(
-        `${API_URL}/api/ai/generate-initial/${user.id}`,
-        { method: 'POST' }
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === 'success') {
-          // Wait a moment for generation to complete
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          // Fetch the newly generated predictions
-          await fetchPredictions();
-        }
-      }
-    } catch (error) {
-      console.error('Error generating initial predictions:', error);
-    } finally {
-      setIsGenerating(false);
     }
   };
 

@@ -120,7 +120,6 @@ export default function NarrativeView() {
     patternQuestions: weeklyPatternQuestions,
     bodyPatterns: weeklyBodyPatterns,
     allPredictions: weeklyPredictions,
-    dashboardAlert,
     dataQualityScore
   } = useWeeklyAIPredictions();
   const { exportPDF, isExporting } = useExportPDF();
@@ -152,19 +151,8 @@ export default function NarrativeView() {
     count: patternsToShow.length
   });
 
-  // Combine strategies from health intelligence with pattern questions from weekly predictions
-  const baseStrategies = analysisData?.strategies || [];
-  
-  // Convert pattern questions to strategies if no strategies available
-  const patternStrategies = weeklyPatternQuestions && baseStrategies.length === 0
-    ? weeklyPatternQuestions.slice(0, 5).map(q => ({
-        id: q.id,
-        strategy: q.question,
-        strategy_type: 'discovery' as const
-      }))
-    : [];
-  
-  const healthStrategies = baseStrategies.length > 0 ? baseStrategies : patternStrategies;
+  // Use strategies from health intelligence only - no fallbacks or contamination
+  const healthStrategies = analysisData?.strategies || [];
 
   // Use weekly predictions if available
   const predictions = weeklyPredictions && weeklyPredictions.length > 0 
@@ -687,45 +675,6 @@ Your body's response to the new exercise routine has been overwhelmingly positiv
           </div>
         </div>
         )}
-
-      {/* Dashboard Alert if available */}
-      {story && dashboardAlert && dataQualityScore >= 30 && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`backdrop-blur-[20px] border rounded-xl p-6 ${
-            dashboardAlert.severity === 'critical' 
-              ? 'bg-red-500/10 border-red-500/20' 
-              : dashboardAlert.severity === 'warning'
-              ? 'bg-yellow-500/10 border-yellow-500/20'
-              : 'bg-blue-500/10 border-blue-500/20'
-          }`}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className={`text-lg font-semibold mb-2 ${
-                dashboardAlert.severity === 'critical' 
-                  ? 'text-red-400' 
-                  : dashboardAlert.severity === 'warning'
-                  ? 'text-yellow-400'
-                  : 'text-blue-400'
-              }`}>
-                {dashboardAlert.title}
-              </h3>
-              <p className="text-gray-300 mb-3">{dashboardAlert.description}</p>
-              {dashboardAlert.preventionTip && (
-                <p className="text-sm text-gray-400">
-                  <span className="font-medium">Prevention tip:</span> {dashboardAlert.preventionTip}
-                </p>
-              )}
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">AI Confidence</p>
-              <p className="text-sm font-medium text-white">{dashboardAlert.confidence}%</p>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {/* Emergency Generate Button if no data */}
       {insights.length === 0 && !isAnalysisLoading && (

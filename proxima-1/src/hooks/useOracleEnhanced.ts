@@ -12,6 +12,8 @@ export interface Message {
     tokens?: number;
     model?: string;
     reasoning?: string;
+    reasoning_tokens?: number;
+    has_reasoning?: boolean;
   };
 }
 
@@ -201,19 +203,26 @@ export function useOracleEnhanced({
 
       // If we streamed, the assistant message is already present and updated.
       if (!streamingEnabled || !response) {
-        // Process the response to extract final content and (optional) reasoning for R1-like models
-        let finalContent = '';
-        let reasoning = '';
-        if (typeof response.response === 'string') {
-          const parts = response.response.split('\n\n');
-          if (parts.length > 1) {
-            reasoning = parts.slice(0, -1).join('\n\n');
-            finalContent = parts[parts.length - 1].trim();
-          } else {
-            finalContent = response.response;
-          }
-        } else {
-          finalContent = JSON.stringify(response.response);
+        // Simple parsing using the has_reasoning flag from backend
+        const finalContent = typeof response.response === 'string' 
+          ? response.response 
+          : JSON.stringify(response.response);
+        
+        // FULL DEBUG LOGGING
+        console.log('[Oracle] FULL RAW RESPONSE:', response);
+        console.log('[Oracle] Response details:', {
+          has_reasoning: response?.has_reasoning,
+          reasoning_exists: !!response?.reasoning,
+          reasoning_length: response?.reasoning?.length || 0,
+          model: response?.model,
+          reasoning_mode: response?.reasoning_mode,
+          reasoning_tokens: response?.usage?.reasoning_tokens,
+          response_keys: response ? Object.keys(response) : [],
+          usage: response?.usage
+        });
+        
+        if (response?.reasoning) {
+          console.log('[Oracle] Reasoning content (first 200 chars):', response.reasoning.substring(0, 200));
         }
 
         const assistantMessage: Message = {
@@ -224,9 +233,13 @@ export function useOracleEnhanced({
           metadata: {
             tokens: response?.usage?.total_tokens,
             model: response?.model,
-            reasoning
+            reasoning: response?.has_reasoning ? response.reasoning : undefined,
+            reasoning_tokens: response?.usage?.reasoning_tokens,
+            has_reasoning: response?.has_reasoning || false
           }
         };
+        
+        console.log('[Oracle] Assistant message metadata:', assistantMessage.metadata);
         setMessages(prev => [...prev, assistantMessage]);
       }
 
@@ -256,10 +269,21 @@ export function useOracleEnhanced({
   // Load existing conversation
   const loadConversation = useCallback(async (convId: string) => {
     setConversationId(convId);
-    setMessages([]);
+    setMessages([]); // Clear messages first
     setIsFirstMessage(false);
 
     try {
+      // Load conversation title
+      const { data: convData } = await supabase
+        .from('conversations')
+        .select('title')
+        .eq('id', convId)
+        .single();
+      
+      if (convData?.title) {
+        setConversationTitle(convData.title);
+      }
+
       // Load messages from Supabase
       const { data: messagesData } = await supabase
         .from('messages')
@@ -268,16 +292,30 @@ export function useOracleEnhanced({
         .order('created_at');
 
       if (messagesData) {
-        const formattedMessages: Message[] = messagesData.map(msg => ({
+        // Deduplicate messages at the source level
+        const messageMap = new Map<string, any>();
+        messagesData.forEach(msg => {
+          // Use the message ID as key to avoid duplicates
+          messageMap.set(msg.id, msg);
+        });
+        
+        const formattedMessages: Message[] = Array.from(messageMap.values()).map(msg => ({
           id: msg.id,
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
           timestamp: new Date(msg.created_at),
           metadata: {
             tokens: msg.token_count,
-            model: msg.model_used
+            model: msg.model_used,
+            reasoning: msg.metadata?.reasoning,
+            reasoning_tokens: msg.metadata?.reasoning_tokens,
+            has_reasoning: msg.metadata?.has_reasoning || false
           }
         }));
+        
+        // Sort by timestamp to maintain order
+        formattedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        
         setMessages(formattedMessages);
       }
 
@@ -320,19 +358,21 @@ export function useOracleEnhanced({
 // Helper function to determine model based on tier and reasoning mode
 function getModelForTier(tier: string, reasoningMode: boolean): string {
   if (tier === 'free') {
+    // Free tier models
     return reasoningMode ? 'deepseek/deepseek-r1' : 'deepseek/deepseek-chat';
   }
   
-  // For premium tiers, let the backend decide based on endpoint
-  // But provide a hint for reasoning mode
-  if (reasoningMode) {
-    return 'openai/gpt-5'; // Backend will use GPT-5 for reasoning
+  // Premium tiers (basic, pro, pro_plus)
+  if (tier === 'basic' || tier === 'pro' || tier === 'pro_plus') {
+    if (reasoningMode) {
+      // Premium reasoning: Claude 3.7 Sonnet (confirmed working)
+      return 'anthropic/claude-3.7-sonnet';
+    } else {
+      // Premium default: Fast and efficient GPT-5 mini or Claude Sonnet 4
+      return 'openai/gpt-5-mini';
+    }
   }
   
-  // Default models for premium tiers
-  if (tier === 'pro' || tier === 'pro_plus') {
-    return 'anthropic/claude-4-sonnet'; // For chat endpoint
-  }
-  
-  return 'openai/gpt-5-mini'; // Basic tier default
+  // Default/fallback
+  return reasoningMode ? 'anthropic/claude-3.7-sonnet' : 'openai/gpt-5-mini';
 }

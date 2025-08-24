@@ -49,6 +49,34 @@ export interface GeneralAssessmentResponse {
   };
 }
 
+// Assessment Refinement
+export interface AssessmentRefinementRequest {
+  assessment_id: string;
+  answers: Array<{
+    question: string;
+    answer: string;
+  }>;
+  user_id?: string;
+}
+
+export interface AssessmentRefinementResponse {
+  refinement_id: string;
+  assessment_id: string;
+  confidence_improvement: number;
+  original_confidence: number;
+  refined_confidence: number;
+  diagnostic_certainty: 'provisional' | 'probable' | 'definitive';
+  refined_analysis: {
+    refined_primary_assessment: string;
+    differential_diagnoses: string[];
+    next_steps: {
+      immediate: string;
+      short_term: string;
+      follow_up: string;
+    };
+  };
+}
+
 // General Deep Dive
 export interface GeneralDeepDiveStartRequest {
   category: string;
@@ -132,6 +160,30 @@ export class GeneralAssessmentClient {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'General assessment failed' }));
       throw new Error(error.error || 'General assessment failed');
+    }
+
+    return await response.json();
+  }
+
+  // Assessment Refinement
+  async refineAssessment(
+    assessmentId: string,
+    answers: Array<{ question: string; answer: string }>,
+    userId?: string
+  ): Promise<AssessmentRefinementResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/general-assessment/refine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assessment_id: assessmentId,
+        answers,
+        user_id: userId,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Assessment refinement failed' }));
+      throw new Error(error.error || 'Assessment refinement failed');
     }
 
     return await response.json();

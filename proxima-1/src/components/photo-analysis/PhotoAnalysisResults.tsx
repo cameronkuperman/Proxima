@@ -277,6 +277,23 @@ export default function PhotoAnalysisResults({
           )}
         </div>
 
+        {/* Question Answer Section - Display if question was detected */}
+        {analysis.analysis.question_detected && analysis.analysis.question_answer && (
+          <div className="p-6 border-b border-white/[0.05] bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-blue-400 mb-2 uppercase">Your Question Answered</h4>
+                <p className="text-gray-300">{analysis.analysis.question_answer}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Visual Observations */}
         <div className="p-6 border-b border-white/[0.05]">
           <h4 className="text-sm font-medium text-gray-400 mb-3 uppercase">Visual Observations</h4>

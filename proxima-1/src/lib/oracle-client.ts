@@ -27,11 +27,15 @@ export interface OracleResponse {
     completion_tokens: number;
     total_tokens: number;
     reasoning_tokens?: number;
+    response_tokens?: number;
   };
   model: string;
   model_used?: string;
   tier?: string;
   reasoning_mode?: boolean;
+  has_reasoning?: boolean;
+  reasoning?: string;
+  message?: string;
 }
 
 export interface SummaryResponse {
@@ -131,6 +135,10 @@ export class OracleClient {
             }
           }
         );
+        
+        // Debug log the raw response
+        console.log('[OracleClient] Raw API response:', response.data);
+        console.log('[OracleClient] Request payload was:', message);
 
         // Store the assistant's response in Supabase
         const responseData = response.data;
@@ -141,10 +149,14 @@ export class OracleClient {
             ? responseData.response 
             : JSON.stringify(responseData.response),
           {
-            token_count: responseData.usage.total_tokens,
+            token_count: responseData.usage?.total_tokens || 0,
             model_used: responseData.model,
             processing_time: Date.now() - startTime,
-            source: 'oracle_chat'
+            source: 'oracle_chat',
+            reasoning: responseData.reasoning,
+            reasoning_tokens: responseData.usage?.reasoning_tokens,
+            reasoning_mode: responseData.reasoning_mode,
+            has_reasoning: responseData.has_reasoning || false
           }
         );
 
@@ -208,10 +220,23 @@ export class OracleClient {
       );
       if (conversation) {
         this.conversationCreated.set(convId, true);
-        await ConversationService.addMessage(convId, 'user', query, { source: 'oracle_chat' });
+        
+        // Add the user's first message to Supabase
+        await ConversationService.addMessage(
+          convId,
+          'user',
+          query,
+          { source: 'oracle_chat' }
+        );
       }
     } else if (!options?.isFirstMessage) {
-      await ConversationService.addMessage(convId, 'user', query, { source: 'oracle_chat' });
+      // Add subsequent user messages
+      await ConversationService.addMessage(
+        convId,
+        'user',
+        query,
+        { source: 'oracle_chat' }
+      );
     }
 
     callbacks?.onStart?.(convId);
@@ -282,13 +307,19 @@ export class OracleClient {
         user_id: userId,
         category: payload.category || 'health-scan',
         usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-        model: options?.model || 'unknown'
+        model: options?.model || 'unknown',
+        has_reasoning: !!reasoningAccum,
+        reasoning: reasoningAccum || undefined,
+        reasoning_mode: options?.reasoningMode
       };
 
       await ConversationService.addMessage(convId, 'assistant', accumulated, {
         token_count: 0,
         model_used: responseData.model,
-        source: 'oracle_chat'
+        source: 'oracle_chat',
+        reasoning: reasoningAccum || undefined,
+        reasoning_mode: options?.reasoningMode,
+        has_reasoning: !!reasoningAccum
       });
 
       const currentCount = this.messagesInConversation.get(convId) || 0;

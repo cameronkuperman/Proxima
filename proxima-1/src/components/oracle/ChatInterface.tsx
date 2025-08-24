@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
@@ -8,7 +8,13 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
-  metadata?: any;
+  metadata?: {
+    tokens?: number;
+    model?: string;
+    reasoning?: string;
+    reasoning_tokens?: number;
+    has_reasoning?: boolean;
+  };
 }
 
 interface ChatInterfaceProps {
@@ -22,7 +28,7 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({
-  messages,
+  messages: rawMessages,
   isLoading,
   error,
   onSendMessage,
@@ -30,6 +36,18 @@ export function ChatInterface({
   conversationId,
   showThoughtProcess = false
 }: ChatInterfaceProps) {
+  // Deduplicate messages based on ID
+  const messages = useMemo(() => {
+    const seen = new Set<string>();
+    const deduped: Message[] = [];
+    for (const msg of rawMessages) {
+      if (!seen.has(msg.id)) {
+        seen.add(msg.id);
+        deduped.push(msg);
+      }
+    }
+    return deduped;
+  }, [rawMessages]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -38,6 +56,8 @@ export function ChatInterface({
   const [localShowReasoning, setLocalShowReasoning] = useState<{ [key: string]: boolean }>({});
   const [streamingText, setStreamingText] = useState<{ [key: string]: string }>({});
   const [isStreaming, setIsStreaming] = useState<{ [key: string]: boolean }>({});
+  const [processedMessages, setProcessedMessages] = useState<Set<string>>(new Set());
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -47,10 +67,45 @@ export function ChatInterface({
     }, 0);
   };
 
-  // Simulate text streaming for new messages
+  // Track when conversation changes (loading history)
+  useEffect(() => {
+    if (conversationId) {
+      setIsLoadingHistory(true);
+      // Clear processed messages when conversation changes
+      setProcessedMessages(new Set());
+      setStreamingText({});
+      setIsStreaming({});
+      // After a brief delay, mark history as loaded
+      const timer = setTimeout(() => {
+        setIsLoadingHistory(false);
+        // Mark all current messages as processed (they're from history)
+        setProcessedMessages(new Set(messages.map(m => m.id)));
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [conversationId]);
+
+  // Simulate text streaming for new messages only
   useEffect(() => {
     messages.forEach((message) => {
-      if (message.role === 'assistant' && !streamingText[message.id] && !isStreaming[message.id]) {
+      // Only stream if:
+      // 1. It's an assistant message
+      // 2. We haven't processed it yet
+      // 3. Message is less than 2 seconds old (truly new)
+      // 4. It hasn't already been streamed
+      const messageAge = Date.now() - new Date(message.timestamp).getTime();
+      const isNewMessage = messageAge < 2000; // Message is less than 2 seconds old
+      
+      if (
+        message.role === 'assistant' && 
+        !processedMessages.has(message.id) &&
+        isNewMessage && // Only stream truly new messages
+        !streamingText[message.id] && 
+        !isStreaming[message.id]
+      ) {
+        // Mark as processed immediately to prevent re-processing
+        setProcessedMessages(prev => new Set([...prev, message.id]));
+        
         // Start streaming animation for new assistant messages
         setIsStreaming(prev => ({ ...prev, [message.id]: true }));
         let currentIndex = 0;
@@ -69,9 +124,12 @@ export function ChatInterface({
         }, 10); // Very fast streaming like Claude
         
         return () => clearInterval(streamInterval);
+      } else if (message.role === 'assistant' && !processedMessages.has(message.id)) {
+        // For historical messages, mark as processed without streaming
+        setProcessedMessages(prev => new Set([...prev, message.id]));
       }
     });
-  }, [messages]);
+  }, [messages, processedMessages]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -213,7 +271,7 @@ export function ChatInterface({
         </div>
         
         {/* Input Area for empty state */}
-        <div className="absolute bottom-0 left-0 right-0 pb-10 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent pt-10">
+        <div className="absolute bottom-0 left-0 right-0 pb-10 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent pt-10 shadow-2xl">
           <div className="max-w-[850px] mx-auto px-8">
             <div className="relative">
               <textarea
@@ -251,12 +309,12 @@ export function ChatInterface({
 
   return (
     <div className="h-full flex flex-col relative">
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '140px' }}>
-        <div className="pt-6">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '200px' }}>
+        <div className="pt-6 pb-8">
           <AnimatePresence mode="popLayout">
             {messages.map((message, index) => (
               <motion.div
-                key={message.id}
+                key={`${message.id}-${index}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -281,9 +339,9 @@ export function ChatInterface({
                   </div>
                 ) : (
                   // Assistant Message - Claude Style
-                  <div className="py-4 border-b border-white/[0.06] last:border-0">
-                    {/* Thought Process Section (Claude-style collapsed) */}
-                    {message.metadata?.reasoning && message.metadata.reasoning.trim() && (
+                  <div className="py-4 border-b border-white/[0.06] last:border-0 last:mb-4">
+                    {/* Thought Process Section - Only show if has_reasoning is true */}
+                    {message.metadata?.has_reasoning && message.metadata?.reasoning && (
                       <div className="max-w-[900px] mx-auto px-8 mb-4">
                         <motion.div
                           initial={{ opacity: 0 }}
@@ -299,8 +357,14 @@ export function ChatInterface({
                             className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-400">Thought process</span>
-                              <span className="text-xs text-gray-500">{localShowReasoning[message.id] ? 'Hide' : 'Show'}</span>
+                              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                              </svg>
+                              <span className="text-sm font-medium text-gray-400">Chain of thought</span>
+                              {message.metadata.reasoning_tokens && (
+                                <span className="text-xs text-gray-500">({message.metadata.reasoning_tokens} reasoning tokens)</span>
+                              )}
+                              <span className="text-xs text-gray-500 ml-auto">{localShowReasoning[message.id] ? 'Hide' : 'Show'}</span>
                             </div>
                             <svg 
                               className={`w-4 h-4 text-gray-500 transition-transform ${
@@ -323,7 +387,8 @@ export function ChatInterface({
                                 className="border-t border-white/[0.08]"
                               >
                                 <div className="px-4 py-4">
-                                  <div className="text-[16px] text-gray-400 leading-relaxed whitespace-pre-wrap">
+                                  <div className="text-sm text-gray-500 mb-2">Enhanced reasoning ({message.metadata.model})</div>
+                                  <div className="text-[14px] text-gray-400 leading-relaxed whitespace-pre-wrap font-mono">
                                     {message.metadata.reasoning}
                                   </div>
                                 </div>
@@ -387,7 +452,7 @@ export function ChatInterface({
       {/* Removed scroll button for now */}
 
       {/* Input Area - Fixed at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] bg-[#0a0a0a]">
+      <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] bg-[#0a0a0a] shadow-2xl">
         <div className="max-w-[900px] mx-auto px-8 py-6">
           <div className="relative">
             <textarea

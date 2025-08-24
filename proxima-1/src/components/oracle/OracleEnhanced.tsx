@@ -12,32 +12,17 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/lib/supabase';
 
 // Helper function to get model display name
-const getModelName = (tier: string, reasoningMode: boolean, modelUsed?: string) => {
-  // If we have the actual model from the response, use it
-  if (modelUsed) {
-    const modelMap: Record<string, string> = {
-      'tngtech/deepseek-r1t-chimera:free': 'DeepSeek R1',
-      'deepseek/deepseek-chat': 'DeepSeek Chat',
-      'deepseek/deepseek-r1': 'DeepSeek R1 (Reasoning)',
-      'openai/gpt-5': 'GPT-5',
-      'openai/gpt-5-mini': 'GPT-5 Mini',
-      'anthropic/claude-4-sonnet': 'Claude 4 Sonnet',
-      'google/gemini-2.5-flash': 'Gemini 2.5 Flash',
-      'x-ai/grok-4': 'Grok 4'
-    };
-    return modelMap[modelUsed] || 'AI Assistant';
-  }
-  
-  // Otherwise, predict based on tier and reasoning mode
+const getModelName = (tier: string, reasoningMode: boolean) => {
+  // Always show model based on current state, not response
   if (tier === 'free') {
     return reasoningMode ? 'DeepSeek R1 (Reasoning)' : 'DeepSeek Chat';
   }
   
-  if (tier === 'pro' || tier === 'pro_plus') {
-    return reasoningMode ? 'GPT-5 (Enhanced)' : 'Claude 4 Sonnet';
+  if (tier === 'basic' || tier === 'pro' || tier === 'pro_plus') {
+    return reasoningMode ? 'Claude 3.7 Sonnet' : 'GPT-5 Mini';
   }
   
-  return reasoningMode ? 'GPT-5 (Enhanced)' : 'GPT-5 Mini';
+  return reasoningMode ? 'Claude 3.7 Sonnet' : 'GPT-5 Mini';
 };
 
 export default function OracleEnhanced() {
@@ -246,13 +231,25 @@ export default function OracleEnhanced() {
               }`}
               title={reasoningMode ? 'Enhanced reasoning enabled' : 'Enable enhanced reasoning'}
             >
-              <span className="text-lg">🧠</span>
+              <svg 
+                className="w-4 h-4" 
+                fill={reasoningMode ? "currentColor" : "none"}
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={reasoningMode ? 0 : 2} 
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" 
+                />
+              </svg>
               <span>{reasoningMode ? 'Enhanced' : 'Standard'}</span>
             </button>
             
             {/* Model Indicator */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 bg-white/[0.03] rounded-lg border border-white/[0.08]">
-              <span>{getModelName(tier, reasoningMode, modelUsed)}</span>
+              <span>{getModelName(tier, reasoningMode)}</span>
             </div>
 
             {/* Share */}
