@@ -101,19 +101,41 @@ export default function FollowUpResultsPage() {
         </div>
       </div>
 
-      {/* Evolution Card */}
+      {/* Main Evolution Card - Photo Analysis Style */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
+        className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl overflow-hidden mb-6"
       >
-        <div className="mb-6 p-6 bg-white/[0.03] rounded-lg border border-white/[0.05]">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              How Your Condition Has Evolved
-            </h3>
+        {/* Gradient Header */}
+        <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-6 border-b border-white/[0.05]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Brain className="h-6 w-6" />
+                Follow-Up Analysis
+              </h2>
+              <p className="text-gray-400 mt-1">How Your Condition Has Evolved</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                progressionTrend === 'improving' ? 'bg-green-500/20 text-green-400' : 
+                progressionTrend === 'worsening' ? 'bg-red-500/20 text-red-400' : 
+                'bg-gray-500/20 text-gray-400'
+              }`}>
+                {progressionTrend === 'improving' ? <TrendingUp className="h-4 w-4" /> : 
+                 progressionTrend === 'worsening' ? <TrendingDown className="h-4 w-4" /> :
+                 <Activity className="h-4 w-4" />}
+                {progressionTrend === 'improving' ? 'Improving' :
+                 progressionTrend === 'worsening' ? 'Worsening' : 'Stable'}
+              </span>
+            </div>
           </div>
+        </div>
+        
+        {/* Evolution Content */}
+        <div className="p-6">
           <div className="space-y-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
@@ -165,34 +187,49 @@ export default function FollowUpResultsPage() {
         </div>
       </motion.div>
 
-      {/* Main Content Tabs */}
-      <div className="space-y-4">
-        <div className="grid grid-cols-4 gap-1 p-1 bg-white/[0.03] rounded-lg">
-          {['overview', 'patterns', 'treatments', 'recommendations'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md font-medium transition-all ${
-                activeTab === tab 
-                  ? 'bg-white/[0.08] text-white' 
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.03]'
-              }`}
-            >
-              {tab === 'overview' && 'Overview'}
-              {tab === 'patterns' && 'Patterns'}
-              {tab === 'treatments' && 'Treatments'}
-              {tab === 'recommendations' && 'Next Steps'}
-            </button>
-          ))}
+      {/* Main Content Tabs with Icons */}
+      <div className="space-y-6">
+        <div className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-2">
+          <div className="grid grid-cols-4 gap-1">
+            {[
+              { id: 'overview', label: 'Overview', icon: Activity },
+              { id: 'patterns', label: 'Patterns', icon: Sparkles },
+              { id: 'treatments', label: 'Treatments', icon: CheckCircle2 },
+              { id: 'recommendations', label: 'Next Steps', icon: Calendar }
+            ].map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
+                    activeTab === tab.id 
+                      ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-white border border-purple-500/30' 
+                      : 'text-gray-400 hover:text-white hover:bg-white/[0.03]'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {activeTab === 'overview' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-4 border-b border-white/[0.05]">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Your Progress
+              </h3>
+            </div>
+            <div className="p-6">
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                   <h4 className="font-medium mb-2">{result.progression_narrative.summary}</h4>
@@ -200,12 +237,12 @@ export default function FollowUpResultsPage() {
                 </div>
                 
                 {result.progression_narrative.milestone && (
-                  <Alert>
-                    <Calendar className="h-4 w-4" />
-                    <AlertDescription>
+                  <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <Calendar className="h-4 w-4 text-blue-400 mt-0.5" />
+                    <div className="text-sm">
                       <strong>Next Milestone:</strong> {result.progression_narrative.milestone}
-                    </AlertDescription>
-                  </Alert>
+                    </div>
+                  </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-4 mt-4">
@@ -228,12 +265,12 @@ export default function FollowUpResultsPage() {
         )}
 
         {/* Patterns Tab */}
-        <TabsContent value="patterns" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pattern Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {activeTab === 'patterns' && (
+          <div className="space-y-4">
+            <div className="bg-white/[0.03] rounded-lg border border-white/[0.05] p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold">Pattern Insights</h3>
+              </div>
               <div className="space-y-4">
                 {result.pattern_insights.discovered_patterns.length > 0 && (
                   <div>
@@ -272,12 +309,12 @@ export default function FollowUpResultsPage() {
         )}
 
         {/* Treatments Tab */}
-        <TabsContent value="treatments" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Treatment Effectiveness</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {activeTab === 'treatments' && (
+          <div className="space-y-4">
+            <div className="bg-white/[0.03] rounded-lg border border-white/[0.05] p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold">Treatment Effectiveness</h3>
+              </div>
               <div className="grid md:grid-cols-3 gap-4">
                 {/* What's Working */}
                 <div className="space-y-2">
@@ -329,12 +366,12 @@ export default function FollowUpResultsPage() {
         )}
 
         {/* Recommendations Tab */}
-        <TabsContent value="recommendations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recommended Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {activeTab === 'recommendations' && (
+          <div className="space-y-4">
+            <div className="bg-white/[0.03] rounded-lg border border-white/[0.05] p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold">Recommended Actions</h3>
+              </div>
               <div className="space-y-4">
                 {/* Immediate Actions */}
                 {result.recommendations.immediate.length > 0 && (
@@ -388,17 +425,17 @@ export default function FollowUpResultsPage() {
                 )}
                 
                 {/* Next Follow-Up */}
-                <Alert>
-                  <Clock className="h-4 w-4" />
-                  <AlertDescription>
+                <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <Clock className="h-4 w-4 text-blue-400 mt-0.5" />
+                  <div className="text-sm">
                     <strong>Next Follow-Up:</strong> {result.recommendations.next_follow_up}
-                  </AlertDescription>
-                </Alert>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         )}
-      </Tabs>
+      </div>
 
       {/* Medical Visit Explanation if present */}
       {result.medical_visit_explained && (
@@ -407,31 +444,44 @@ export default function FollowUpResultsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
         >
-          <Card className="mt-6 border-blue-200 dark:border-blue-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <div className="mt-6 bg-white/[0.03] rounded-lg border border-blue-500/20 p-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 What Your Doctor Meant
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                <p className="text-sm">{result.medical_visit_explained}</p>
-              </div>
-            </CardContent>
-          </Card>
+              </h3>
+            </div>
+            <div className="p-4 bg-blue-500/10 rounded-lg">
+              <p className="text-sm">{result.medical_visit_explained}</p>
+            </div>
+          </div>
         </motion.div>
       )}
 
       {/* Action Buttons */}
       <div className="flex justify-between mt-8">
-        <Button variant="outline" onClick={() => router.back()}>
+        <button
+          className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.08] text-white rounded-lg transition-all"
+          onClick={() => {
+            // Navigate to the original assessment results page
+            const assessmentType = localStorage.getItem(`assessment_type_${followUpId}`) || 'general'
+            const assessmentId = localStorage.getItem(`assessment_id_${followUpId}`)
+            if (assessmentId) {
+              router.push(`/results/${assessmentType}/${assessmentId}`)
+            } else {
+              router.back()
+            }
+          }}
+        >
           View Original Assessment
-        </Button>
+        </button>
         {chain && (
-          <Button variant="outline" onClick={() => router.push(`/follow-up/chain/${result.chain_id}`)}>
+          <button
+            className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.08] text-white rounded-lg transition-all"
+            onClick={() => router.push(`/follow-up/chain/${result.chain_id}`)}
+          >
             View Full Timeline
-          </Button>
+          </button>
         )}
       </div>
     </div>

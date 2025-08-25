@@ -92,30 +92,6 @@ export interface PatternCard {
   };
 }
 
-export interface PhotoProgressionData {
-  sessions: {
-    id: string;
-    date: string;
-    photos: string[];
-    bodyPart: string;
-    notes?: string;
-  }[];
-  comparison: {
-    beforePhoto: {
-      url: string;
-      date: string;
-      annotations: string[];
-    };
-    afterPhoto: {
-      url: string;
-      date: string;
-      annotations: string[];
-    };
-    improvement: number;
-    aiAnalysis: string;
-  };
-}
-
 export interface DoctorReadinessData {
   score: number;
   missingData: string[];
@@ -424,27 +400,6 @@ export function generateMockHealthData() {
     }
   ];
 
-  const photoProgression: PhotoProgressionData = {
-    sessions: generatePhotoSessions().map(session => ({
-      ...session,
-      photos: [`/mock-photo-${session.id}-1.jpg`, `/mock-photo-${session.id}-2.jpg`]
-    })),
-    comparison: {
-      beforePhoto: {
-        url: '/mock-before.jpg',
-        date: format(subDays(new Date(), 28), 'yyyy-MM-dd'),
-        annotations: ['Visible inflammation', 'Redness present', 'Uneven texture']
-      },
-      afterPhoto: {
-        url: '/mock-after.jpg',
-        date: format(subDays(new Date(), 1), 'yyyy-MM-dd'),
-        annotations: ['Reduced inflammation', 'Improved tone', 'Smoother texture']
-      },
-      improvement: 42,
-      aiAnalysis: 'Significant improvement observed. Inflammation reduced by approximately 40%, skin tone more even, texture smoother. Continue current treatment protocol.'
-    }
-  };
-
   const doctorReadiness: DoctorReadinessData = {
     score: 87,
     missingData: ['Current medications', 'Blood pressure readings', 'Family history'],
@@ -521,7 +476,6 @@ export function generateMockHealthData() {
     bodySystems,
     timeline,
     patternCards,
-    photoProgression,
     doctorReadiness,
     comparativeIntelligence
   };

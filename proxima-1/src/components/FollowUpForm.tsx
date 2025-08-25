@@ -133,7 +133,7 @@ export function FollowUpForm({
     
     console.log('Rendering question:', actualCurrentQuestion.id, 'Type:', actualCurrentQuestion.type)
     
-    // Special handling for Q1 - always render as yes/no regardless of backend type
+    // Special handling for Q1 - Yes/No for "Have there been any changes?"
     if (actualCurrentQuestion.id === 'q1') {
       return (
         <div className="space-y-4">
@@ -160,7 +160,7 @@ export function FollowUpForm({
               className="mt-3 p-3 bg-gradient-to-r from-purple-500/[0.05] to-blue-500/[0.05] border border-purple-500/[0.2] rounded-lg"
             >
               <p className="text-sm text-purple-300">
-                Great! The next question will ask about specific changes.
+                The next question will ask about specific changes you've noticed.
               </p>
             </motion.div>
           )}
@@ -366,10 +366,10 @@ export function FollowUpForm({
               >
                 <Textarea
                   placeholder="What specific triggers or patterns have you noticed?"
-                  value={responses[`${actualCurrentQuestion.id}_triggers`] || ''}
+                  value={responses[`${actualCurrentQuestion.id}_text`] || ''}
                   onChange={(e) => setResponses(prev => ({
                     ...prev,
-                    [`${actualCurrentQuestion.id}_triggers`]: e.target.value
+                    [`${actualCurrentQuestion.id}_text`]: e.target.value
                   }))}
                   className="mt-3"
                   rows={3}

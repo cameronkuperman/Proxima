@@ -764,12 +764,12 @@ function DashboardContent() {
 
   return (
     <UnifiedAuthGuard requireAuth={true}>
-      <div className="min-h-screen bg-[#0a0a0a] relative  transition-all duration-1000">
+      <div className="min-h-screen bg-[#0a0a0a] relative overflow-x-hidden transition-all duration-1000">
         {/* Ambient Health Background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${getAmbientGradient()} transition-all duration-3000`} />
         
         {/* Background Elements */}
-        <div className="absolute inset-0 ">
+        <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-1/4 -left-48 w-96 h-96 bg-gradient-to-r from-purple-600/10 to-pink-600/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-full blur-3xl" />
           

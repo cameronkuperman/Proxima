@@ -128,6 +128,13 @@ export function useFollowUp(assessmentId: string, assessmentType: string) {
 
       const data = await response.json()
       
+      console.log('Follow-up questions received from backend:', {
+        base_questions: data.base_questions,
+        ai_questions: data.ai_questions,
+        context: data.context,
+        raw_response: data
+      })
+      
       // Store questions and context
       setBaseQuestions(data.base_questions || [])
       setAiQuestions(data.ai_questions || [])
@@ -186,6 +193,15 @@ export function useFollowUp(assessmentId: string, assessmentType: string) {
       // Map assessment type for backend
       const backendType = mapAssessmentType(assessmentType)
 
+      // Provider type mapping from UI to backend format
+      const providerTypeMap: Record<string, string> = {
+        'Primary Care': 'primary',
+        'Specialist': 'specialist',
+        'Urgent Care': 'urgent_care',
+        'Emergency': 'er',
+        'Telehealth': 'telehealth'
+      }
+
       // Clean responses - remove undefined/null values and ensure proper types
       const cleanedResponses: Record<string, any> = {}
       let medicalVisit = null
@@ -194,6 +210,33 @@ export function useFollowUp(assessmentId: string, assessmentType: string) {
         if (value !== undefined && value !== null && value !== '') {
           // Don't include medical visit fields in main responses
           if (key.startsWith('q5_')) {
+            continue
+          }
+          
+          // Handle Q5 boolean conversion
+          if (key === 'q5') {
+            cleanedResponses[key] = value === 'Yes' ? true : false
+            continue
+          }
+          
+          // Handle trigger text field - convert from _triggers to _text
+          if (key.endsWith('_triggers')) {
+            const baseKey = key.replace('_triggers', '_text')
+            cleanedResponses[baseKey] = value
+            continue
+          }
+          
+          // Handle AI questions - check if question was marked as AI
+          const questionIndex = mergedQuestions.findIndex(q => q.id === key)
+          if (questionIndex !== -1 && mergedQuestions[questionIndex].category === 'ai') {
+            // Map AI question IDs to backend format
+            const aiQuestionMap: Record<string, string> = {
+              'ai1': 'ai_q1',
+              'ai2': 'ai_q2', 
+              'ai3': 'ai_q3'
+            }
+            const mappedKey = aiQuestionMap[key] || `ai_${key}`
+            cleanedResponses[mappedKey] = value
             continue
           }
           
@@ -208,8 +251,9 @@ export function useFollowUp(assessmentId: string, assessmentType: string) {
       
       // Extract medical visit data if user saw a doctor
       if (responses.q5 === 'Yes') {
+        const providerType = responses.q5_provider_type
         medicalVisit = {
-          provider_type: responses.q5_provider_type || '',
+          provider_type: providerTypeMap[providerType] || providerType?.toLowerCase() || '',
           provider_specialty: responses.q5_specialty || undefined,
           assessment: responses.q5_assessment || '',
           treatments: responses.q5_treatments || '',
@@ -252,11 +296,17 @@ export function useFollowUp(assessmentId: string, assessmentType: string) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.error('Backend error response:', errorData)
+        console.error('Backend error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          sentData: submissionData
+        })
         throw new Error(errorData.detail || `Failed to submit follow-up (${response.status})`)
       }
 
       const result = await response.json()
+      console.log('Follow-up submission successful, result:', result)
       setResult(result)
       
       // Clear stored chain_id after successful submission

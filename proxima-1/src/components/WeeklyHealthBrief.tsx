@@ -2,9 +2,9 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { X, Calendar, Clock, ChevronRight, Sparkles, TrendingUp, AlertCircle, BookOpen } from 'lucide-react';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { useAuth } from '@/contexts/AuthContext';
+import { X, Calendar, Clock, ChevronRight, Sparkles, TrendingUp, AlertCircle, BookOpen, RefreshCw } from 'lucide-react';
+import { format, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import { useWeeklyBrief } from '@/hooks/useWeeklyBrief';
 
 interface WeeklyHealthBriefProps {
   isOpen: boolean;
@@ -257,18 +257,49 @@ This is why Tuesday stress = Wednesday symptoms. Understanding this delay gives 
 }
 
 export default function WeeklyHealthBrief({ isOpen, onClose }: WeeklyHealthBriefProps) {
-  const { user } = useAuth();
-  const [briefData, setBriefData] = useState<BriefData | null>(null);
+  // Use the real weekly brief hook
+  const {
+    brief: realBrief,
+    isCurrentWeek,
+    weekOf,
+    isLoading,
+    isError,
+    hasBeenSeen,
+    markAsOpened,
+    dismissBrief,
+    refreshBrief,
+    briefsEnabled,
+    setBriefsEnabled
+  } = useWeeklyBrief();
+  
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const [showLearnMore, setShowLearnMore] = useState(false);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [currentSection, setCurrentSection] = useState(0);
+  const [showPermanentDismiss, setShowPermanentDismiss] = useState(false);
   
+  // Transform the real brief data to match the component's expected format
+  const briefData = realBrief ? {
+    greeting: realBrief.greeting,
+    mainStory: {
+      headline: realBrief.main_story.headline,
+      narrative: realBrief.main_story.narrative,
+      weekHighlights: realBrief.main_story.weekHighlights,
+      inlineInsights: realBrief.main_story.inlineInsights
+    },
+    discoveries: realBrief.discoveries,
+    experiments: realBrief.experiments,
+    spotlight: realBrief.spotlight,
+    weekStats: realBrief.week_stats,
+    lookingAhead: realBrief.looking_ahead
+  } : (!isLoading && !realBrief ? generateMockBriefData() : null);
+  
+  // Mark as opened when the modal is displayed
   useEffect(() => {
-    if (isOpen) {
-      setBriefData(generateMockBriefData());
+    if (isOpen && realBrief && !hasBeenSeen) {
+      markAsOpened();
     }
-  }, [isOpen]);
+  }, [isOpen, realBrief, hasBeenSeen, markAsOpened]);
   
   const toggleChecklistItem = (id: string) => {
     const newChecked = new Set(checkedItems);
@@ -281,6 +312,91 @@ export default function WeeklyHealthBrief({ isOpen, onClose }: WeeklyHealthBrief
   };
   
   const sections = ['Story', 'Discoveries', 'Experiments', 'Spotlight', 'Stats'];
+  
+  // Handle close with dismissal options
+  const handleClose = () => {
+    if (showPermanentDismiss) {
+      dismissBrief(true);
+    } else {
+      dismissBrief(false);
+    }
+    onClose();
+  };
+  
+  // Show loading state
+  if (isLoading && isOpen) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            >
+              <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-2xl p-8 pointer-events-auto">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-400" />
+                <p className="text-white">Loading your weekly health brief...</p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
+  
+  // Show error state
+  if (isError && isOpen) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            >
+              <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-2xl p-8 max-w-md pointer-events-auto">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">Unable to Load Brief</h3>
+                <p className="text-gray-400 mb-4">We couldn't fetch your weekly health brief. Please try again.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={refreshBrief}
+                    className="flex-1 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="flex-1 px-4 py-2 bg-white/[0.05] text-gray-400 rounded-lg hover:bg-white/[0.08]"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
   
   if (!briefData) return null;
 
@@ -317,12 +433,17 @@ export default function WeeklyHealthBrief({ isOpen, onClose }: WeeklyHealthBrief
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      Week of {format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d')}
+                      Week of {format(weekOf ? parseISO(weekOf) : startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d')}
+                      {!isCurrentWeek && realBrief && (
+                        <span className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs">
+                          Previous Week
+                        </span>
+                      )}
                     </span>
                   </div>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="p-2 hover:bg-white/[0.05] rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5 text-gray-400" />
@@ -655,32 +776,49 @@ export default function WeeklyHealthBrief({ isOpen, onClose }: WeeklyHealthBrief
             </div>
             
             {/* Footer */}
-            <div className="p-4 border-t border-white/[0.08] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  {sections.map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                        currentSection === i ? 'bg-purple-400' : 'bg-gray-600'
-                      }`}
-                    />
-                  ))}
+            <div className="p-4 border-t border-white/[0.08]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex gap-1">
+                    {sections.map((_, i) => (
+                      <div
+                        key={i}
+                        className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                          currentSection === i ? 'bg-purple-400' : 'bg-gray-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  {briefsEnabled && (
+                    <label className="flex items-center gap-2 text-xs text-gray-500">
+                      <input
+                        type="checkbox"
+                        checked={showPermanentDismiss}
+                        onChange={(e) => setShowPermanentDismiss(e.target.checked)}
+                        className="rounded border-gray-600"
+                      />
+                      Don't show weekly briefs anymore
+                    </label>
+                  )}
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
-                  Save as PDF
-                </button>
-                <button className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
-                  Share
-                </button>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
-                >
-                  Done Reading
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={refreshBrief}
+                    className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 inline-block mr-1" />
+                    Refresh
+                  </button>
+                  <button className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                    Share
+                  </button>
+                  <button
+                    onClick={handleClose}
+                    className="px-4 py-2 text-sm bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+                  >
+                    Done Reading
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
