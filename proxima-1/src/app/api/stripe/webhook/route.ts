@@ -82,8 +82,25 @@ export async function POST(req: NextRequest) {
             session.subscription as string
           ) as Stripe.Subscription;
           
-          // Extract tier from metadata
-          const tier = session.metadata?.tier || 'unknown';
+          // Determine tier from price ID (same logic as updates)
+          let tier = session.metadata?.tier || 'basic'; // Use metadata as fallback
+          if (subscription.items && subscription.items.data.length > 0) {
+            const priceId = subscription.items.data[0].price.id;
+            
+            // Map price IDs to tiers
+            if (priceId === process.env.STRIPE_PRICE_BASIC_MONTHLY || 
+                priceId === process.env.STRIPE_PRICE_BASIC_YEARLY) {
+              tier = 'basic';
+            } else if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || 
+                       priceId === process.env.STRIPE_PRICE_PRO_YEARLY) {
+              tier = 'pro';
+            } else if (priceId === process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 
+                       priceId === process.env.STRIPE_PRICE_PRO_PLUS_YEARLY) {
+              tier = 'pro_plus';
+            }
+            
+            console.log('Detected tier from price ID at checkout:', priceId, '->', tier);
+          }
           
           // Create subscription record
           await supabase
@@ -106,18 +123,150 @@ export async function POST(req: NextRequest) {
       // Handle subscription updates
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
+        const previousAttributes = (event.data as any).previous_attributes || {};
         
-        await supabase
+        const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
+        
+        // Determine the tier from the price ID
+        let tier = 'basic'; // default
+        if (subscription.items && subscription.items.data.length > 0) {
+          const priceId = subscription.items.data[0].price.id;
+          
+          // Map price IDs to tiers
+          if (priceId === process.env.STRIPE_PRICE_BASIC_MONTHLY || 
+              priceId === process.env.STRIPE_PRICE_BASIC_YEARLY) {
+            tier = 'basic';
+          } else if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || 
+                     priceId === process.env.STRIPE_PRICE_PRO_YEARLY) {
+            tier = 'pro';
+          } else if (priceId === process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 
+                     priceId === process.env.STRIPE_PRICE_PRO_PLUS_YEARLY) {
+            tier = 'pro_plus';
+          }
+          
+          console.log('Detected tier from price ID:', priceId, '->', tier);
+        }
+        
+        const updateData: any = {
+          status: subscription.status,
+          tier: tier, // Add tier update
+          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          cancel_at_period_end: cancelAtPeriodEnd,
+          updated_at: new Date().toISOString(),
+        };
+        
+        // Handle cancellation status changes
+        if (cancelAtPeriodEnd) {
+          // Subscription is being canceled
+          const cancellationDetails = (subscription as any).cancellation_details;
+          
+          // Use actual cancellation details from Stripe
+          const reason = cancellationDetails?.reason || 
+                        (subscription as any).metadata?.cancellation_reason || 
+                        'cancellation_requested';
+          
+          const feedback = cancellationDetails?.feedback || 
+                          (subscription as any).metadata?.cancellation_feedback || 
+                          null;
+          
+          // Only update cancellation fields if they're not already set or if reason changed
+          const { data: existingSub } = await supabase
+            .from('subscriptions')
+            .select('cancellation_reason, canceled_at')
+            .eq('stripe_subscription_id', subscription.id)
+            .single();
+          
+          if (!existingSub?.canceled_at || existingSub?.cancellation_reason !== reason) {
+            updateData.cancellation_reason = reason;
+            updateData.cancellation_feedback = feedback;
+            updateData.canceled_at = (subscription as any).canceled_at ? 
+                                   new Date((subscription as any).canceled_at * 1000).toISOString() : 
+                                   new Date().toISOString();
+          }
+        } else {
+          // Subscription is active (was resumed or never canceled)
+          // Clear all cancellation data
+          updateData.cancellation_reason = null;
+          updateData.cancellation_feedback = null;
+          updateData.canceled_at = null;
+        }
+        
+        const { error: updateError } = await supabase
           .from('subscriptions')
-          .update({
-            status: subscription.status,
-            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-            cancel_at_period_end: (subscription as any).cancel_at_period_end,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq('stripe_subscription_id', subscription.id);
         
-        console.log('Subscription updated:', subscription.id);
+        if (updateError) {
+          console.error('Failed to update subscription:', updateError);
+        }
+        
+        // Log subscription state changes
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('user_id, tier')
+          .eq('stripe_subscription_id', subscription.id)
+          .single();
+        
+        if (sub?.user_id) {
+          // Check what changed
+          const previousCancelState = previousAttributes?.cancel_at_period_end;
+          
+          // Check for tier changes (upgrade/downgrade)
+          if (sub.tier !== tier) {
+            const eventType = tier > sub.tier ? 'subscription_upgraded' : 'subscription_downgraded';
+            await supabase
+              .from('subscription_events')
+              .insert({
+                user_id: sub.user_id,
+                event_type: eventType,
+                metadata: {
+                  stripe_subscription_id: subscription.id,
+                  old_tier: sub.tier,
+                  new_tier: tier,
+                  changed_at: new Date().toISOString(),
+                },
+              });
+            console.log(`Subscription ${eventType} from ${sub.tier} to ${tier}`);
+          }
+          
+          if (cancelAtPeriodEnd && previousCancelState === false) {
+            // New cancellation
+            const cancellationDetails = (subscription as any).cancellation_details;
+            await supabase
+              .from('subscription_events')
+              .insert({
+                user_id: sub.user_id,
+                event_type: 'cancellation_scheduled',
+                metadata: {
+                  stripe_subscription_id: subscription.id,
+                  cancel_at: (subscription as any).cancel_at,
+                  current_period_end: (subscription as any).current_period_end,
+                  reason: cancellationDetails?.reason || 'cancellation_requested',
+                  feedback: cancellationDetails?.feedback || null,
+                  comment: cancellationDetails?.comment || null,
+                  canceled_via: 'stripe_portal',
+                },
+                event_details: cancellationDetails || null,
+              });
+            console.log('Cancellation scheduled for user:', sub.user_id);
+            
+          } else if (!cancelAtPeriodEnd && previousCancelState === true) {
+            // Subscription resumed
+            await supabase
+              .from('subscription_events')
+              .insert({
+                user_id: sub.user_id,
+                event_type: 'subscription_resumed',
+                metadata: {
+                  stripe_subscription_id: subscription.id,
+                  resumed_at: new Date().toISOString(),
+                },
+              });
+            console.log('Subscription resumed for user:', sub.user_id);
+          }
+        }
+        
+        console.log('Subscription updated:', subscription.id, cancelAtPeriodEnd ? '(cancellation scheduled)' : '');
         break;
       }
       
@@ -125,13 +274,48 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         
+        // Extract cancellation details
+        const cancellationReason = (subscription as any).cancellation_details?.reason || 
+                                   (subscription as any).metadata?.cancellation_reason || 
+                                   null;
+        const cancellationFeedback = (subscription as any).cancellation_details?.feedback || 
+                                     (subscription as any).metadata?.cancellation_feedback || 
+                                     null;
+        
         await supabase
           .from('subscriptions')
           .update({
             status: 'canceled',
+            cancellation_reason: cancellationReason,
+            cancellation_feedback: cancellationFeedback,
+            canceled_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_subscription_id', subscription.id);
+        
+        // Store cancellation event with reason if available
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('user_id')
+          .eq('stripe_subscription_id', subscription.id)
+          .single();
+        
+        if (sub) {
+          await supabase
+            .from('subscription_events')
+            .insert({
+              user_id: sub.user_id,
+              event_type: 'subscription_canceled',
+              metadata: {
+                stripe_subscription_id: subscription.id,
+                cancellation_reason: cancellationReason || 'not_provided',
+                cancellation_feedback: cancellationFeedback,
+                cancellation_comment: (subscription as any).cancellation_details?.comment,
+                canceled_at: new Date().toISOString(),
+                final_period_end: (subscription as any).current_period_end,
+              },
+            });
+        }
         
         console.log('Subscription canceled:', subscription.id);
         break;
@@ -141,7 +325,41 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         console.log('Payment succeeded for invoice:', invoice.id);
-        // You can add payment logging here if needed
+        
+        // Store payment in payment_history table
+        if (invoice.customer && invoice.amount_paid > 0) {
+          // Get user ID from customer
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('stripe_customer_id', invoice.customer as string)
+            .single();
+          
+          if (profile) {
+            await supabase
+              .from('payment_history')
+              .upsert({
+                user_id: profile.user_id,
+                stripe_invoice_id: invoice.id,
+                stripe_payment_intent_id: (invoice as any).payment_intent as string,
+                amount: invoice.amount_paid,
+                currency: invoice.currency,
+                status: 'succeeded',
+                description: invoice.description || `Payment for ${invoice.lines.data[0]?.description || 'subscription'}`,
+                invoice_pdf: (invoice as any).invoice_pdf,
+                hosted_invoice_url: (invoice as any).hosted_invoice_url,
+                metadata: {
+                  period_start: (invoice as any).period_start,
+                  period_end: (invoice as any).period_end,
+                  subscription: (invoice as any).subscription,
+                },
+              }, {
+                onConflict: 'stripe_invoice_id',
+              });
+            
+            console.log('Payment history recorded for invoice:', invoice.id);
+          }
+        }
         break;
       }
       
@@ -149,6 +367,35 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         console.log('Payment failed for invoice:', invoice.id);
+        
+        // Store failed payment in payment_history
+        if (invoice.customer) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('stripe_customer_id', invoice.customer as string)
+            .single();
+          
+          if (profile) {
+            await supabase
+              .from('payment_history')
+              .upsert({
+                user_id: profile.user_id,
+                stripe_invoice_id: invoice.id,
+                stripe_payment_intent_id: (invoice as any).payment_intent as string,
+                amount: invoice.amount_due,
+                currency: invoice.currency,
+                status: 'failed',
+                description: `Failed payment for ${invoice.lines.data[0]?.description || 'subscription'}`,
+                metadata: {
+                  failure_reason: (invoice as any).last_payment_error?.message,
+                  subscription: (invoice as any).subscription,
+                },
+              }, {
+                onConflict: 'stripe_invoice_id',
+              });
+          }
+        }
         
         if ((invoice as any).subscription) {
           await supabase

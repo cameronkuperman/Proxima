@@ -1,40 +1,20 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Crown, CreditCard, Calendar, AlertCircle } from 'lucide-react';
+import { Crown, CreditCard, Calendar, AlertCircle, Settings } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export default function SubscriptionCard() {
   const { subscription, hasActiveSubscription, tier, loading } = useSubscription();
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
+  const router = useRouter();
 
   const handleManageSubscription = async () => {
-    setIsLoadingPortal(true);
-    
-    try {
-      const response = await fetch('/api/stripe/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || 'Failed to open billing portal');
-        return;
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Portal error:', error);
-      toast.error('Failed to open billing portal');
-    } finally {
-      setIsLoadingPortal(false);
-    }
+    // Navigate to the new subscription management page
+    router.push('/subscription');
   };
 
   if (loading) {
@@ -83,15 +63,13 @@ export default function SubscriptionCard() {
           <Crown className="w-5 h-5 text-purple-400" />
           Subscription
         </h3>
-        {hasActiveSubscription && (
-          <button
-            onClick={handleManageSubscription}
-            disabled={isLoadingPortal}
-            className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium disabled:opacity-50"
-          >
-            {isLoadingPortal ? 'Loading...' : 'Manage Billing'}
-          </button>
-        )}
+        <button
+          onClick={handleManageSubscription}
+          className="px-4 py-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-purple-400 rounded-lg hover:from-purple-600/30 hover:to-pink-600/30 transition-all text-sm font-medium flex items-center gap-2"
+        >
+          <Settings className="w-4 h-4" />
+          Manage Plan
+        </button>
       </div>
 
       <div className="space-y-4">

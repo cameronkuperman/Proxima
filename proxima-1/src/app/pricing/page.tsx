@@ -58,10 +58,28 @@ export default function PricingPage() {
         return;
       }
 
-      // Check if user has any active subscription
+      // If user has an active subscription, use portal for upgrades/downgrades
       if (hasActiveSubscription) {
-        toast.info('Please manage your existing subscription from your profile');
-        router.push('/profile');
+        console.log('User has active subscription, opening portal for plan change...');
+        
+        const portalResponse = await fetch('/api/stripe/create-portal-session', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+        
+        const portalData = await portalResponse.json();
+        
+        if (portalResponse.ok && portalData.url) {
+          toast.info('Redirecting to billing portal to change your plan...');
+          // Open portal where they can change plans
+          window.location.href = portalData.url;
+        } else {
+          toast.error('Failed to open billing portal. Please try from your subscription page.');
+          router.push('/subscription');
+        }
+        
         setIsLoading(null);
         return;
       }
@@ -141,6 +159,19 @@ export default function PricingPage() {
     if (hasActiveSubscription && currentTier === tierName) return 'Current Plan';
     if (tierName === 'free') return 'Get Started';
     if (tierName === 'enterprise') return 'Contact Sales';
+    
+    // Show different text for upgrades/downgrades
+    if (hasActiveSubscription) {
+      const currentTierIndex = ['free', 'basic', 'pro', 'pro_plus'].indexOf(currentTier || 'free');
+      const targetTierIndex = ['free', 'basic', 'pro', 'pro_plus'].indexOf(tierName);
+      
+      if (targetTierIndex > currentTierIndex) {
+        return 'Upgrade Plan';
+      } else if (targetTierIndex < currentTierIndex) {
+        return 'Downgrade Plan';
+      }
+    }
+    
     return 'Subscribe';
   };
 
@@ -155,7 +186,7 @@ export default function PricingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-pink-900/20" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 0 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
@@ -169,7 +200,7 @@ export default function PricingPage() {
             {/* Show current subscription status */}
             {hasActiveSubscription && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 1, scale: 1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white font-medium mb-8"
               >
@@ -212,22 +243,15 @@ export default function PricingPage() {
           {Object.values(TIERS).map((tier, index) => (
             <motion.div
               key={tier.name}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 1, y: 0 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ duration: 0.3 }}
               className={`relative rounded-2xl backdrop-blur-sm border transition-all hover:scale-105 ${
                 tier.isRecommended
                   ? 'bg-gradient-to-b from-purple-900/20 to-transparent border-purple-500/50 shadow-xl shadow-purple-500/20'
                   : 'bg-white/[0.02] border-white/10'
               }`}
             >
-              {tier.isRecommended && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full">
-                    MOST POPULAR
-                  </span>
-                </div>
-              )}
 
               <div className="p-6">
                 {/* Tier Header */}
@@ -374,10 +398,6 @@ export default function PricingPage() {
             question="Can I cancel anytime?"
             answer="Absolutely. You can cancel your subscription at any time, and you'll continue to have access until the end of your billing period."
           />
-          <FAQItem
-            question="Do you offer refunds?"
-            answer="We offer a 30-day money-back guarantee. If you're not satisfied, contact support for a full refund."
-          />
         </div>
       </div>
     </div>
@@ -416,7 +436,7 @@ function FeatureItem({
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
       className="bg-white/[0.02] backdrop-blur-sm border border-white/10 rounded-xl p-6"

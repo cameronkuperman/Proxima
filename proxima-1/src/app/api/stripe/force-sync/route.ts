@@ -78,6 +78,26 @@ export async function POST(req: NextRequest) {
       if (existing) {
         console.log('Subscription already exists, updating...');
         
+        // Determine tier from price ID (same logic as create)
+        let tier = 'basic'; // default
+        const priceId = stripeSub.items.data[0]?.price.id;
+        
+        console.log('Price ID:', priceId);
+        
+        // Map price ID to tier
+        if (priceId === process.env.STRIPE_PRICE_BASIC_MONTHLY || 
+            priceId === process.env.STRIPE_PRICE_BASIC_YEARLY) {
+          tier = 'basic';
+        } else if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || 
+                   priceId === process.env.STRIPE_PRICE_PRO_YEARLY) {
+          tier = 'pro';
+        } else if (priceId === process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 
+                   priceId === process.env.STRIPE_PRICE_PRO_PLUS_YEARLY) {
+          tier = 'pro_plus';
+        }
+        
+        console.log('Determined tier:', tier);
+        
         // Safe date handling for update
         const currentPeriodEnd = (stripeSub as any).current_period_end;
         let periodEndDate: string | null = null;
@@ -92,11 +112,12 @@ export async function POST(req: NextRequest) {
           }
         }
         
-        // Update existing subscription
+        // Update existing subscription INCLUDING tier
         const { error: updateError } = await supabaseAdmin
           .from('subscriptions')
           .update({
             status: stripeSub.status,
+            tier: tier, // NOW UPDATING TIER!
             current_period_end: periodEndDate,
             cancel_at_period_end: (stripeSub as any).cancel_at_period_end || false,
             updated_at: new Date().toISOString(),
@@ -106,7 +127,12 @@ export async function POST(req: NextRequest) {
         if (updateError) {
           errors.push({ subscription: stripeSub.id, error: updateError.message });
         } else {
-          synced.push({ subscription: stripeSub.id, action: 'updated' });
+          synced.push({ 
+            subscription: stripeSub.id, 
+            action: 'updated',
+            tier: tier,
+            status: stripeSub.status
+          });
         }
       } else {
         console.log('Creating new subscription record...');

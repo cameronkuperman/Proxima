@@ -8,6 +8,7 @@ export default function TestSyncPage() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [fixing, setFixing] = useState(false);
+  const [syncingPayments, setSyncingPayments] = useState(false);
   const [result, setResult] = useState<any>(null);
   const router = useRouter();
 
@@ -145,6 +146,46 @@ export default function TestSyncPage() {
             className="px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded-lg font-medium"
           >
             {fixing ? 'Updating...' : 'Fix Tier to PRO PLUS'}
+          </button>
+          
+          <button
+            onClick={async () => {
+              setSyncingPayments(true);
+              try {
+                const supabase = createClient();
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                  alert('Not authenticated');
+                  return;
+                }
+
+                const response = await fetch('/api/stripe/sync-payment-history', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                  },
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                  alert(`Success! ${data.message}`);
+                } else {
+                  alert(`Error: ${data.error || 'Failed to sync payments'}`);
+                }
+                
+                setResult(data);
+              } catch (error: any) {
+                alert(`Error: ${error.message}`);
+              } finally {
+                setSyncingPayments(false);
+              }
+            }}
+            disabled={syncingPayments}
+            className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-medium"
+          >
+            {syncingPayments ? 'Syncing...' : 'Sync Payment History'}
           </button>
         </div>
 
