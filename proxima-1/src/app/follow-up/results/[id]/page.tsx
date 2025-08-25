@@ -14,7 +14,8 @@ import {
   Calendar,
   Sparkles,
   FileText,
-  Clock
+  Clock,
+  Shield
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useFollowUpResult } from '@/hooks/useFollowUp'
@@ -151,18 +152,23 @@ export default function FollowUpResultsPage() {
               </div>
               
               {/* Confidence Progress */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Diagnostic Confidence</span>
-                  <span className="text-sm text-gray-400">{result.assessment_evolution.confidence_change}</span>
+              <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                <div className="flex justify-between mb-3">
+                  <span className="text-sm font-medium text-white flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-purple-400" />
+                    Diagnostic Confidence
+                  </span>
+                  <span className="text-sm font-semibold text-purple-400">{result.assessment_evolution.confidence_change}</span>
                 </div>
-                <div className="w-full bg-white/[0.05] rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-                    style={{ width: `${confidenceLevel}%` }}
+                <div className="w-full bg-black/30 rounded-full h-3 overflow-hidden backdrop-blur">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${confidenceLevel}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30"
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">{result.confidence_indicator.explanation}</p>
+                <p className="text-xs text-gray-400 mt-2">{result.confidence_indicator.explanation}</p>
               </div>
               
               {/* Key Discoveries */}
@@ -261,16 +267,23 @@ export default function FollowUpResultsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Patterns Tab */}
         {activeTab === 'patterns' && (
-          <div className="space-y-4">
-            <div className="bg-white/[0.03] rounded-lg border border-white/[0.05] p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">Pattern Insights</h3>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-4 border-b border-white/[0.05]">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Pattern Insights
+              </h3>
+            </div>
+            <div className="p-6">
               <div className="space-y-4">
                 {result.pattern_insights.discovered_patterns.length > 0 && (
                   <div>
@@ -305,16 +318,23 @@ export default function FollowUpResultsPage() {
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Treatments Tab */}
         {activeTab === 'treatments' && (
-          <div className="space-y-4">
-            <div className="bg-white/[0.03] rounded-lg border border-white/[0.05] p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">Treatment Effectiveness</h3>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 p-4 border-b border-white/[0.05]">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5" />
+                Treatment Effectiveness
+              </h3>
+            </div>
+            <div className="p-6">
               <div className="grid md:grid-cols-3 gap-4">
                 {/* What's Working */}
                 <div className="space-y-2">
@@ -362,16 +382,23 @@ export default function FollowUpResultsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Recommendations Tab */}
         {activeTab === 'recommendations' && (
-          <div className="space-y-4">
-            <div className="bg-white/[0.03] rounded-lg border border-white/[0.05] p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">Recommended Actions</h3>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4 border-b border-white/[0.05]">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Recommended Actions
+              </h3>
+            </div>
+            <div className="p-6">
               <div className="space-y-4">
                 {/* Immediate Actions */}
                 {result.recommendations.immediate.length > 0 && (
@@ -433,7 +460,7 @@ export default function FollowUpResultsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -443,29 +470,33 @@ export default function FollowUpResultsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
+          className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl overflow-hidden"
         >
-          <div className="mt-6 bg-white/[0.03] rounded-lg border border-blue-500/20 p-6">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                What Your Doctor Meant
-              </h3>
-            </div>
+          <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-4 border-b border-white/[0.05]">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              What Your Doctor Meant
+            </h3>
+          </div>
+          <div className="p-6">
             <div className="p-4 bg-blue-500/10 rounded-lg">
-              <p className="text-sm">{result.medical_visit_explained}</p>
+              <p className="text-sm text-gray-300">{result.medical_visit_explained}</p>
             </div>
           </div>
         </motion.div>
       )}
 
       {/* Action Buttons */}
-      <div className="flex justify-between mt-8">
-        <button
-          className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.08] text-white rounded-lg transition-all"
+      <div className="flex flex-col sm:flex-row gap-4 mt-8">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 text-white rounded-xl transition-all border border-purple-500/30 backdrop-blur-[20px] flex items-center justify-center gap-2"
           onClick={() => {
             // Navigate to the original assessment results page
-            const assessmentType = localStorage.getItem(`assessment_type_${followUpId}`) || 'general'
-            const assessmentId = localStorage.getItem(`assessment_id_${followUpId}`)
+            // Try to get from result object first, then fallback to localStorage
+            const assessmentType = result?.assessment_type || 'general'
+            const assessmentId = result?.assessment_id
             if (assessmentId) {
               router.push(`/results/${assessmentType}/${assessmentId}`)
             } else {
@@ -473,15 +504,19 @@ export default function FollowUpResultsPage() {
             }
           }}
         >
+          <ArrowLeft className="h-4 w-4" />
           View Original Assessment
-        </button>
+        </motion.button>
         {chain && (
-          <button
-            className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.08] text-white rounded-lg transition-all"
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 text-white rounded-xl transition-all border border-blue-500/30 backdrop-blur-[20px] flex items-center justify-center gap-2"
             onClick={() => router.push(`/follow-up/chain/${result.chain_id}`)}
           >
+            <Clock className="h-4 w-4" />
             View Full Timeline
-          </button>
+          </motion.button>
         )}
       </div>
     </div>
