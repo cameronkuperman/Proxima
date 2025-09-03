@@ -180,7 +180,7 @@ export default function FollowUpChainPage() {
               </div>
             ))}
           </div>
-        </CardContent>
+        </div>
       </div>
 
       {/* Confidence Chart */}
@@ -217,7 +217,7 @@ export default function FollowUpChainPage() {
               />
             </LineChart>
           </ResponsiveContainer>
-        </CardContent>
+        </div>
       </div>
 
       {/* Timeline */}
@@ -239,9 +239,9 @@ export default function FollowUpChainPage() {
               <div className="flex-grow">
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-medium">Initial Assessment</h4>
-                  <Badge variant="secondary" className="text-xs">
+                  <span className="px-2 py-0.5 text-xs bg-secondary/50 rounded-full">
                     {chainData.assessment_progression[0]}
-                  </Badge>
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {chainData.total_days_tracked} days ago
@@ -303,14 +303,13 @@ export default function FollowUpChainPage() {
                     </div>
                   </div>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
+                <button 
+                  className="px-3 py-1.5 text-sm bg-white/[0.05] hover:bg-white/[0.08] text-white rounded-lg transition-all flex items-center gap-1"
                   onClick={() => router.push(`/follow-up/results/${followUp.id}`)}
                 >
                   View
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </motion.div>
             ))}
           </div>
