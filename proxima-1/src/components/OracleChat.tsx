@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOracle } from '@/hooks/useOracle';
 import { useAuth } from '@/contexts/AuthContext';
 import { SummaryNotification } from './SummaryNotification';
+import VoiceMode from './VoiceMode';
 
 interface OracleChatProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [summarySuccess, setSummarySuccess] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -73,8 +75,14 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
 
   useEffect(() => {
     if (textareaRef.current) {
+      // Reset height to auto to get the correct scrollHeight
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      // Set height based on content, respecting min and max
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const minHeight = 44;
+      const maxHeight = 120;
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [input]);
 
@@ -159,6 +167,16 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
         isGenerating={isGeneratingSummary}
         success={summarySuccess}
         error={summaryError || undefined}
+      />
+      
+      {/* Voice Mode Interface */}
+      <VoiceMode 
+        isOpen={voiceModeOpen}
+        onClose={() => setVoiceModeOpen(false)}
+        onTranscript={(text) => {
+          setInput(text);
+          handleSend();
+        }}
       />
       
       <AnimatePresence>
@@ -307,13 +325,13 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
                         initial={{ opacity: 0, x: message.role === 'user' ? 10 : -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.1 }}
-                        className={`inline-block px-5 py-3 rounded-2xl max-w-[85%] ${
+                        className={`inline-block px-6 py-4 rounded-2xl max-w-[85%] ${
                           message.role === 'user'
-                            ? 'bg-white/[0.08] text-gray-200 border border-white/[0.05]'
-                            : 'bg-white/[0.02] text-gray-200 border border-white/[0.03]'
+                            ? 'bg-white/[0.06] text-gray-200'
+                            : 'bg-white/[0.03] text-gray-200'
                         }`}
                       >
-                        <div className="text-[15px] leading-relaxed">
+                        <div className="text-[16px] leading-relaxed">
                           {renderMessageContent(message.content)}
                         </div>
                       </motion.div>
@@ -366,88 +384,44 @@ export default function OracleChat({ isOpen, onClose, healthScore = 92 }: Oracle
               </div>
             </div>
 
-            {/* Input Area - Claude-style with health context */}
-            <div className="border-t border-white/[0.08] px-6 py-4 bg-[#0a0a0a]/50 backdrop-blur-sm flex-shrink-0">
-              <div className="flex gap-3 items-end">
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask about your health..."
-                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.08] rounded-xl text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.07] transition-all text-[15px] leading-relaxed min-h-[48px] max-h-[120px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
-                    style={{ height: '48px' }}
-                  />
-                  
-                  {/* Subtle health context indicator */}
-                  {input.toLowerCase().includes('headache') || input.toLowerCase().includes('pain') ? (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="absolute -top-2 left-3 px-2 py-0.5 bg-[#0a0a0a] rounded-full"
-                    >
-                      <span className="text-xs text-purple-400">Symptom detected</span>
-                    </motion.div>
-                  ) : null}
-                </div>
+            {/* Refined Input Area - ChatGPT-inspired */}
+            <div className="border-t border-white/[0.06] px-6 py-4 bg-[#0a0a0a]/50 backdrop-blur-sm flex-shrink-0">
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Message Oracle..."
+                  className="w-full px-4 py-3 pr-12 bg-white/[0.03] border border-white/[0.06] rounded-xl text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500/30 focus:bg-white/[0.05] transition-all text-[16px] leading-relaxed min-h-[44px] max-h-[120px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                  style={{ height: 'auto' }}
+                />
                 
+                {/* Smart button system - voice when empty, send when typing */}
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSend}
-                  disabled={!input.trim() || isThinking}
-                  className={`p-3 rounded-xl transition-all ${
+                  whileHover={input.trim() ? { scale: 1.05 } : undefined}
+                  whileTap={input.trim() ? { scale: 0.95 } : undefined}
+                  onClick={input.trim() ? handleSend : () => setVoiceModeOpen(true)}
+                  disabled={isThinking}
+                  className={`absolute right-2 bottom-2 p-2 transition-all ${
                     input.trim() && !isThinking
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
-                      : 'bg-white/[0.03] text-gray-600 cursor-not-allowed'
+                      ? 'bg-white text-black rounded-lg hover:bg-gray-100'
+                      : 'text-gray-400 hover:text-gray-300'
                   }`}
+                  title={input.trim() ? undefined : "Use voice mode"}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
+                  {input.trim() ? (
+                    // Send arrow (upward)
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    </svg>
+                  ) : (
+                    // Voice waveform icon
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6m3 13V9m3 10V4" />
+                    </svg>
+                  )}
                 </motion.button>
-              </div>
-              
-              {/* Minimal context bar */}
-              <div className="flex items-center justify-between mt-3 px-1">
-                <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    Health Score: {healthScore}/100
-                  </span>
-                  <span>•</span>
-                  <span>Secure & Private</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={startNewConversation}
-                    className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
-                  >
-                    New chat
-                  </button>
-                  <button 
-                    onClick={() => {
-                      const chatData = {
-                        conversationId,
-                        messages: messages.map(m => ({
-                          role: m.role,
-                          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-                          timestamp: m.timestamp
-                        }))
-                      };
-                      const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `oracle-chat-${conversationId.slice(0, 8)}.json`;
-                      a.click();
-                    }}
-                    className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
-                  >
-                    Export chat
-                  </button>
-                </div>
               </div>
             </div>
           </motion.div>

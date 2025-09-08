@@ -130,7 +130,7 @@ Frontend logs all API calls with prefix `[Intelligence API]`. Look for:
 - Empty response handling
 
 ## Contact
-
+L
 If backend endpoints are not working as expected, frontend will:
 1. Log detailed errors to console
 2. Fall back to mock data
