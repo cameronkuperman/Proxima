@@ -32,7 +32,7 @@ export default function InfoButton({ content, className = '', position = 'bottom
   const getPositionStyles = () => {
     switch (position) {
       case 'top':
-        return 'bottom-full mb-2 left-1/2 -translate-x-1/2';
+        return 'bottom-full mb-2 right-0';
       case 'left':
         return 'right-full mr-2 top-1/2 -translate-y-1/2';
       case 'right':
@@ -59,14 +59,15 @@ export default function InfoButton({ content, className = '', position = 'bottom
       <AnimatePresence>
         {isVisible && (
           <motion.div
-            className={`absolute z-50 ${getPositionStyles()}`}
+            className={`absolute z-[100] ${getPositionStyles()}`}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
+            style={{ pointerEvents: 'none' }}
           >
-            <div className="px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-xl border border-gray-800 min-w-[200px] max-w-[320px]">
-              <div className="whitespace-normal break-words leading-relaxed">
+            <div className="px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-xl border border-gray-800 min-w-[200px] max-w-[320px] overflow-visible">
+              <div className="whitespace-normal break-words leading-relaxed overflow-visible">
                 {content}
               </div>
             </div>

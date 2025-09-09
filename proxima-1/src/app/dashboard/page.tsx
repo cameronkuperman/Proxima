@@ -136,6 +136,23 @@ function DashboardContent() {
   const { user, signOut } = useAuth();
   const { initializeTutorial } = useTutorial();
   
+  // Oracle rotating prompts state
+  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
+  const healthPrompts = [
+    "What's causing my headaches?",
+    "Should I see a doctor?",
+    "Explain my test results",
+    "Is this rash serious?",
+    "How can I sleep better?",
+    "Why am I always tired?",
+    "Is my heart rate normal?",
+    "What do these symptoms mean?",
+    "How do I manage chronic pain?",
+    "Are these side effects normal?",
+    "What vitamins should I take?",
+    "Why do I feel dizzy?"
+  ];
+  
   // Debug logging for tutorial
   useEffect(() => {
     console.log('Dashboard: Current URL:', window.location.href);
@@ -565,6 +582,15 @@ function DashboardContent() {
     };
   }, []);
 
+  // Rotate Oracle prompts every 3.5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPromptIndex((prev) => (prev + 1) % healthPrompts.length);
+    }, 3500);
+    
+    return () => clearInterval(interval);
+  }, [healthPrompts.length]);
+  
   // Fetch user profile data from database
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -1128,7 +1154,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Manage your health profile including medications, allergies, and emergency contacts. Complete your profile for more accurate assessments." position="top" />
+                  <InfoButton content="Manage your health profile including medications, allergies, and emergency contacts. Complete your profile for more accurate assessments." position="bottom" />
                 </div>
                 {/* Completion ring background */}
                 <div className="absolute top-4 right-14">
@@ -1213,7 +1239,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Interactive 3D body model. Click exactly where symptoms occur for precise location tracking. Best for pain, injuries, and visible symptoms." position="top" />
+                  <InfoButton content="Interactive 3D body model. Click exactly where symptoms occur for precise location tracking. Best for pain, injuries, and visible symptoms." position="bottom" />
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 flex items-center justify-center mb-4 group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all">
                   <PersonStanding className="w-6 h-6 text-purple-400" />
@@ -1230,7 +1256,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Describe symptoms in your own words. AI will analyze and ask follow-up questions. Best for fatigue, mental health, or multiple symptoms." position="top" />
+                  <InfoButton content="Describe symptoms in your own words. AI will analyze and ask follow-up questions. Best for fatigue, mental health, or multiple symptoms." position="bottom" />
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <ClipboardList className="w-6 h-6 text-blue-400" />
@@ -1247,7 +1273,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Upload photos for AI visual analysis. Track changes over time. Best for skin conditions, rashes, wounds, or any visible symptoms." position="top" />
+                  <InfoButton content="Upload photos for AI visual analysis. Track changes over time. Best for skin conditions, rashes, wounds, or any visible symptoms." position="bottom" />
                 </div>
                 {/* Ultra-thin reminder indicator */}
                 {lastActivityTimes.photoAnalysis === 'Follow-up due' && (
@@ -1275,7 +1301,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Generate professional medical reports from your health conversations. Perfect for sharing with healthcare providers." position="top" />
+                  <InfoButton content="Generate professional medical reports from your health conversations. Perfect for sharing with healthcare providers." position="bottom" />
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <FileText className="w-6 h-6 text-blue-400" />
@@ -1529,7 +1555,7 @@ function DashboardContent() {
                     </div>
                   </div>
                 ) : aiAlert ? (
-                  <div className={`backdrop-blur-[20px] rounded-xl p-5 border transition-all
+                  <div className={`backdrop-blur-[20px] rounded-xl p-5 border min-h-[180px] transition-all duration-200 ease-out hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_10px_40px_-10px_rgba(0,0,0,0.4)] hover:bg-white/[0.04]
                     ${aiAlert.severity === 'critical' 
                       ? 'bg-gradient-to-r from-red-600/10 to-orange-600/10 border-red-600/20' 
                       : aiAlert.severity === 'warning'
@@ -1577,7 +1603,7 @@ function DashboardContent() {
                 ) : (
                   // No alerts state - good news!
                   <div className="backdrop-blur-[20px] bg-gradient-to-r from-green-600/10 to-emerald-600/10 
-                                  border border-green-600/20 rounded-xl p-5">
+                                  border border-green-600/20 rounded-xl p-5 min-h-[180px] transition-all duration-200 ease-out hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_10px_40px_-10px_rgba(0,0,0,0.4)] hover:bg-white/[0.04]">
                     <div className="flex items-start gap-3">
                       <div className="p-2 rounded-lg bg-green-500/20">
                         <Shield className="w-5 h-5 text-green-400" />
@@ -1599,10 +1625,9 @@ function DashboardContent() {
                 )}
 
                 {/* AI Oracle Chat */}
-                <motion.div 
-                  whileHover={{ scale: 1.02, x: 3, y: -3 }}
+                <div 
                   onClick={() => router.push('/oracle')}
-                  className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5 cursor-pointer hover:border-purple-600/30 transition-all relative"
+                  className="backdrop-blur-[20px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-600/20 rounded-xl p-5 cursor-pointer hover:border-purple-600/30 min-h-[180px] transition-all duration-200 ease-out hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_10px_40px_-10px_rgba(0,0,0,0.4)] hover:bg-white/[0.04] relative"
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
@@ -1613,12 +1638,23 @@ function DashboardContent() {
                       <p className="text-sm text-gray-300 mb-3">
                         Ask me anything about your health data or symptoms.
                       </p>
-                      <button className="w-full text-left text-sm bg-white/[0.03] border border-white/[0.05] rounded-lg px-3 py-2 text-gray-400 hover:text-white hover:border-white/[0.1] transition-all">
-                        &quot;What&apos;s causing my headaches?&quot; →
-                      </button>
+                      <div className="relative h-10">
+                        <AnimatePresence mode="wait">
+                          <motion.button
+                            key={currentPromptIndex}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.3 }}
+                            className="absolute inset-0 w-full text-left text-sm bg-white/[0.03] border border-white/[0.05] rounded-lg px-3 py-2 text-gray-400 hover:text-white hover:border-white/[0.1] transition-colors"
+                          >
+                            &quot;{healthPrompts[currentPromptIndex]}&quot; →
+                          </motion.button>
+                        </AnimatePresence>
+                      </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
             </div>
 
