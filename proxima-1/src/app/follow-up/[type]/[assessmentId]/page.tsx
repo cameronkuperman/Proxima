@@ -23,7 +23,7 @@ export default function FollowUpFormPage() {
 
   // Check if enough time has passed for follow-up
   useEffect(() => {
-    if (!loading && context && context.days_since_original < 1 && context.days_since_last < 1) {
+    if (!loading && context && context.days_since_original < 1 && context.days_since_last && context.days_since_last < 1) {
       // Too soon for follow-up
     }
   }, [loading, context])

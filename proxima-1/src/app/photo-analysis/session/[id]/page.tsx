@@ -125,10 +125,10 @@ export default function PhotoSessionDetailPage() {
                 </button>
                 <div>
                   <h1 className="text-xl font-semibold text-white">
-                    {historyData.session.condition_name}
+                    {historyData?.session?.condition_name || historyData?.session_info?.condition_name || 'Loading...'}
                   </h1>
                   <p className="text-sm text-gray-400">
-                    {analyses.length} analyses • Started {new Date(historyData.session.created_at).toLocaleDateString()}
+                    {analyses.length} analyses • Started {new Date(historyData?.session?.created_at || historyData?.session_info?.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -476,7 +476,7 @@ export default function PhotoSessionDetailPage() {
                   </div>
                   
                   {/* Summary Stats */}
-                  {timelineData.summary && (
+                  {timelineData?.summary && (
                     <div className="grid grid-cols-3 gap-6">
                       <div>
                         <p className="text-sm text-gray-400 mb-1">Overall Trend</p>

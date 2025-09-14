@@ -137,7 +137,7 @@ export function withIntelligenceErrorBoundary<P extends object>(
 
     return (
       <IntelligenceErrorBoundary fallback={fallback}>
-        <Component {...props} ref={ref} />
+        <Component {...(props as P)} />
       </IntelligenceErrorBoundary>
     );
   });

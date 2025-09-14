@@ -1708,7 +1708,7 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
                    'Issue characteristics:'}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {formData.issueType === 'pain' ? [
+                  {(formData.issueType === 'pain' ? [
                     { value: 'sharp_movement', label: 'Sharp with specific movements' },
                     { value: 'constant_ache', label: 'Constant ache' },
                     { value: 'throbbing', label: 'Throbbing/pulsing' },
@@ -1741,7 +1741,7 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
                     { value: 'intermittent', label: 'Comes and goes' },
                     { value: 'with_symptoms', label: 'With other symptoms' }
                   ] : []
-                  }.map((option) => (
+                  ).map((option) => (
                     <CheckboxCard
                       key={option.value}
                       checked={formData.issueCharacteristics?.includes(option.value) || false}

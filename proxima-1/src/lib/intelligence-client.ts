@@ -130,7 +130,7 @@ export interface BodySystemsData {
 }
 
 export interface TimelineData {
-  timeRange: string;
+  timeRange: '7D' | '30D' | '90D' | '1Y' | 'ALL';
   dataPoints: Array<{
     date: string;
     severity: number; // 0-10

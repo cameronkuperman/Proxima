@@ -200,13 +200,46 @@ export function useOracleEnhanced({
       if (isFirstMessage) {
         setIsFirstMessage(false);
       }
+      
+      // Check context status from backend
+      if (response?.context_status) {
+        console.log('[Oracle] Context status:', response.context_status);
+        
+        // Handle blocked status (free tier limit reached)
+        if (response.context_status.can_continue === false || response.context_status.status === 'blocked') {
+          setTokenLimits({
+            total_tokens: response.context_status.tokens,
+            limit: response.context_status.limit,
+            percentage: response.context_status.percentage,
+            is_blocked: true,
+            needs_compression: false
+          } as any);
+          onTokenLimitReached?.({
+            can_continue: false,
+            total_tokens: response.context_status.tokens,
+            is_premium: tier !== 'free',
+            limit: response.context_status.limit,
+            percentage: response.context_status.percentage,
+            needs_compression: false,
+            is_blocked: true
+          });
+        }
+        
+        // Handle needs_compression status
+        if (response.context_status.needs_compression) {
+          setCompressionActive(true);
+        }
+      }
 
       // If we streamed, the assistant message is already present and updated.
       if (!streamingEnabled || !response) {
-        // Simple parsing using the has_reasoning flag from backend
-        const finalContent = typeof response.response === 'string' 
-          ? response.response 
-          : JSON.stringify(response.response);
+        // Use correct field names from backend
+        const finalContent = response?.response || response?.message || response?.raw_response || '';
+        
+        // Only proceed if we have content
+        if (!finalContent) {
+          console.error('[Oracle] No content in response:', response);
+        }
         
         // FULL DEBUG LOGGING
         console.log('[Oracle] FULL RAW RESPONSE:', response);

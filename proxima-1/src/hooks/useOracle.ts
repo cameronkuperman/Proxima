@@ -35,8 +35,6 @@ export function useOracle({
   );
   const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
-  const [lastSummaryAt, setLastSummaryAt] = useState<number>(0);
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const summaryGeneratedRef = useRef<boolean>(false);
 
   // Initialize conversation ID
@@ -100,60 +98,32 @@ export function useOracle({
           setIsFirstMessage(false);
         }
 
-        // Add Oracle's response
+        // Add Oracle's response - handle multiple possible field names
+        const responseContent = response.response || response.message || response.raw_response || '';
+        
+        // Log for debugging
+        console.log('[Oracle] Response fields:', {
+          has_response: !!response.response,
+          has_message: !!response.message,
+          has_raw_response: !!response.raw_response,
+          status: response.status,
+          actual_content: responseContent.substring(0, 100)
+        });
+        
         const assistantMessage: Message = {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          content: response.response,
+          content: responseContent,
           timestamp: new Date(),
           metadata: {
-            tokens: response.usage.total_tokens,
-            model: response.model
+            tokens: response.usage?.total_tokens || 0,
+            model: response.model || response.model_used
           }
         };
         setMessages(prev => [...prev, assistantMessage]);
-
-        // Check if we should generate a summary
-        const totalMessages = messages.length + 2; // +2 for the new messages
-        const messagesSinceLastSummary = totalMessages - lastSummaryAt;
         
-        // Generate summary after every 5 message exchanges (10 total messages)
-        if (messagesSinceLastSummary >= 10 && !summaryGeneratedRef.current) {
-          summaryGeneratedRef.current = true;
-          generateSummary().then((summary) => {
-            setLastSummaryAt(totalMessages);
-            summaryGeneratedRef.current = false;
-            if (summary && onSummaryGenerated) {
-              onSummaryGenerated(summary);
-            }
-          }).catch(err => {
-            console.warn('Auto-summary generation failed:', err);
-            summaryGeneratedRef.current = false;
-          });
-        }
-
-        // Reset inactivity timer
-        if (inactivityTimerRef.current) {
-          clearTimeout(inactivityTimerRef.current);
-        }
-        
-        // Set new inactivity timer (2 minutes)
-        inactivityTimerRef.current = setTimeout(() => {
-          const currentMessages = messages.concat([userMessage, assistantMessage]);
-          const hasUserMessages = currentMessages.some(m => m.role === 'user');
-          if (hasUserMessages && !summaryGeneratedRef.current) {
-            summaryGeneratedRef.current = true;
-            generateSummary().then((summary) => {
-              summaryGeneratedRef.current = false;
-              if (summary && onSummaryGenerated) {
-                onSummaryGenerated(summary);
-              }
-            }).catch(err => {
-              console.warn('Inactivity-triggered summary generation failed:', err);
-              summaryGeneratedRef.current = false;
-            });
-          }
-        }, 120000); // 2 minutes
+        // Summary generation removed - should only happen on conversation end
+        // The beforeunload event handler will handle exit summaries
 
         onSuccess?.(response);
         return response;
@@ -176,6 +146,24 @@ export function useOracle({
     setMessages([]);
   }, []);
 
+  const generateSummary = useCallback(async (): Promise<SummaryResponse | null> => {
+    // Only generate if we have user messages
+    const hasUserMessages = messages.some(m => m.role === 'user');
+    
+    if (!conversationId || !hasUserMessages) {
+      return null;
+    }
+
+    try {
+      const summaryResponse = await oracleClient.generateSummary(conversationId, userId);
+      return summaryResponse;
+    } catch (error) {
+      console.error('Failed to generate summary:', error);
+      onError?.(error as Error);
+      return null;
+    }
+  }, [conversationId, userId, messages, onError]);
+
   const startNewConversation = useCallback(async () => {
     // Generate summary for current conversation before starting new one
     if (messages.some(m => m.role === 'user') && !summaryGeneratedRef.current) {
@@ -196,34 +184,9 @@ export function useOracle({
     setConversationId(newId);
     clearMessages();
     setIsFirstMessage(true);
-    setLastSummaryAt(0);
-    
-    // Clear inactivity timer
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = null;
-    }
     
     return newId;
-  }, [userId, clearMessages, messages, onSummaryGenerated]);
-
-  const generateSummary = useCallback(async (): Promise<SummaryResponse | null> => {
-    // Only generate if we have user messages
-    const hasUserMessages = messages.some(m => m.role === 'user');
-    
-    if (!conversationId || !hasUserMessages) {
-      return null;
-    }
-
-    try {
-      const summaryResponse = await oracleClient.generateSummary(conversationId, userId);
-      return summaryResponse;
-    } catch (error) {
-      console.error('Failed to generate summary:', error);
-      onError?.(error as Error);
-      return null;
-    }
-  }, [conversationId, userId, messages, onError]);
+  }, [userId, clearMessages, messages, generateSummary, onSummaryGenerated]);
 
   // Only handle browser/tab close when there are actual user messages
   useEffect(() => {
@@ -247,15 +210,6 @@ export function useOracle({
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, [messages, conversationId, userId]);
-
-  // Clean up inactivity timer on unmount
-  useEffect(() => {
-    return () => {
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-    };
-  }, []);
 
   return {
     messages,

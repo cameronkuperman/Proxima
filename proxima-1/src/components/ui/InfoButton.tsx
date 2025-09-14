@@ -39,7 +39,7 @@ export default function InfoButton({ content, className = '', position = 'bottom
         return 'left-full ml-2 top-1/2 -translate-y-1/2';
       case 'bottom':
       default:
-        return 'top-full mt-2 right-0';
+        return 'bottom-full mb-2 left-0';
     }
   };
 
@@ -66,7 +66,7 @@ export default function InfoButton({ content, className = '', position = 'bottom
             transition={{ duration: 0.15, ease: 'easeOut' }}
             style={{ pointerEvents: 'none' }}
           >
-            <div className="px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-xl border border-gray-800 min-w-[200px] max-w-[320px] overflow-visible">
+            <div className="px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-xl border border-gray-800 min-w-[200px] max-w-[400px] overflow-visible">
               <div className="whitespace-normal break-words leading-relaxed overflow-visible">
                 {content}
               </div>

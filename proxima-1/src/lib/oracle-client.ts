@@ -123,7 +123,17 @@ export class OracleClient {
     const retries = options?.retries || this.defaultRetries;
     const startTime = Date.now();
     
+    console.log('[OracleClient] sendMessage called with:', {
+      queryLength: query.length,
+      userId: userId.substring(0, 8) + '...',
+      conversationId: convId.substring(0, 8) + '...',
+      model: options?.model,
+      reasoningMode: options?.reasoningMode,
+      baseUrl: this.baseUrl
+    });
+    
     for (let attempt = 1; attempt <= retries; attempt++) {
+      console.log(`[OracleClient] Attempt ${attempt}/${retries} to call /api/chat`);
       try {
         const response = await axios.post<OracleResponse>(
           `${this.baseUrl}/api/chat`,
@@ -137,8 +147,21 @@ export class OracleClient {
         );
         
         // Debug log the raw response
-        console.log('[OracleClient] Raw API response:', response.data);
-        console.log('[OracleClient] Request payload was:', message);
+        console.log('[OracleClient] API Call Success!');
+        console.log('[OracleClient] Request URL:', `${this.baseUrl}/api/chat`);
+        console.log('[OracleClient] Request payload:', message);
+        console.log('[OracleClient] Response status:', response.status);
+        console.log('[OracleClient] Response data:', response.data);
+        
+        // Check if response has expected structure
+        if (!response.data.response && !response.data.message) {
+          console.error('[OracleClient] WARNING: No content field in response!', {
+            hasResponse: !!response.data.response,
+            hasMessage: !!response.data.message,
+            hasRawResponse: !!response.data.raw_response,
+            keys: Object.keys(response.data)
+          });
+        }
 
         // Store the assistant's response in Supabase
         const responseData = response.data;
@@ -166,11 +189,15 @@ export class OracleClient {
 
         return responseData;
       } catch (error) {
+        console.error(`[OracleClient] Attempt ${attempt} failed:`, error);
         if (attempt === retries) {
+          console.error('[OracleClient] All retries exhausted, throwing error');
           throw this.handleError(error);
         }
+        const backoffMs = Math.pow(2, attempt - 1) * 1000;
+        console.log(`[OracleClient] Retrying in ${backoffMs}ms...`);
         // Exponential backoff
-        await this.delay(Math.pow(2, attempt - 1) * 1000);
+        await this.delay(backoffMs);
       }
     }
 
@@ -362,6 +389,31 @@ export class OracleClient {
     conversationId: string,
     userId: string
   ): Promise<SummaryResponse> {
+    // Validate UUIDs to prevent backend errors
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (!uuidRegex.test(conversationId)) {
+      console.warn('[OracleClient] Invalid conversation UUID format:', conversationId);
+      return {
+        summary: '',
+        token_count: 0,
+        compression_ratio: 0,
+        status: 'error',
+        error: 'Invalid conversation ID format'
+      };
+    }
+    
+    if (!uuidRegex.test(userId)) {
+      console.warn('[OracleClient] Invalid user UUID format:', userId);
+      return {
+        summary: '',
+        token_count: 0,
+        compression_ratio: 0,
+        status: 'error',
+        error: 'Invalid user ID format'
+      };
+    }
+    
     // Don't even try if we haven't created a conversation or have no messages
     const messageCount = this.messagesInConversation.get(conversationId) || 0;
     if (!this.conversationCreated.get(conversationId) || messageCount === 0) {

@@ -16,6 +16,8 @@ import {
 import { motion } from 'framer-motion'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Button } from '@/components/ui/button'
+import { CardContent } from '@/components/ui/card'
 
 interface ChainData {
   chain_id: string
@@ -283,9 +285,9 @@ export default function FollowUpChainPage() {
                 <div className="flex-grow">
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-medium">Follow-up #{followUp.follow_up_number}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <span className="px-2 py-0.5 text-xs border border-white/[0.1] rounded-full">
                       {followUp.overall_trend.replace('_', ' ')}
-                    </Badge>
+                    </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(followUp.created_at), { addSuffix: true })}
@@ -313,7 +315,7 @@ export default function FollowUpChainPage() {
               </motion.div>
             ))}
           </div>
-        </CardContent>
+        </div>
       </div>
 
       {/* Next Follow-Up Suggestion */}
@@ -334,7 +336,7 @@ export default function FollowUpChainPage() {
               <Calendar className="h-4 w-4 ml-2" />
             </Button>
           </div>
-        </CardContent>
+        </div>
       </div>
     </div>
   )

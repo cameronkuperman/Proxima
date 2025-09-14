@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, forwardRef } from 'react';
-import { FixedSizeList as List } from 'react-window';
+const ReactWindow = require('react-window');
+const { FixedSizeList: List } = ReactWindow;
 import InfiniteLoader from 'react-window-infinite-loader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, formatDistanceToNow } from 'date-fns';

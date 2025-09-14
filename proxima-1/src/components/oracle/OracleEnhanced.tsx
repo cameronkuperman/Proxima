@@ -103,14 +103,17 @@ export default function OracleEnhanced() {
   // Auto-save on unmount
   useEffect(() => {
     return () => {
-      if (conversationId && messages.length > 0) {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/oracle/exit-summary`, {
+      if (conversationId && messages.length > 0 && user?.id) {
+        // Use the correct generate_summary endpoint
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/generate_summary`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             conversation_id: conversationId,
-            user_id: user?.id
+            user_id: user.id
           })
+        }).catch(err => {
+          console.warn('[Oracle] Exit summary generation failed:', err);
         });
       }
     };

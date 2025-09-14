@@ -513,12 +513,12 @@ export default function GeneralAssessmentResult({
 
                       {/* Questions */}
                       <div className="space-y-3">
-                        {result.analysis.follow_up_questions.map((question, index) => (
+                        {result.analysis.follow_up_questions?.map((question, index) => (
                           <RefinementQuestion
                             key={index}
                             question={question}
                             questionIndex={index}
-                            totalQuestions={result.analysis.follow_up_questions.length}
+                            totalQuestions={result.analysis.follow_up_questions?.length || 0}
                             isActive={index === refinementHook.currentQuestionIndex}
                             isAnswered={refinementHook.answers.has(question)}
                             onAnswer={(answer) => refinementHook.handleAnswer(index, answer)}

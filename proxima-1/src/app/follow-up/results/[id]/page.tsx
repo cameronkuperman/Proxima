@@ -493,15 +493,8 @@ export default function FollowUpResultsPage() {
           whileTap={{ scale: 0.98 }}
           className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 text-white rounded-xl transition-all border border-purple-500/30 backdrop-blur-[20px] flex items-center justify-center gap-2"
           onClick={() => {
-            // Navigate to the original assessment results page
-            // Try to get from result object first, then fallback to localStorage
-            const assessmentType = result?.assessment_type || 'general'
-            const assessmentId = result?.assessment_id
-            if (assessmentId) {
-              router.push(`/results/${assessmentType}/${assessmentId}`)
-            } else {
-              router.back()
-            }
+            // Navigate back
+            router.back()
           }}
         >
           <ArrowLeft className="h-4 w-4" />
