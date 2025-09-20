@@ -61,6 +61,8 @@ interface GeneralFormData {
   wakingUpFeeling?: string
   energyCrashes?: string
   exerciseCapability?: string
+  wakeGasping?: string
+  sleepInterference?: string
   unexplainedWeightLoss?: boolean
   nightSweats?: boolean
   
@@ -77,6 +79,7 @@ interface GeneralFormData {
   concentrationLevel?: number
   triggerEvents?: string
   triggerEvents_other?: string
+  lostInterest?: string
   selfHarmThoughts?: boolean
   familyHistory?: boolean
   
@@ -94,6 +97,10 @@ interface GeneralFormData {
   bowelChanges?: string
   foodTriggers_old?: string
   foodTriggers_other?: string
+  painAfterBM?: string
+  stoolAppearance?: string
+  wakesFromSleep?: string
+  weightChange?: string
   digestiveBlood?: boolean
   digestiveWeightLoss?: boolean
   
@@ -107,6 +114,8 @@ interface GeneralFormData {
   temperatureFeeling?: string
   symptomProgression?: string
   sickDuration?: string
+  fever?: string
+  exposures?: string
   contagiousExposure?: boolean
   
   // Skin & Hair
@@ -131,6 +140,9 @@ interface GeneralFormData {
   breathingMain?: string
   breathingMain_other?: string
   breathingWhen?: string
+  breathlessLimitation?: string
+  worsePosition?: string
+  wheezing?: string
   chestPain?: boolean
   breathingUrgent?: boolean
   
@@ -159,6 +171,10 @@ interface GeneralFormData {
   headacheType?: string
   neuroSymptoms?: string[]
   neuroTriggers?: string
+  neuroType?: string
+  neuroOtherDescription?: string
+  weaknessLocation?: string
+  dizzinessType?: string
   
   // Medication Side Effects
   whichMedications?: string[]
@@ -206,6 +222,7 @@ interface GeneralFormData {
   recentChanges?: string
   biggestWorry?: string
   feelingBetter?: string
+  lifeChanges?: string
 }
 
 // Enhanced categories with icons and descriptions
@@ -757,27 +774,29 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
               </div>
             </div>
 
-            {/* Advanced Questions Section */}
-            <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-              <button
-                type="button"
-                onClick={() => setShowAdvancedQuestions(!showAdvancedQuestions)}
-                className="w-full flex items-center justify-between text-left"
-              >
-                <span className="text-gray-300 font-medium">Additional questions for better accuracy</span>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showAdvancedQuestions ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {showAdvancedQuestions && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="mt-4 space-y-4"
+            {/* Advanced Questions Section - Only show for categories with additional questions */}
+            {['energy', 'mental', 'digestive', 'breathing', 'sick', 'neurological', 'multiple'].includes(selectedCategory!) && (
+              <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedQuestions(!showAdvancedQuestions)}
+                  className="w-full flex items-center justify-between text-left"
                 >
-                  {renderAdvancedQuestions()}
-                </motion.div>
-              )}
-            </div>
+                  <span className="text-gray-300 font-medium">Additional questions for better accuracy</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showAdvancedQuestions ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showAdvancedQuestions && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-4 space-y-4"
+                  >
+                    {renderAdvancedQuestions()}
+                  </motion.div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}
@@ -2511,15 +2530,15 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
           <>
             <div>
               <label className="block text-gray-300 text-sm mb-2">
-                Can you exercise for 10 minutes if you had to?
+                Do you wake up gasping or out of breath?
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {['Yes easily', 'With difficulty', 'Maybe', 'No way'].map((option) => (
+                {['Often', 'Sometimes', 'Rarely', 'Never'].map((option) => (
                   <RadioCard
                     key={option}
-                    name="exerciseCapability"
+                    name="wakeGasping"
                     value={option}
-                    checked={formData.exerciseCapability === option}
+                    checked={formData.wakeGasping === option}
                     onChange={handleInputChange}
                     label={option}
                   />
@@ -2608,10 +2627,338 @@ export default function GeneralAssessmentForm({ mode, onComplete, userGender = '
                 ))}
               </div>
             </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Has this interfered with your sleep?
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Yes significantly', 'Somewhat', 'No'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="sleepInterference"
+                    value={option}
+                    checked={formData.sleepInterference === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Have you lost interest in things you normally enjoy?
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Yes', 'Somewhat', 'No'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="lostInterest"
+                    value={option}
+                    checked={formData.lostInterest === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
           </>
         )
 
-      // Add more cases for other categories...
+      case 'digestive':
+        return (
+          <>
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Does pain improve after bowel movements?
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Yes', 'No', 'Sometimes'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="painAfterBM"
+                    value={option}
+                    checked={formData.painAfterBM === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Have you noticed blood or black color in stool?
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Red blood', 'Black tar', 'Neither'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="stoolAppearance"
+                    value={option}
+                    checked={formData.stoolAppearance === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Does it wake you from sleep?
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {['Yes', 'No'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="wakesFromSleep"
+                    value={option}
+                    checked={formData.wakesFromSleep === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Any unintentional weight change?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Lost >10lbs', 'Lost 5-10lbs', 'No change', 'Gained'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="weightChange"
+                    value={option}
+                    checked={formData.weightChange === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )
+
+      case 'breathing':
+        return (
+          <>
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                How much does breathlessness limit your daily activities?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Severely', 'Moderately', 'Mildly', 'Not at all'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="breathlessLimitation"
+                    value={option}
+                    checked={formData.breathlessLimitation === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                What position makes breathing worse?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Lying flat', 'Sitting up', 'No difference', 'Walking'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="worsePosition"
+                    value={option}
+                    checked={formData.worsePosition === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Do you wheeze or feel chest tightness?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['With activity', 'Random times', 'At night', 'Never'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="wheezing"
+                    value={option}
+                    checked={formData.wheezing === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )
+
+      case 'sick':
+        return (
+          <>
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Do you have a fever?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Yes (feels high)', 'Yes (mild)', 'No', 'Haven\'t checked'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="fever"
+                    value={option}
+                    checked={formData.fever === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Any recent travel or sick contacts?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Travel', 'Sick contacts', 'Both', 'Neither'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="exposures"
+                    value={option}
+                    checked={formData.exposures === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                How are symptoms progressing?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Getting worse', 'Getting better', 'Same', 'Up and down'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="symptomProgression"
+                    value={option}
+                    checked={formData.symptomProgression === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )
+
+      case 'neurological':
+        return (
+          <>
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                What type of neurological symptom?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {['Headache', 'Vision changes', 'Dizziness', 'Numbness', 'Other'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="neuroType"
+                    value={option}
+                    checked={formData.neuroType === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {formData.neuroType === 'Other' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+              >
+                <textarea
+                  name="neuroOtherDescription"
+                  value={formData.neuroOtherDescription || ''}
+                  onChange={handleInputChange}
+                  placeholder="Please describe your neurological symptom..."
+                  className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-gray-500 focus:border-purple-500/50 focus:outline-none transition-all"
+                  rows={2}
+                />
+              </motion.div>
+            )}
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Any weakness, numbness, or tingling?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Yes-arms', 'Yes-legs', 'Yes-face', 'No'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="weaknessLocation"
+                    value={option}
+                    checked={formData.weaknessLocation === option}
+                    onChange={handleInputChange}
+                    label={option.replace('-', ' in ')}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Do you feel unsteady or does the room spin?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Room spins', 'Feel unsteady', 'Both', 'Neither'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="dizzinessType"
+                    value={option}
+                    checked={formData.dizzinessType === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )
+
+      case 'multiple':
+        return (
+          <>
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Any major life changes recently?
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {['Yes', 'No'].map((option) => (
+                  <RadioCard
+                    key={option}
+                    name="lifeChanges"
+                    value={option}
+                    checked={formData.lifeChanges === option}
+                    onChange={handleInputChange}
+                    label={option}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )
+
       default:
         return null
     }

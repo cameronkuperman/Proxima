@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2, MessageSquare, Lightbulb, CheckCircle } from 'lucide-react'
+import { AlertCircle, Brain, FileText, TrendingUp, ChevronDown, ChevronRight, Sparkles, Eye, Download, X, Loader2, MessageSquare, Lightbulb, CheckCircle, Mail, ClipboardList } from 'lucide-react'
 import OracleEmbedded from '@/components/OracleEmbedded'
 import OracleAIModal from '@/components/OracleAIModal'
 import { useRouter } from 'next/navigation'
 import { useTrackingStore } from '@/stores/useTrackingStore'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { generateReportPDF } from '@/utils/pdfGenerator'
+import { MedicalPdfGenerator, MedicalReportData } from '@/services/medicalPdfService'
+import { format } from 'date-fns'
 
 interface QuickScanResultsProps {
   scanData: {
@@ -132,10 +135,132 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanData.scan_id, mode]) // Intentionally omit generateSuggestion to avoid infinite loop
 
-  const handleGenerateReport = () => {
-    console.log('Generating physician report...')
-    // TODO: Implement report generation
-  }
+  // PDF Export - Simple Quick Scan format
+  const handleExportPDF = async () => {
+    try {
+      const reportData = {
+        report_id: scanData.scan_id || `QS-${Date.now()}`,
+        report_type: 'quick_scan',
+        generated_at: new Date().toISOString(),
+        confidence_score: confidence,
+        model_used: 'Seimeo AI',
+        report_data: {
+          body_part: scanData.bodyPart,
+          symptoms: scanData.formData,
+          analysis: analysisResult,
+          what_this_means: whatThisMeans,
+          immediate_actions: immediateActions,
+          tracking_data: currentSuggestion ? {
+            metric: currentSuggestion.metric_name,
+            frequency: currentSuggestion.frequency
+          } : null
+        }
+      };
+
+      await generateReportPDF(reportData, {
+        includeMetadata: true,
+        includeSummaryOnly: false,
+        fileName: `quick-scan-${scanData.bodyPart.toLowerCase()}-${format(new Date(), 'MMM-dd-yyyy').toLowerCase()}.pdf`
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Generate Medical Report - Epic MyChart format for doctors
+  const handleGenerateMedicalReport = async () => {
+    try {
+      const pdfGenerator = new MedicalPdfGenerator();
+      
+      // Prepare medical report data
+      const medicalData: MedicalReportData = {
+        scan_id: scanData.scan_id,
+        user_id: user?.id || 'anonymous',
+        assessment_date: new Date(),
+        chief_complaint: {
+          description: `${scanData.formData.symptoms || 'Symptoms'} in ${scanData.bodyPart}`,
+          body_part: scanData.bodyPart,
+          duration: scanData.formData.duration || 'Not specified',
+          severity: scanData.formData.painLevel || scanData.formData.severity || 5,
+          pattern: scanData.formData.pattern || scanData.formData.timing
+        },
+        urgency_level: analysisResult.urgency as 'critical' | 'high' | 'moderate' | 'low',
+        ai_analysis: {
+          primary_condition: analysisResult.primaryCondition,
+          confidence: confidence,
+          differentials: analysisResult.differentials.map((diff: any) => ({
+            condition: typeof diff === 'string' ? diff : diff.condition || diff.name,
+            probability: typeof diff === 'object' ? diff.probability || diff.likelihood || 50 : 50
+          }))
+        },
+        symptom_timeline: currentSuggestion ? [
+          { date: new Date(), severity: scanData.formData.painLevel || 5 }
+        ] : undefined,
+        red_flags: analysisResult.redFlags.map((flag: string) => ({
+          symptom: flag,
+          present: false // Would need to check against actual symptoms
+        })),
+        treatments_tried: scanData.formData.treatmentsTried ? 
+          Object.entries(scanData.formData.treatmentsTried).map(([treatment, result]) => ({
+            treatment,
+            result: result as string
+          })) : undefined,
+        associated_symptoms: scanData.formData.associatedSymptoms?.map((symptom: any) => ({
+          symptom: typeof symptom === 'string' ? symptom : symptom.name,
+          onset_date: 'Recent',
+          present: true
+        })),
+        triggers_patterns: {
+          time: scanData.formData.timing,
+          activity: scanData.formData.triggers,
+          position: scanData.formData.position
+        },
+        medical_history: {
+          medications: scanData.formData.currentMedications,
+          allergies: scanData.formData.allergies,
+          previous: scanData.formData.previousEpisodes
+        }
+      };
+
+      const blob = await pdfGenerator.generateMedicalReport(medicalData);
+      
+      // Download the PDF
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `medical-report-${scanData.bodyPart.toLowerCase()}-${format(new Date(), 'MMM-dd-yyyy').toLowerCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      // Show success notification
+      setShowSuccessNotification(true);
+      setTimeout(() => setShowSuccessNotification(false), 3000);
+    } catch (error) {
+      console.error('Error generating medical report:', error);
+      alert('Failed to generate medical report. Please try again.');
+    }
+  };
+
+  // Email Medical Report
+  const handleEmailMedicalReport = async () => {
+    const email = prompt('Enter email address to send the medical report:');
+    if (!email) return;
+    
+    try {
+      // Generate the medical report first
+      const pdfGenerator = new MedicalPdfGenerator();
+      // ... (same medical data preparation as above)
+      
+      // For now, just show a message (backend email service would be implemented)
+      alert(`Medical report would be sent to ${email}. (Email service to be implemented)`);
+    } catch (error) {
+      console.error('Error emailing report:', error);
+      alert('Failed to email report. Please try again.');
+    }
+  };
 
   const handleTrackProgress = async () => {
     setIsLoadingTrackButton(true)
@@ -731,22 +856,36 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
             )}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div className="grid md:grid-cols-3 gap-4 mb-6">
+            {/* Export PDF - Simple format */}
             <button 
-              onClick={handleGenerateReport}
-              className="px-6 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 transition-all flex items-center justify-center gap-3 group"
+              onClick={handleExportPDF}
+              className="px-4 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 transition-all flex items-center justify-center gap-3 group"
             >
-              <FileText className="w-5 h-5 text-gray-400 group-hover:text-gray-300" />
+              <Download className="w-5 h-5 text-gray-400 group-hover:text-gray-300" />
               <div className="text-left">
-                <div className="font-medium text-white">Generate Detailed Report</div>
-                <div className="text-xs text-gray-400">For your doctor visit</div>
+                <div className="font-medium text-white">Export PDF</div>
+                <div className="text-xs text-gray-400">Quick scan results</div>
+              </div>
+            </button>
+
+            {/* Generate Medical Report - Epic MyChart format */}
+            <button 
+              onClick={handleGenerateMedicalReport}
+              className="px-4 py-4 rounded-xl bg-gradient-to-r from-purple-600/20 to-purple-600/10 hover:from-purple-600/30 hover:to-purple-600/20 border border-purple-500/30 hover:border-purple-500/50 transition-all flex items-center justify-center gap-3 group"
+            >
+              <ClipboardList className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
+              <div className="text-left">
+                <div className="font-medium text-white">Medical Report</div>
+                <div className="text-xs text-purple-300">For doctor visits</div>
               </div>
             </button>
             
+            {/* Track Over Time */}
             <button 
               onClick={handleTrackProgress}
               disabled={isLoadingTrackButton || isGeneratingTracking}
-              className="px-6 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 group"
+              className="px-4 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 group"
             >
               {isLoadingTrackButton || isGeneratingTracking ? (
                 <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
@@ -755,12 +894,23 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
               )}
               <div className="text-left">
                 <div className="font-medium text-white">
-                  {isLoadingTrackButton || isGeneratingTracking ? 'Preparing Tracking...' : 'Track Over Time'}
+                  {isLoadingTrackButton || isGeneratingTracking ? 'Preparing...' : 'Track Symptoms'}
                 </div>
                 <div className="text-xs text-gray-400">
-                  {isLoadingTrackButton || isGeneratingTracking ? 'Setting up your tracking' : 'Monitor symptom changes'}
+                  {isLoadingTrackButton || isGeneratingTracking ? 'Setting up' : 'Monitor changes'}
                 </div>
               </div>
+            </button>
+          </div>
+
+          {/* Email option for Medical Report */}
+          <div className="flex items-center justify-center mb-4">
+            <button
+              onClick={handleEmailMedicalReport}
+              className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-2 transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+              Email medical report to doctor
             </button>
           </div>
 

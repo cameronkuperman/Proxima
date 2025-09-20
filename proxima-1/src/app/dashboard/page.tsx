@@ -233,12 +233,15 @@ function DashboardContent() {
   
   // Initialize visible reports based on available data
   const [visibleReports, setVisibleReports] = useState<number[]>([]);
+  const [dismissedReports, setDismissedReports] = useState<number[]>([]);
   
   // Update visible reports when timeline data changes
   useEffect(() => {
     if (healthTimelineData.length > 0) {
       // Show first 2 reports if available
       setVisibleReports(healthTimelineData.length >= 2 ? [0, 1] : [0]);
+      // Reset dismissed reports when new data loads
+      setDismissedReports([]);
     }
   }, [healthTimelineData]);
   
@@ -250,9 +253,8 @@ function DashboardContent() {
       setHealthTimelineLoading(true);
       try {
         const reports = await reportsService.fetchUserReports(user.id);
-        // Get the most recent 10 reports
-        const recentReports = reports.slice(0, 10);
-        setHealthTimelineData(recentReports);
+        // Get all available reports (service already limits to 50)
+        setHealthTimelineData(reports);
       } catch (error) {
         console.error('Error fetching reports:', error);
         setHealthTimelineData([]);
@@ -626,7 +628,7 @@ function DashboardContent() {
         if (user?.id) {
           try {
             const reports = await reportsService.fetchUserReports(user.id);
-            setHealthTimelineData(reports.slice(0, 10));
+            setHealthTimelineData(reports);
             
             // Refresh health story (use Supabase for faster loading)
             const latestStory = await healthStoryService.getLatestHealthStoryFromSupabase(user.id);
@@ -739,12 +741,34 @@ function DashboardContent() {
   };
 
   const dismissReport = (index: number) => {
-    const newVisible = [...visibleReports];
-    // Find next available report not currently visible
-    const nextIndex = healthTimelineData.findIndex((_, idx) => !visibleReports.includes(idx) && idx !== visibleReports[index]);
+    const currentReportIndex = visibleReports[index];
+    
+    // Add current report to dismissed list
+    const newDismissed = [...dismissedReports, currentReportIndex];
+    setDismissedReports(newDismissed);
+    
+    // Find next available report that's neither visible nor dismissed
+    const nextIndex = healthTimelineData.findIndex((_, idx) => 
+      !visibleReports.includes(idx) && 
+      !newDismissed.includes(idx)
+    );
+    
     if (nextIndex !== -1) {
+      // Replace the dismissed report with the next available one
+      const newVisible = [...visibleReports];
       newVisible[index] = nextIndex;
       setVisibleReports(newVisible);
+    } else {
+      // No more reports to show - remove this slot
+      const newVisible = visibleReports.filter((_, i) => i !== index);
+      setVisibleReports(newVisible);
+      
+      // If all reports have been viewed, optionally reset
+      if (newVisible.length === 0 && healthTimelineData.length > 0) {
+        // Reset to show first 2 reports again
+        setVisibleReports(healthTimelineData.length >= 2 ? [0, 1] : [0]);
+        setDismissedReports([]);
+      }
     }
   };
   
@@ -1149,7 +1173,7 @@ function DashboardContent() {
               <motion.div
                 data-tour="profile-card"
                 whileHover={{ scale: 1.02, x: 3, y: -3 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative hover:z-10 "
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
                 onClick={() => router.push('/profile')}
               >
                 {/* Info button in top right */}
@@ -1234,7 +1258,7 @@ function DashboardContent() {
               <motion.div
                 data-tour="body-visualization-card"
                 whileHover={{ scale: 1.02, x: 3, y: -3 }}
-                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative hover:z-10 "
+                className="backdrop-blur-[20px] bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 cursor-pointer group relative"
                 onClick={() => setAssessmentModalOpen('body')}
               >
                 {/* Info button in top right */}
@@ -1301,7 +1325,7 @@ function DashboardContent() {
               >
                 {/* Info button in top right */}
                 <div className="absolute top-4 right-4 z-10">
-                  <InfoButton content="Generate professional medical reports from your health conversations. Perfect for sharing with healthcare providers." position="bottom" />
+                  <InfoButton content="Generate professional medical reports from your health conversations. Perfect for sharing with healthcare providers." position="bottom" alignRight />
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:from-blue-600/30 group-hover:to-cyan-600/30 transition-all">
                   <FileText className="w-6 h-6 text-blue-400" />

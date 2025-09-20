@@ -357,9 +357,49 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         readyForAnalysis: response.ready_for_analysis
       })
       
-      if (response.ready_for_analysis) {
-        // Don't auto-complete, just mark as ready
-        console.log('Ready for analysis, showing complete button')
+      if (response.ready_for_analysis && questionCount < 2) {
+        // Backend says ready but we need at least 2 questions for proper diagnosis
+        console.log(`Backend ready after ${questionCount} questions, forcing more questions for accuracy`)
+        
+        // Force another question by continuing
+        const forcedResponse = await deepDiveClient.continueDeepDive(
+          sessionId!,
+          "I need more details to provide an accurate assessment. Please continue.",
+          questionCount,
+          'deepseek/deepseek-chat'
+        )
+        
+        console.log('Forced continue response:', forcedResponse)
+        
+        if (forcedResponse.question && forcedResponse.question.trim() !== '') {
+          const nextQuestionNumber = forcedResponse.question_number || questionCount + 1
+          const assistantMessage: Message = {
+            id: `q${nextQuestionNumber}-${Date.now()}`,
+            role: 'assistant',
+            content: forcedResponse.question,
+            timestamp: new Date()
+          }
+          
+          setQuestionCount(nextQuestionNumber)
+          setCurrentQuestion(forcedResponse.question)
+          setMessages(prev => [...prev, assistantMessage])
+        } else {
+          // If we still can't get a question, then mark as ready
+          console.log('Could not force more questions, marking as ready')
+          setAnalysisReady(true)
+          setCurrentQuestion('')
+          
+          const readyMessage: Message = {
+            id: `ready-${Date.now()}`,
+            role: 'assistant',
+            content: 'I have gathered enough information. Click the button below to generate your comprehensive health analysis.',
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, readyMessage])
+        }
+      } else if (response.ready_for_analysis) {
+        // We have at least 2 questions, can complete
+        console.log(`Ready for analysis after ${questionCount} questions`)
         setAnalysisReady(true)
         setCurrentQuestion('')
         
@@ -394,33 +434,76 @@ export default function DeepDiveChat({ scanData, onComplete }: DeepDiveChatProps
         // Confidence is tracked separately in Ask Me More flow
       } else if (!response.question || response.question.trim() === '') {
         // Check if we've asked enough questions
-        if (questionCount >= 6) {
-          console.log('Reached maximum questions (6), ready for analysis')
+        if (questionCount >= 2) {
+          console.log(`No more questions after ${questionCount} questions, ready for analysis`)
           setAnalysisReady(true)
           setCurrentQuestion('')
+          
+          const readyMessage: Message = {
+            id: `ready-${Date.now()}`,
+            role: 'assistant',
+            content: 'I have gathered enough information. Click the button below to generate your comprehensive health analysis.',
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, readyMessage])
           return
         }
         
-        // No valid question but not ready for analysis - use fallback
-        console.warn('Received empty question, using contextual fallback')
-        const fallbackQuestion = generateContextualQuestion(
-          scanData.bodyPart,
-          scanData.formData.symptoms || '',
-          questionCount + 1
-        )
-        console.log('Generated fallback question:', fallbackQuestion)
+        // Need more questions but backend returned empty - try again with different model
+        console.warn('Received empty question, retrying with different model')
         
-        const nextQuestionNumber = questionCount + 1
-        const assistantMessage: Message = {
-          id: `q${nextQuestionNumber}-${Date.now()}`,
-          role: 'assistant',
-          content: fallbackQuestion,
-          timestamp: new Date()
+        try {
+          const retryResponse = await deepDiveClient.continueDeepDive(
+            sessionId!,
+            "Please provide more details about your symptoms.",
+            questionCount,
+            'openai/gpt-4-turbo'  // Try different model
+          )
+          
+          if (retryResponse.question && retryResponse.question.trim() !== '') {
+            const nextQuestionNumber = retryResponse.question_number || questionCount + 1
+            const assistantMessage: Message = {
+              id: `q${nextQuestionNumber}-${Date.now()}`,
+              role: 'assistant',
+              content: retryResponse.question,
+              timestamp: new Date()
+            }
+            
+            setQuestionCount(nextQuestionNumber)
+            setCurrentQuestion(retryResponse.question)
+            setMessages(prev => [...prev, assistantMessage])
+          } else {
+            // Still no question, mark as ready if we have at least 1 question
+            console.log('Could not get more questions from backend')
+            if (questionCount >= 1) {
+              setAnalysisReady(true)
+              setCurrentQuestion('')
+              
+              const readyMessage: Message = {
+                id: `ready-${Date.now()}`,
+                role: 'assistant',
+                content: 'I have gathered initial information. Click the button below to generate your health analysis.',
+                timestamp: new Date()
+              }
+              setMessages(prev => [...prev, readyMessage])
+            }
+          }
+        } catch (retryError) {
+          console.error('Retry failed:', retryError)
+          // If retry fails and we have at least 1 question, allow completion
+          if (questionCount >= 1) {
+            setAnalysisReady(true)
+            setCurrentQuestion('')
+            
+            const readyMessage: Message = {
+              id: `ready-${Date.now()}`,
+              role: 'assistant',
+              content: 'I have gathered initial information. Click the button below to generate your health analysis.',
+              timestamp: new Date()
+            }
+            setMessages(prev => [...prev, readyMessage])
+          }
         }
-        
-        setQuestionCount(nextQuestionNumber)
-        setCurrentQuestion(fallbackQuestion)
-        setMessages(prev => [...prev, assistantMessage])
       } else {
         // No more questions, show complete button
         console.log('No more questions, ready for analysis')
