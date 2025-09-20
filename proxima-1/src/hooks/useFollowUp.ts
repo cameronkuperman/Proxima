@@ -204,7 +204,7 @@ export function useFollowUp(assessmentId: string, assessmentType: string) {
 
       // Clean responses - remove undefined/null values and ensure proper types
       const cleanedResponses: Record<string, any> = {}
-      let medicalVisit = null
+      let medicalVisit: any = null
       
       for (const [key, value] of Object.entries(responses)) {
         if (value !== undefined && value !== null && value !== '') {
@@ -348,7 +348,7 @@ export function useFollowUp(assessmentId: string, assessmentType: string) {
   // Check if follow-up is available (minimum 1 day)
   const canFollowUp = (minDays: number = 1) => {
     if (!context) return false
-    return context.days_since_original >= minDays || context.days_since_last >= minDays
+    return context.days_since_original >= minDays || (context.days_since_last !== undefined && context.days_since_last >= minDays)
   }
 
   // Get days since assessment for display

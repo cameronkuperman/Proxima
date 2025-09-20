@@ -13,7 +13,7 @@ export default function VoiceMode({ isOpen, onClose, onTranscript }: VoiceModePr
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [duration, setDuration] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Start timer when listening
   useEffect(() => {

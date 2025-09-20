@@ -243,5 +243,3 @@ class EmailService {
 // Export singleton instance
 export const emailService = new EmailService();
 
-// Export types
-export type { EmailOptions, EmailResponse };

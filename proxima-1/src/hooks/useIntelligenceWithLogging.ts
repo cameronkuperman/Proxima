@@ -165,7 +165,8 @@ export function useIntelligenceLogging(componentName: string) {
   // Set up query client error logging
   useEffect(() => {
     const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (event.type === 'error' && event.query.queryKey[0]?.toString().includes('intelligence')) {
+      // Check if query has error state when updated
+      if (event.type === 'updated' && event.query.state.error && event.query.queryKey[0]?.toString().includes('intelligence')) {
         intelligenceLogger.error(
           componentName,
           `Query failed: ${event.query.queryKey}`,

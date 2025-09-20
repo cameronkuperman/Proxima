@@ -106,7 +106,6 @@ export function useOracle({
           has_response: !!response.response,
           has_message: !!response.message,
           has_raw_response: !!response.raw_response,
-          status: response.status,
           actual_content: responseContent.substring(0, 100)
         });
         

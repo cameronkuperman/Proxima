@@ -227,7 +227,7 @@ export function useWeeklyBrief(): UseWeeklyBriefReturn {
   
   return {
     // Data
-    brief,
+    brief: brief ?? null,
     isCurrentWeek,
     weekOf,
     

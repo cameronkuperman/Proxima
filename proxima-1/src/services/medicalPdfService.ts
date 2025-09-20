@@ -460,7 +460,7 @@ export class MedicalPdfGenerator {
       this.pdf.setFont('helvetica', 'normal');
       const text = `${item.treatment} - ${item.result}`;
       const lines = this.pdf.splitTextToSize(text, this.contentWidth - 10);
-      lines.forEach((line, i) => {
+      lines.forEach((line: string, i: number) => {
         this.pdf.text(line, this.margins.left + 7, this.currentY + (i * 5));
       });
       

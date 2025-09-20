@@ -207,13 +207,11 @@ export function useOracleEnhanced({
         
         // Handle blocked status (free tier limit reached)
         if (response.context_status.can_continue === false || response.context_status.status === 'blocked') {
-          setTokenLimits({
-            total_tokens: response.context_status.tokens,
-            limit: response.context_status.limit,
-            percentage: response.context_status.percentage,
-            is_blocked: true,
-            needs_compression: false
-          } as any);
+          // Update token usage state
+          setTokenUsage({
+            current: response.context_status.tokens,
+            limit: response.context_status.limit
+          });
           onTokenLimitReached?.({
             can_continue: false,
             total_tokens: response.context_status.tokens,

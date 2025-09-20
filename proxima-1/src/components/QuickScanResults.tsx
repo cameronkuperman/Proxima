@@ -151,8 +151,7 @@ export default function QuickScanResults({ scanData, onNewScan, mode = 'quick' }
           what_this_means: whatThisMeans,
           immediate_actions: immediateActions,
           tracking_data: currentSuggestion ? {
-            metric: currentSuggestion.metric_name,
-            frequency: currentSuggestion.frequency
+            metric: currentSuggestion.metric_name
           } : null
         }
       };
